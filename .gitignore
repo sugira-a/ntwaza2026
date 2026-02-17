@@ -1,0 +1,70 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+venv*/
+env/
+ENV/
+
+# Flask
+instance/
+.webassets-cache
+
+# Database
+*.db
+*.sqlite
+
+# Environment
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.iml
+
+# Logs
+logs/
+*.log
+
+# Build artifacts
+build/
+
+# Flutter/Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+
+# Uploads
+uploads/
+
+# Firebase
+firebase-service-account.json
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+
+# API Keys & Secrets
+ios/Flutter/Secrets.xcconfig
+*.env.local
+.env.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test/debug scripts in root
+/smtp_test.py
+/test_bulk_message.py
+/test_email.py
+/test_image_endpoint.py
+/test_product_update.py
+/vendor_orders.json
+/setup-optimization.ps1
+/65

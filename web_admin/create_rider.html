@@ -1,0 +1,74 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Create Rider - NTWAZA Admin</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;background:#f5f7fb;padding:24px}
+    .card{background:#fff;padding:20px;border-radius:8px;max-width:720px;margin:24px auto;box-shadow:0 6px 18px rgba(0,0,0,0.06)}
+    label{display:block;margin-bottom:6px;font-weight:600}
+    input,select{width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:6px;margin-bottom:12px}
+    button{background:#2563eb;color:#fff;padding:10px 14px;border:none;border-radius:6px;cursor:pointer}
+    .muted{color:#6b7280}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Create Rider (Website)</h2>
+    <p class="muted">This simple form posts JSON to your backend endpoint <strong>/api/admin/riders</strong>.</p>
+    <form id="riderForm">
+      <label>Full name</label>
+      <input id="name" required />
+      <label>Email</label>
+      <input id="email" type="email" required />
+      <label>Phone</label>
+      <input id="phone" required />
+      <label>Vehicle (optional)</label>
+      <input id="vehicle" />
+      <label>License number (optional)</label>
+      <input id="license" />
+      <label>Password (optional)</label>
+      <input id="password" type="password" />
+
+      <button type="submit">Create Rider</button>
+    </form>
+    <div id="result" style="margin-top:16px"></div>
+  </div>
+
+  <script>
+    const form = document.getElementById('riderForm');
+    const result = document.getElementById('result');
+    form.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      result.innerText = 'Sending...';
+      const payload = {
+        name: document.getElementById('name').value.trim(),
+        email: document.getElementById('email').value.trim(),
+        phone: document.getElementById('phone').value.trim(),
+        vehicle: document.getElementById('vehicle').value.trim(),
+        license_number: document.getElementById('license').value.trim(),
+        password: document.getElementById('password').value, // optional
+        role: 'rider'
+      };
+
+      try{
+        const res = await fetch('/api/admin/riders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const json = await res.json();
+        if (res.ok && json.success) {
+          result.innerHTML = '<span style="color:green">Rider created</span>';
+          form.reset();
+        } else {
+          result.innerHTML = '<span style="color:red">Error: ' + (json.error || res.statusText) + '</span>';
+        }
+      }catch(err){
+        result.innerHTML = '<span style="color:red">Network error: '+err.message+'</span>';
+      }
+    })
+  </script>
+</body>
+</html>

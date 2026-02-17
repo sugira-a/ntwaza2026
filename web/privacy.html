@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Privacy Policy | NTWAZA Delivery</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png" />
+    <link rel="stylesheet" href="landing.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="header" id="site-header">
+        <div class="container nav">
+          <a href="/" class="logo">NTWAZA</a>
+          <button class="hamburger" id="hamburger" aria-label="Menu">
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+          <nav class="nav-links" id="nav-links">
+            <button class="close-menu" id="close-menu" aria-label="Close menu">
+              <span></span>
+              <span></span>
+            </button>
+            <a href="/">Home</a>
+            <a href="/#how">How it works</a>
+            <a href="/#download">Download</a>
+            <a href="/#cities">Cities</a>
+            <a href="/#contact">Contact</a>
+          </nav>
+        </div>
+      </header>
+      <main>
+        <section class="section light">
+          <div class="container">
+            <h1 class="section-title">Privacy policy</h1>
+            <p class="section-subtitle">
+              Your privacy matters to us. This policy explains how NTWAZA
+              collects, uses, and protects information when you use our delivery
+              services in Rwanda.
+            </p>
+          </div>
+        </section>
+        <section class="section">
+          <div class="container">
+            <h2 class="section-title">Information we collect</h2>
+            <p class="section-subtitle">
+              We collect information needed to deliver your orders and provide
+              support, such as your name, phone number, email, delivery
+              addresses, and order details. We also collect location data when
+              you enable tracking so you can see progress in real time.
+            </p>
+            <h2 class="section-title">How we use information</h2>
+            <p class="section-subtitle">
+              We use your information to confirm orders, coordinate pickup and
+              delivery, send status updates, and improve service quality. We may
+              use aggregated data to understand demand patterns across Kigali
+              and other service areas in Rwanda.
+            </p>
+            <h2 class="section-title">Sharing and retention</h2>
+            <p class="section-subtitle">
+              We share only what is necessary with merchants and delivery
+              partners to complete your order. We keep information for as long
+              as needed to provide services, resolve disputes, and meet legal or
+              operational requirements.
+            </p>
+            <h2 class="section-title">Security and your choices</h2>
+            <p class="section-subtitle">
+              We apply security practices designed to protect data against
+              unauthorized access. You can request access, correction, or
+              deletion of your information by contacting us.
+            </p>
+            <h2 class="section-title">Contact</h2>
+            <p class="section-subtitle">
+              For privacy questions, email hello@ntwaza.com or visit our contact
+              section. We respond quickly during business hours in Rwanda.
+            </p>
+          </div>
+        </section>
+      </main>
+      <footer class="site-footer">
+        <div class="container footer-top">
+          <div class="footer-brand">
+            <div class="logo">NTWAZA</div>
+            <p>Premium delivery for food, groceries, and essentials in Kigali.</p>
+          </div>
+        </div>
+        <div class="container footer-grid">
+          <div>
+            <h5>Company</h5>
+            <a href="/about">About us</a>
+            <a href="/faq">FAQ</a>
+          </div>
+          <div>
+            <h5>Policies</h5>
+            <a href="/terms">Terms &amp; conditions</a>
+            <a href="/privacy">Privacy policy</a>
+          </div>
+          <div>
+            <h5>Contact center</h5>
+            <a href="mailto:hello@ntwaza.com">hello@ntwaza.com</a>
+            <a href="mailto:partners@ntwaza.com">partners@ntwaza.com</a>
+            <a href="tel:+250785119320">+250 785 119 320</a>
+          </div>
+        </div>
+        <div class="container footer-bottom">
+          <span>&copy; 2026 NTWAZA &nbsp; | &nbsp; <a href="/web/login">Vendor Portal</a></span>
+        </div>
+      </footer>
+      <script>
+        const hamburger = document.getElementById("hamburger");
+        const navLinks = document.getElementById("nav-links");
+        const closeMenu = document.getElementById("close-menu");
+
+        if (hamburger && navLinks) {
+          hamburger.addEventListener("click", () => {
+            hamburger.classList.toggle("active");
+            navLinks.classList.toggle("active");
+          });
+        }
+
+        if (closeMenu && hamburger && navLinks) {
+          closeMenu.addEventListener("click", () => {
+            hamburger.classList.remove("active");
+            navLinks.classList.remove("active");
+          });
+        }
+
+        if (navLinks && hamburger) {
+          navLinks.querySelectorAll("a").forEach((link) => {
+            link.addEventListener("click", () => {
+              hamburger.classList.remove("active");
+              navLinks.classList.remove("active");
+            });
+          });
+        }
+      </script>
+    </div>
+  </body>
+</html>

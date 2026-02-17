@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FAQ | NTWAZA Delivery</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png" />
+    <link rel="stylesheet" href="landing.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="header" id="site-header">
+        <div class="container nav">
+          <a href="/" class="logo">NTWAZA</a>
+          <button class="hamburger" id="hamburger" aria-label="Menu">
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+          <nav class="nav-links" id="nav-links">
+            <button class="close-menu" id="close-menu" aria-label="Close menu">
+              <span></span>
+              <span></span>
+            </button>
+            <a href="/">Home</a>
+            <a href="/#how">How it works</a>
+            <a href="/#download">Download</a>
+            <a href="/#cities">Cities</a>
+            <a href="/#contact">Contact</a>
+          </nav>
+        </div>
+      </header>
+      <main>
+        <section class="section light centered">
+          <div class="container">
+            <h1 class="section-title">Frequently asked questions</h1>
+            <p class="section-subtitle">
+              Quick answers to common questions about delivery in Rwanda.
+            </p>
+          </div>
+        </section>
+        <section class="section">
+          <div class="container">
+            <h2 class="section-title">Where does NTWAZA operate?</h2>
+            <p class="section-subtitle">
+              We currently serve Kigali and selected nearby areas in Rwanda.
+              Coverage expands based on partner availability and demand.
+            </p>
+            <h2 class="section-title">How long does delivery take?</h2>
+            <p class="section-subtitle">
+              Most deliveries arrive within 30-45 minutes in Kigali, depending
+              on traffic, distance, and merchant preparation time.
+            </p>
+            <h2 class="section-title">Can I track my order?</h2>
+            <p class="section-subtitle">
+              Yes. Live tracking is available from pickup to delivery once your
+              order is confirmed.
+            </p>
+            <h2 class="section-title">What can I order?</h2>
+            <p class="section-subtitle">
+              Food, groceries, and daily essentials from trusted local
+              merchants. Availability varies by area and time of day.
+            </p>
+            <h2 class="section-title">How do I contact support?</h2>
+            <p class="section-subtitle">
+              You can reach us via hello@ntwaza.com or the contact form on the
+              website. We respond quickly during business hours in Rwanda.
+            </p>
+            <h2 class="section-title">I have a business. Can I partner?</h2>
+            <p class="section-subtitle">
+              Yes. Email partners@ntwaza.com to learn about onboarding and
+              partner requirements.
+            </p>
+          </div>
+        </section>
+      </main>
+      <footer class="site-footer">
+        <div class="container footer-top">
+          <div class="footer-brand">
+            <div class="logo">NTWAZA</div>
+            <p>Premium delivery for food, groceries, and essentials in Kigali.</p>
+          </div>
+        </div>
+        <div class="container footer-grid">
+          <div>
+            <h5>Company</h5>
+            <a href="/about">About us</a>
+            <a href="/faq">FAQ</a>
+          </div>
+          <div>
+            <h5>Policies</h5>
+            <a href="/terms">Terms &amp; conditions</a>
+            <a href="/privacy">Privacy policy</a>
+          </div>
+          <div>
+            <h5>Contact center</h5>
+            <a href="mailto:hello@ntwaza.com">hello@ntwaza.com</a>
+            <a href="mailto:partners@ntwaza.com">partners@ntwaza.com</a>
+            <a href="tel:+250785119320">+250 785 119 320</a>
+          </div>
+        </div>
+        <div class="container footer-bottom">
+          <span>&copy; 2026 NTWAZA &nbsp; | &nbsp; <a href="/web/login">Vendor Portal</a></span>
+        </div>
+      </footer>
+      <script>
+        const hamburger = document.getElementById("hamburger");
+        const navLinks = document.getElementById("nav-links");
+        const closeMenu = document.getElementById("close-menu");
+
+        if (hamburger && navLinks) {
+          hamburger.addEventListener("click", () => {
+            hamburger.classList.toggle("active");
+            navLinks.classList.toggle("active");
+          });
+        }
+
+        if (closeMenu && hamburger && navLinks) {
+          closeMenu.addEventListener("click", () => {
+            hamburger.classList.remove("active");
+            navLinks.classList.remove("active");
+          });
+        }
+
+        if (navLinks && hamburger) {
+          navLinks.querySelectorAll("a").forEach((link) => {
+            link.addEventListener("click", () => {
+              hamburger.classList.remove("active");
+              navLinks.classList.remove("active");
+            });
+          });
+        }
+      </script>
+    </div>
+  </body>
+</html>

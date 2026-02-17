@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Driver Management - NTWAZA Admin</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        .page-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px 30px;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .page-header h1 {
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+
+        .page-header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .section {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .section-title {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 2px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .form-group label .required {
+            color: #e74c3c;
+        }
+
+        .form-group input {
+            padding: 12px 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group input::placeholder {
+            color: #999;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 28px;
+        }
+
+        .btn {
+            padding: 12px 28px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+
+        .btn-secondary:hover {
+            background: #e5e5e5;
+        }
+
+        .alert {
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+            border-left: 4px solid;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border-left-color: #28a745;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border-left-color: #dc3545;
+        }
+
+        .drivers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .driver-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .driver-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-color: #667eea;
+        }
+
+        .driver-name {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .driver-info {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 4px;
+        }
+
+        .driver-status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 12px;
+        }
+
+        .status-active {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .empty-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+        }
+
+        .empty-text {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 24px;
+        }
+
+        .loader {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .drivers-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .form-actions {
+                flex-direction: column;
+            }
+
+            .btn {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page-header">
+        <div class="container">
+            <h1>🚗 Driver Management</h1>
+            <p>Create and manage delivery drivers for your platform</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Add Driver Form -->
+        <div class="section">
+            <h2 class="section-title">Add New Driver</h2>
+            
+            <div id="alert" class="alert"></div>
+
+            <form id="driverForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="name">Full Name <span class="required">*</span></label>
+                        <input type="text" id="name" name="name" placeholder="e.g., John Doe" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Email <span class="required">*</span></label>
+                        <input type="email" id="email" name="email" placeholder="driver@example.com" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="phone">Phone Number <span class="required">*</span></label>
+                        <input type="tel" id="phone" name="phone" placeholder="+250 XXX XXX XXX" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="vehicle">Vehicle Type</label>
+                        <input type="text" id="vehicle" name="vehicle" placeholder="e.g., Motorcycle, Car">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="license">License Number</label>
+                        <input type="text" id="license" name="license_number" placeholder="RW-XXXX-XXXX">
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" placeholder="Leave blank for auto-generated">
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary" id="submitBtn">
+                        <span>➕</span>
+                        <span id="submitText">Add Driver</span>
+                    </button>
+                    <button type="reset" class="btn btn-secondary">
+                        <span>🔄</span>
+                        <span>Clear Form</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Drivers List -->
+        <div class="section">
+            <h2 class="section-title">Active Drivers</h2>
+            
+            <div id="driversList">
+                <div class="empty-state">
+                    <div class="empty-icon">🚗</div>
+                    <div class="empty-text">No drivers yet</div>
+                    <p style="color: #999; font-size: 14px;">Add your first driver using the form above</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:5000';
+        const form = document.getElementById('driverForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const submitText = document.getElementById('submitText');
+        const alertBox = document.getElementById('alert');
+        const driversList = document.getElementById('driversList');
+
+        function showAlert(message, type) {
+            alertBox.textContent = message;
+            alertBox.className = `alert alert-${type}`;
+            alertBox.style.display = 'block';
+            
+            if (type === 'success') {
+                setTimeout(() => {
+                    alertBox.style.display = 'none';
+                    loadDrivers();
+                }, 2000);
+            }
+        }
+
+        function setLoading(loading) {
+            submitBtn.disabled = loading;
+            if (loading) {
+                submitText.innerHTML = '<span class="loader"></span> Adding...';
+            } else {
+                submitText.textContent = 'Add Driver';
+            }
+        }
+
+        async function loadDrivers() {
+            try {
+                const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+                const response = await fetch(`${API_BASE_URL}/api/riders`, {
+                    headers: {
+                        ...(token && { 'Authorization': `Bearer ${token}` })
+                    }
+                });
+
+                if (!response.ok) throw new Error('Failed to load drivers');
+
+                const result = await response.json();
+                const drivers = result.riders || result.data || [];
+
+                if (drivers.length === 0) {
+                    driversList.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-icon">🚗</div>
+                            <div class="empty-text">No drivers yet</div>
+                            <p style="color: #999; font-size: 14px;">Add your first driver using the form above</p>
+                        </div>
+                    `;
+                } else {
+                    driversList.innerHTML = `
+                        <div class="drivers-grid">
+                            ${drivers.map(driver => `
+                                <div class="driver-card">
+                                    <div class="driver-name">${driver.name || 'Unknown'}</div>
+                                    <div class="driver-info">📧 ${driver.email}</div>
+                                    <div class="driver-info">📱 ${driver.phone || 'N/A'}</div>
+                                    ${driver.vehicle ? `<div class="driver-info">🚗 ${driver.vehicle}</div>` : ''}
+                                    <div class="driver-status ${driver.status === 'active' ? 'status-active' : 'status-pending'}">
+                                        ${driver.status || 'pending'}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Load drivers error:', error);
+            }
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(form);
+            const data = {
+                role: 'rider'
+            };
+            
+            for (const [key, value] of formData.entries()) {
+                if (value.trim()) {
+                    data[key] = value.trim();
+                }
+            }
+
+            setLoading(true);
+            
+            try {
+                const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+                
+                const response = await fetch(`${API_BASE_URL}/api/admin/riders`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(token && { 'Authorization': `Bearer ${token}` })
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    showAlert('✅ Driver created successfully!', 'success');
+                    form.reset();
+                } else {
+                    showAlert(`❌ Error: ${result.error || 'Failed to create driver'}`, 'error');
+                }
+            } catch (error) {
+                showAlert(`❌ Network error: ${error.message}`, 'error');
+                console.error('Create driver error:', error);
+            } finally {
+                setLoading(false);
+            }
+        });
+
+        // Load drivers on page load
+        loadDrivers();
+        
+        // Auto-refresh drivers every 10 seconds
+        setInterval(loadDrivers, 10000);
+    </script>
+</body>
+</html>
