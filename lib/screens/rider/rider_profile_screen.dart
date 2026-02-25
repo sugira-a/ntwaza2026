@@ -38,10 +38,7 @@ class RiderProfileScreen extends StatelessWidget {
           backgroundColor: Colors.black,
           surfaceTintColor: Colors.transparent,
           elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () => Navigator.pop(context),
-          ),
+          centerTitle: true,
           title: Text(
             'Profile',
             style: TextStyle(
@@ -67,10 +64,7 @@ class RiderProfileScreen extends StatelessWidget {
         backgroundColor: Colors.black,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
+        centerTitle: true,
         title: Text(
           'Profile & Settings',
           style: TextStyle(
@@ -408,7 +402,7 @@ class RiderProfileScreen extends StatelessWidget {
                         child: Text(
                           'Close',
                           style: TextStyle(
-                            color: primaryColor,
+                            color: accentGreen,
                             fontWeight: FontWeight.w800,
                           ),
                         ),

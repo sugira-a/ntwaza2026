@@ -6,6 +6,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/vendor_provider.dart';
@@ -332,6 +333,19 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
                       ),
                       const SizedBox(height: 16),
                       _buildMenuItemWithIcon(
+                        icon: Icons.local_shipping,
+                        iconColor: Colors.deepOrange,
+                        title: 'Pickup Orders',
+                        onTap: () {
+                          Navigator.pop(context);
+                          context.push('/pickup-orders');
+                        },
+                        textColor: textColor,
+                        subtextColor: subtextColor,
+                        isDarkMode: isDarkMode,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildMenuItemWithIcon(
                         icon: Icons.settings,
                         iconColor: Colors.grey[700]!,
                         title: 'Settings',
@@ -516,24 +530,28 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
   Widget _buildSearchHeader(BuildContext context, bool isDarkMode, Color cardColor, Color textColor, Color subtextColor, 
     VendorProvider vendorProvider, AuthProvider authProvider, ThemeProvider themeProvider) {
   return Container(
+    clipBehavior: Clip.hardEdge,
     decoration: BoxDecoration(
       color: cardColor, 
       boxShadow: [BoxShadow(color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.08), blurRadius: 8, offset: const Offset(0, 2))]
     ),
     child: SafeArea(
-      bottom: false, 
+      bottom: false,
+      maintainBottomViewPadding: false,
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), 
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), 
             child: Row(
               children: [
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text('NTWAZA', style: TextStyle(color: textColor, fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
-                      const SizedBox(height: 4),
+                      Text('NTWAZA', style: TextStyle(color: textColor, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: 1.5), maxLines: 1),
+                      const SizedBox(height: 3),
                       GestureDetector(
                         onTap: () => _showAddressManagementDialog(context, isDarkMode, cardColor, textColor, subtextColor),
                         child: Row(
@@ -581,7 +599,7 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16), 
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8), 
             child: TextField(
               controller: _searchController,
               style: TextStyle(color: textColor),
@@ -602,7 +620,8 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
                 filled: true, 
                 fillColor: isDarkMode ? Colors.grey[900] : Colors.grey[100],
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                isDense: true,
               ),
               onChanged: _onSearchChanged,
             )
@@ -771,8 +790,10 @@ void _showAddressManagementDialog(BuildContext context, bool isDarkMode, Color c
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.1), blurRadius: 12, offset: const Offset(0, -4))],
       ),
       child: SafeArea(
+        top: false,
+        maintainBottomViewPadding: false,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(vertical: 6),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
@@ -795,10 +816,10 @@ void _showAddressManagementDialog(BuildContext context, bool isDarkMode, Color c
       onTap: () => _onNavItemTapped(index),
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Icon(isSelected ? filledIcon : outlinedIcon, color: isSelected ? selectedTextColor : subtextColor, size: 24),
-          const SizedBox(height: 4),
+          const SizedBox(height: 3),
           Text(label, style: TextStyle(fontSize: 10, fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400, color: isSelected ? selectedTextColor : subtextColor)),
         ]),
       ),
@@ -823,147 +844,91 @@ void _showAddressManagementDialog(BuildContext context, bool isDarkMode, Color c
   }
 
   Widget _buildPromotionCircle(SpecialOffer promo, bool isDarkMode, Color cardColor, Color textColor) {
-    // Build robust image URL with validation
-    String imageUrl = 'https://picsum.photos/seed/offer${promo.id}/400/300';
-    if (promo.imageUrl != null && promo.imageUrl!.isNotEmpty) {
-      final trimmedUrl = promo.imageUrl!.trim().toLowerCase();
-      // Skip invalid values
-      if (trimmedUrl != 'null' && trimmedUrl != 'none' && !trimmedUrl.isEmpty) {
-        imageUrl = 'http://localhost:5000/static/uploads/offers/${promo.imageUrl}';
-      }
-    }
-    
-    // Professional gradient colors for offer badges
-    final _brandTeal = const Color(0xFF2BC2B4);
-    final _brandAmber = const Color(0xFFFFB24C);
-    
-    return GestureDetector(
-      onTap: () => print('Tapped on ${promo.name}'),
-      child: SizedBox(
-        width: 85,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Professional circular card with gradient overlay
-            Container(
-              width: 70, 
-              height: 70,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: cardColor,
-                boxShadow: [
-                  BoxShadow(
-                    color: isDarkMode ? Colors.black.withOpacity(0.4) : Colors.black.withOpacity(0.12),
-                    blurRadius: 16,
-                    offset: const Offset(0, 8),
-                    spreadRadius: 1
-                  )
-                ],
-              ),
-              child: Stack(
+    return _buildOfferBannerCard(promo, isDarkMode, textColor);
+  }
+
+  /// Handle offer tap - navigate based on link_type
+  void _handleOfferTap(SpecialOffer offer) {
+    switch (offer.linkType) {
+      case 'vendor':
+        if (offer.linkValue != null && offer.linkValue!.isNotEmpty) {
+          final vendorProvider = context.read<VendorProvider>();
+          try {
+            final vendor = vendorProvider.vendors.firstWhere((v) => v.id == offer.linkValue);
+            Navigator.push(context, MaterialPageRoute(
+              builder: (_) => VendorDetailScreen(vendor: vendor),
+            ));
+          } catch (_) {
+            // Vendor not found in list — try by vendorId field
+            if (offer.vendorId != null) {
+              try {
+                final vendor = vendorProvider.vendors.firstWhere((v) => v.id == offer.vendorId.toString());
+                Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => VendorDetailScreen(vendor: vendor),
+                ));
+              } catch (_) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Vendor not available'), backgroundColor: Colors.orange),
+                );
+              }
+            }
+          }
+        }
+        break;
+      case 'category':
+        if (offer.linkValue != null) {
+          setState(() {
+            _selectedCategory = offer.linkValue!;
+          });
+        }
+        break;
+      case 'external':
+        if (offer.linkValue != null && offer.linkValue!.isNotEmpty) {
+          launchUrl(Uri.parse(offer.linkValue!), mode: LaunchMode.externalApplication);
+        }
+        break;
+      case 'product':
+        // Could navigate to product detail
+        break;
+      default:
+        // 'none' — show promo code if available
+        final promoCode = offer.promoCode?.trim() ?? '';
+        if (promoCode.isNotEmpty && promoCode.toLowerCase() != 'none' && promoCode.toLowerCase() != 'null') {
+          final badgeText = offer.discountText.trim();
+          final hasBadgeText = badgeText.isNotEmpty && badgeText.toLowerCase() != 'none';
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
                 children: [
-                  // Image
-                  ClipOval(
-                    child: Image.network(
-                      imageUrl,
-                      width: 70,
-                      height: 70,
-                      fit: BoxFit.cover,
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return Container(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: LinearGradient(
-                              colors: [_brandTeal.withOpacity(0.1), _brandAmber.withOpacity(0.1)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                          ),
-                          child: Center(
-                            child: CircularProgressIndicator(
-                              value: loadingProgress.expectedTotalBytes != null
-                                  ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                                  : null,
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(_brandTeal),
-                            )
-                          ),
-                        );
-                      },
-                      errorBuilder: (context, error, stackTrace) {
-                        // Professional fallback with gradient
-                        return Container(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: LinearGradient(
-                              colors: [_brandTeal.withOpacity(0.2), _brandAmber.withOpacity(0.2)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                          ),
-                          child: Center(
-                            child: Icon(Icons.local_offer, color: _brandTeal, size: 32),
-                          ),
-                        );
-                      },
+                  const Icon(Icons.local_offer, color: Colors.white, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      hasBadgeText
+                          ? 'Use code $promoCode at checkout for $badgeText!'
+                          : 'Use code $promoCode at checkout.',
                     ),
                   ),
                 ],
               ),
+              backgroundColor: const Color(0xFF2E7D32),
+              duration: const Duration(seconds: 4),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
-            const SizedBox(height: 8),
-            // Promotion name
-            SizedBox(
-              height: 14,
-              child: Text(
-                promo.name, 
-                style: TextStyle(
-                  fontSize: 11, 
-                  fontWeight: FontWeight.w600, 
-                  color: textColor,
-                  height: 1.0,
-                ), 
-                textAlign: TextAlign.center, 
-                maxLines: 1, 
-                overflow: TextOverflow.ellipsis
-              ),
-            ),
-            const SizedBox(height: 3),
-            // Discount badge
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [_brandAmber, _brandAmber.withOpacity(0.8)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(6),
-                boxShadow: [
-                  BoxShadow(
-                    color: _brandAmber.withOpacity(0.3),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  )
-                ],
-              ),
-              child: Text(
-                promo.discountText, 
-                style: const TextStyle(
-                  fontSize: 9, 
-                  fontWeight: FontWeight.w700, 
-                  color: Colors.white,
-                  height: 1.0,
-                ), 
-                textAlign: TextAlign.center, 
-                maxLines: 1, 
-                overflow: TextOverflow.ellipsis
-              ),
-            ),
-          ],
-        ),
-      ),
+          );
+        }
+        break;
+    }
+  }
+
+  /// Sponsored banner card for featured ads
+  Widget _buildOfferBannerCard(SpecialOffer offer, bool isDarkMode, Color textColor) {
+    return _OfferAdCard(
+      offer: offer,
+      isDarkMode: isDarkMode,
+      textColor: textColor,
+      onTap: () => _handleOfferTap(offer),
     );
   }
 
@@ -2221,6 +2186,7 @@ Widget _buildNoVendorsOverlay(bool isDarkMode, Color cardColor, Color textColor,
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
           CircularProgressIndicator(color: Colors.black),
           const SizedBox(height: 16),
@@ -2243,31 +2209,6 @@ Widget _buildNoVendorsOverlay(bool isDarkMode, Color cardColor, Color textColor,
     child: ListView(
       controller: _scrollController,
       children: [
-        if (specialOffers.isNotEmpty)
-          Container(
-            color: cardColor,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Text('Special Offers', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: textColor)),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  height: 107,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: specialOffers.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 12),
-                    itemBuilder: (context, index) => _buildPromotionCircle(specialOffers[index], isDarkMode, cardColor, textColor),
-                  ),
-                ),
-              ],
-            ),
-          ),
         const SizedBox(height: 12),
         _buildPackageDeliveryBanner(),
         Padding(
@@ -2295,25 +2236,91 @@ Widget _buildNoVendorsOverlay(bool isDarkMode, Color cardColor, Color textColor,
             ],
           ),
         ),
-        if (displayVendors.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 0.78,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
+        if (displayVendors.isNotEmpty) ...[
+          // First 2 vendors (row of 2) — use LayoutBuilder to match GridView aspect ratio
+          if (displayVendors.length >= 2)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final cardWidth = (constraints.maxWidth - 12) / 2;
+                  final cardHeight = cardWidth / 0.78;
+                  return SizedBox(
+                    height: cardHeight,
+                    child: Row(
+                      children: [
+                        Expanded(child: _buildVendorCard(displayVendors[0], 0, isDarkMode, cardColor, textColor, subtextColor)),
+                        const SizedBox(width: 12),
+                        Expanded(child: _buildVendorCard(displayVendors[1], 1, isDarkMode, cardColor, textColor, subtextColor)),
+                      ],
+                    ),
+                  );
+                },
               ),
-              itemCount: displayVendors.length,
-              itemBuilder: (context, index) {
-                final Vendor vendor = displayVendors[index];
-                return _buildVendorCard(vendor, index, isDarkMode, cardColor, textColor, subtextColor);
-              },
+            )
+          else if (displayVendors.length == 1)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final cardWidth = (constraints.maxWidth - 12) / 2;
+                  final cardHeight = cardWidth / 0.78;
+                  return SizedBox(
+                    height: cardHeight,
+                    child: Row(
+                      children: [
+                        Expanded(child: _buildVendorCard(displayVendors[0], 0, isDarkMode, cardColor, textColor, subtextColor)),
+                        const SizedBox(width: 12),
+                        const Expanded(child: SizedBox()),
+                      ],
+                    ),
+                  );
+                },
+              ),
             ),
-          ),
+          // Sponsored / Featured ads - horizontal carousel
+          if (specialOffers.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  const Icon(Icons.campaign_outlined, size: 18, color: Color(0xFF10B981)),
+                  const SizedBox(width: 6),
+                  Text('Featured', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: textColor)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            _FeaturedOffersCarousel(
+              offers: specialOffers,
+              isDarkMode: isDarkMode,
+              textColor: textColor,
+              onOfferTap: _handleOfferTap,
+            ),
+            const SizedBox(height: 8),
+          ],
+          // Remaining vendors (from index 2 onwards)
+          if (displayVendors.length > 2)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  childAspectRatio: 0.78,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                ),
+                itemCount: displayVendors.length - 2,
+                itemBuilder: (context, index) {
+                  final Vendor vendor = displayVendors[index + 2];
+                  return _buildVendorCard(vendor, index + 2, isDarkMode, cardColor, textColor, subtextColor);
+                },
+              ),
+            ),
+        ],
         const SizedBox(height: 80),
       ],
     ),
@@ -2365,6 +2372,7 @@ Widget build(BuildContext context) {
   return Scaffold(
     backgroundColor: backgroundColor,
     body: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _buildSearchHeader(context, isDarkMode, cardColor, textColor, subtextColor, vendorProvider, authProvider, themeProvider),
         Expanded(child: mainContent),
@@ -2373,3 +2381,355 @@ Widget build(BuildContext context) {
     bottomNavigationBar: _buildBottomNav(isDarkMode, cardColor, textColor, subtextColor),
   );
 }}
+
+
+/// Horizontally-scrolling, auto-sliding carousel for featured offers
+class _FeaturedOffersCarousel extends StatefulWidget {
+  final List<SpecialOffer> offers;
+  final bool isDarkMode;
+  final Color textColor;
+  final void Function(SpecialOffer) onOfferTap;
+
+  const _FeaturedOffersCarousel({
+    required this.offers,
+    required this.isDarkMode,
+    required this.textColor,
+    required this.onOfferTap,
+  });
+
+  @override
+  State<_FeaturedOffersCarousel> createState() => _FeaturedOffersCarouselState();
+}
+
+class _FeaturedOffersCarouselState extends State<_FeaturedOffersCarousel> {
+  late final PageController _pageController;
+  Timer? _autoSlideTimer;
+  int _currentPage = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(viewportFraction: 0.92);
+    _startAutoSlide();
+  }
+
+  @override
+  void dispose() {
+    _autoSlideTimer?.cancel();
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _startAutoSlide() {
+    if (widget.offers.length < 2) return;
+    _autoSlideTimer?.cancel();
+    _autoSlideTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (!mounted || !_pageController.hasClients) return;
+      final nextPage = (_currentPage + 1) % widget.offers.length;
+      _pageController.animateToPage(
+        nextPage,
+        duration: const Duration(milliseconds: 450),
+        curve: Curves.easeInOut,
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        SizedBox(
+          height: 160,
+          child: PageView.builder(
+            controller: _pageController,
+            itemCount: widget.offers.length,
+            onPageChanged: (index) => setState(() => _currentPage = index),
+            itemBuilder: (context, index) {
+              return AnimatedScale(
+                scale: index == _currentPage ? 1.0 : 0.95,
+                duration: const Duration(milliseconds: 300),
+                child: _OfferAdCard(
+                  offer: widget.offers[index],
+                  isDarkMode: widget.isDarkMode,
+                  textColor: widget.textColor,
+                  onTap: () => widget.onOfferTap(widget.offers[index]),
+                ),
+              );
+            },
+          ),
+        ),
+        if (widget.offers.length > 1) ...[
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(widget.offers.length, (index) {
+              final isActive = index == _currentPage;
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                width: isActive ? 18 : 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: isActive
+                      ? const Color(0xFF10B981)
+                      : (widget.isDarkMode ? Colors.grey[700]! : Colors.grey[300]!),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              );
+            }),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+
+class _OfferAdCard extends StatefulWidget {
+  final SpecialOffer offer;
+  final bool isDarkMode;
+  final Color textColor;
+  final VoidCallback? onTap;
+
+  const _OfferAdCard({
+    required this.offer,
+    required this.isDarkMode,
+    required this.textColor,
+    this.onTap,
+  });
+
+  @override
+  State<_OfferAdCard> createState() => _OfferAdCardState();
+}
+
+class _OfferAdCardState extends State<_OfferAdCard> {
+  late final PageController _pageController;
+  Timer? _autoSlideTimer;
+  int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController();
+    _startAutoSlide();
+  }
+
+  @override
+  void didUpdateWidget(covariant _OfferAdCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final oldCount = oldWidget.offer.imageUrls.length + (oldWidget.offer.imageUrl != null ? 1 : 0);
+    final newCount = widget.offer.imageUrls.length + (widget.offer.imageUrl != null ? 1 : 0);
+    if (oldCount != newCount) {
+      _currentIndex = 0;
+      _startAutoSlide();
+    }
+  }
+
+  @override
+  void dispose() {
+    _autoSlideTimer?.cancel();
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  bool _hasText(String? value) {
+    if (value == null) return false;
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) return false;
+    final lower = trimmed.toLowerCase();
+    return lower != 'none' && lower != 'null';
+  }
+
+  List<String> _resolveImageUrls() {
+    final urls = widget.offer.imageUrls.isNotEmpty
+        ? widget.offer.imageUrls
+        : (_hasText(widget.offer.imageUrl) ? [widget.offer.imageUrl!.trim()] : []);
+
+    return urls.map<String>((url) {
+      if (url.startsWith('http')) return url;
+      return '${ApiService.baseUrl}/static/uploads/offers/$url';
+    }).toList();
+  }
+
+  void _startAutoSlide() {
+    final images = _resolveImageUrls();
+    if (images.length < 2) return;
+
+    _autoSlideTimer?.cancel();
+    _autoSlideTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (!mounted || !_pageController.hasClients) return;
+      final nextPage = (_currentIndex + 1) % images.length;
+      _pageController.animateToPage(
+        nextPage,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOut,
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final images = _resolveImageUrls();
+    final hasImages = images.isNotEmpty;
+    final badgeText = _hasText(widget.offer.discountText) ? widget.offer.discountText : null;
+    final title = _hasText(widget.offer.bannerTitle)
+        ? widget.offer.bannerTitle!
+        : (_hasText(widget.offer.name) ? widget.offer.name : 'Special Offer');
+    final subtitle = _hasText(widget.offer.bannerSubtitle)
+        ? widget.offer.bannerSubtitle!
+        : (_hasText(widget.offer.description) ? widget.offer.description! : null);
+    
+    // Check if promo code is valid (not null/None/empty)
+    final hasValidPromo = _hasText(widget.offer.promoCode) && 
+                          widget.offer.promoCode!.toLowerCase() != 'none' && 
+                          widget.offer.promoCode!.toLowerCase() != 'null';
+    final badgeLabel = hasValidPromo ? 'Sponsored' : 'Ad';
+
+    return GestureDetector(
+      onTap: widget.onTap,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        height: 150,
+        decoration: BoxDecoration(
+          color: widget.offer.bgColor,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(widget.isDarkMode ? 0.35 : 0.2),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(18),
+          child: Stack(
+            children: [
+              if (hasImages)
+                PageView.builder(
+                  controller: _pageController,
+                  itemCount: images.length,
+                  onPageChanged: (index) => setState(() => _currentIndex = index),
+                  itemBuilder: (context, index) {
+                    return Image.network(
+                      images[index],
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, progress) {
+                        if (progress == null) return child;
+                        return Container(color: widget.offer.bgColor);
+                      },
+                      errorBuilder: (_, __, ___) => Container(color: widget.offer.bgColor),
+                    );
+                  },
+                )
+              else
+                Container(color: widget.offer.bgColor),
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.black.withOpacity(0.45),
+                      Colors.black.withOpacity(0.15),
+                      Colors.transparent,
+                    ],
+                    stops: const [0.0, 0.55, 1.0],
+                    begin: Alignment.bottomLeft,
+                    end: Alignment.topRight,
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                        height: 1.2,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.white.withOpacity(0.8),
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                    if (badgeText != null) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          badgeText,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            letterSpacing: 0.4,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              if (widget.offer.linkType != 'none')
+                Positioned(
+                  right: 12,
+                  top: 12,
+                  child: Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.35),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 14),
+                  ),
+                ),
+              if (images.length > 1)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 10,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(images.length, (index) {
+                      final isActive = index == _currentIndex;
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        margin: const EdgeInsets.symmetric(horizontal: 3),
+                        width: isActive ? 14 : 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: isActive ? Colors.white : Colors.white.withOpacity(0.4),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      );
+                    }),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

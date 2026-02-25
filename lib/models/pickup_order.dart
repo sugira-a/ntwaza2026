@@ -114,8 +114,12 @@ class PickupOrder {
   final String? paymentStatus;
   final bool isPaid;
   final String? notes;
+  final String? vendorPickupCode;  // New: code for vendor/pickup verification
+  final String? customerDropoffCode;  // New: code for customer/delivery verification
   final double? riderLatitude;
   final double? riderLongitude;
+  final int? riderRating;
+  final String? riderReview;
 
   PickupOrder({
     required this.id,
@@ -144,8 +148,12 @@ class PickupOrder {
     this.paymentStatus,
     this.isPaid = false,
     this.notes,
+    this.vendorPickupCode,
+    this.customerDropoffCode,
     this.riderLatitude,
     this.riderLongitude,
+    this.riderRating,
+    this.riderReview,
   });
 
   // Computed properties
@@ -197,8 +205,12 @@ class PickupOrder {
       paymentStatus: json['paymentStatus'] as String?,
       isPaid: json['isPaid'] as bool? ?? false,
       notes: json['notes'] as String?,
+      vendorPickupCode: json['vendorPickupCode'] as String?,
+      customerDropoffCode: json['customerDropoffCode'] as String?,
       riderLatitude: (json['riderLatitude'] as num?)?.toDouble(),
       riderLongitude: (json['riderLongitude'] as num?)?.toDouble(),
+      riderRating: json['riderRating'] != null ? (json['riderRating'] is int ? json['riderRating'] : int.tryParse(json['riderRating'].toString())) : null,
+      riderReview: json['riderReview'] as String?,
     );
   }
 
@@ -230,8 +242,12 @@ class PickupOrder {
       'paymentStatus': paymentStatus,
       'isPaid': isPaid,
       'notes': notes,
+      'vendorPickupCode': vendorPickupCode,
+      'customerDropoffCode': customerDropoffCode,
       'riderLatitude': riderLatitude,
       'riderLongitude': riderLongitude,
+      'riderRating': riderRating,
+      'riderReview': riderReview,
     };
   }
 
@@ -264,6 +280,8 @@ class PickupOrder {
     String? notes,
     double? riderLatitude,
     double? riderLongitude,
+    int? riderRating,
+    String? riderReview,
   }) {
     return PickupOrder(
       id: id ?? this.id,
@@ -294,6 +312,8 @@ class PickupOrder {
       notes: notes ?? this.notes,
       riderLatitude: riderLatitude ?? this.riderLatitude,
       riderLongitude: riderLongitude ?? this.riderLongitude,
+      riderRating: riderRating ?? this.riderRating,
+      riderReview: riderReview ?? this.riderReview,
     );
   }
 }

@@ -15,16 +15,18 @@ class ProductService {
     
     final endpoint = isRestaurant 
         ? '/api/vendors/$vendorId/menus'
-        : '/api/vendors/$vendorId/categories';
+        : '/api/vendors/$vendorId/products';  // ✅ FIXED: Changed from /categories to /products
     
-    print('🔍 ProductService: Fetching ${isRestaurant ? "menus" : "categories"} for vendor: $vendorId');
+    print('🔍 ProductService: Fetching ${isRestaurant ? "menus" : "products"} for vendor: $vendorId');
     print('🌐 Using endpoint: $endpoint');
 
     final response = await _apiService.get(endpoint);
 
-    print('📦 ProductService: Raw response: $response');
+    print('📦 ProductService: Raw response keys: ${response.keys.toList()}');
 
-    final dataKey = response.containsKey('menus') ? 'menus' : 'categories';
+    // For simple vendors, the /products endpoint returns {products: [...]}
+    // For restaurants, we expect {menus: [...]}
+    final dataKey = isRestaurant ? 'menus' : 'products';
     
     if (!response.containsKey(dataKey)) {
       print('⚠️ Response does not contain "$dataKey" key');
@@ -32,67 +34,103 @@ class ProductService {
       return [];
     }
 
-    final categoriesData = response[dataKey];
+    final productsOrMenusData = response[dataKey];
 
-    if (categoriesData is! List) {
-      print('❌ $dataKey is not a list: ${categoriesData.runtimeType}');
+    if (productsOrMenusData is! List) {
+      print('❌ $dataKey is not a list: ${productsOrMenusData.runtimeType}');
       return [];
     }
 
-    print('📦 Parsing ${categoriesData.length} $dataKey...');
+    print('📦 Received ${productsOrMenusData.length} $dataKey...');
 
-    final List<ProductCategory> categories = [];
-
-    for (int i = 0; i < categoriesData.length; i++) {
-      try {
-        print('🔄 Parsing category $i: ${categoriesData[i]['name']}');
-        
-        // ✅ CRITICAL FIX: Inject vendor_id into each product before parsing
-        final categoryJson = Map<String, dynamic>.from(categoriesData[i]);
-        if (categoryJson['products'] is List) {
-          categoryJson['products'] = (categoryJson['products'] as List).map((productJson) {
-            // Create a mutable copy of the product JSON
-            final mutableProduct = Map<String, dynamic>.from(productJson);
-            
-            // ✅ Ensure vendor_id is set
-            if (mutableProduct['vendor_id'] == null || 
-                mutableProduct['vendor_id'].toString().isEmpty ||
-                mutableProduct['vendor_id'] == '0') {
-              print('⚠️ Product "${mutableProduct['name']}" missing vendor_id, injecting: $vendorId');
-              mutableProduct['vendor_id'] = vendorId;
-            }
-            
-            // Also inject vendor name if available
-            if (vendor != null && 
-                (mutableProduct['vendor_name'] == null || 
-                 mutableProduct['vendor_name'].toString().isEmpty)) {
-              mutableProduct['vendor_name'] = vendor.name;
-            }
-            
-            return mutableProduct;
-          }).toList();
-        }
-        
-        final category = ProductCategory.fromJson(categoryJson);
-        categories.add(category);
-        print('✅ ${isRestaurant ? "Menu" : "Category"}: ${category.name} with ${category.products.length} products');
-        
-        // Verify vendor_id was injected
-        for (var product in category.products) {
-          if (product.vendorId == '0' || product.vendorId.isEmpty) {
-            print('❌ WARNING: Product ${product.name} still has invalid vendor_id: ${product.vendorId}');
+    // For restaurants, parse as categories with products
+    if (isRestaurant) {
+      final List<ProductCategory> categories = [];
+      for (int i = 0; i < productsOrMenusData.length; i++) {
+        try {
+          print('🔄 Parsing menu $i: ${productsOrMenusData[i]['name']}');
+          
+          final categoryJson = Map<String, dynamic>.from(productsOrMenusData[i]);
+          if (categoryJson['products'] is List) {
+            categoryJson['products'] = (categoryJson['products'] as List).map((productJson) {
+              final mutableProduct = Map<String, dynamic>.from(productJson);
+              if (mutableProduct['vendor_id'] == null || 
+                  mutableProduct['vendor_id'].toString().isEmpty ||
+                  mutableProduct['vendor_id'] == '0') {
+                mutableProduct['vendor_id'] = vendorId;
+              }
+              if (vendor != null && 
+                  (mutableProduct['vendor_name'] == null || 
+                   mutableProduct['vendor_name'].toString().isEmpty)) {
+                mutableProduct['vendor_name'] = vendor.name;
+              }
+              return mutableProduct;
+            }).toList();
           }
+          
+          final category = ProductCategory.fromJson(categoryJson);
+          categories.add(category);
+          print('✅ Menu: ${category.name} with ${category.products.length} products');
+        } catch (e, stackTrace) {
+          print('❌ Error parsing menu $i: $e');
+          print('Stack trace: $stackTrace');
         }
-        
-      } catch (e, stackTrace) {
-        print('❌ Error parsing ${isRestaurant ? "menu" : "category"} $i: $e');
-        print('📋 Raw JSON: ${categoriesData[i]}');
-        print('Stack trace: $stackTrace');
       }
+      print('✅ Successfully parsed ${categories.length} menus');
+      return categories;
+    } 
+    
+    // For simple vendors, /products returns a flat list - group by category
+    else {
+      final Map<String, List<Product>> productsByCategory = {};
+      
+      for (var productJson in productsOrMenusData) {
+        try {
+          // Inject vendor_id
+          final mutableProduct = Map<String, dynamic>.from(productJson);
+          if (mutableProduct['vendor_id'] == null || 
+              mutableProduct['vendor_id'].toString().isEmpty ||
+              mutableProduct['vendor_id'] == '0') {
+            mutableProduct['vendor_id'] = vendorId;
+          }
+          if (vendor != null && 
+              (mutableProduct['vendor_name'] == null || 
+               mutableProduct['vendor_name'].toString().isEmpty)) {
+            mutableProduct['vendor_name'] = vendor.name;
+          }
+          
+          final product = Product.fromJson(mutableProduct);
+          final category = product.category.isEmpty ? 'Uncategorized' : product.category;
+          
+          if (!productsByCategory.containsKey(category)) {
+            productsByCategory[category] = [];
+          }
+          productsByCategory[category]!.add(product);
+        } catch (e) {
+          print('❌ Error parsing product: $e');
+        }
+      }
+      
+      // Convert to ProductCategory objects
+      final List<ProductCategory> categories = [];
+      int sortIndex = 0;
+      
+      for (var entry in productsByCategory.entries) {
+        print('🔄 Parsing category $sortIndex: ${entry.key}');
+        final category = ProductCategory(
+          id: entry.key.toLowerCase().replaceAll(' ', '_'),
+          name: entry.key,
+          sortOrder: sortIndex++,
+          isActive: true,
+          products: entry.value,
+        );
+        categories.add(category);
+        print('✅ Category: ${category.name} with ${category.products.length} products');
+      }
+      
+      print('✅ Successfully parsed ${categories.length} categories');
+      return categories;
     }
-
-    print('✅ Successfully parsed ${categories.length} ${isRestaurant ? "menus" : "categories"}');
-    return categories;
 
   } catch (e, stackTrace) {
     print('❌ ProductService error: $e');

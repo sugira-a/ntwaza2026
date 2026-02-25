@@ -1,7 +1,5 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 import '../services/api/api_service.dart';
 import '../services/notification_service.dart';
 import '../services/realtime/realtime_service.dart';
@@ -44,17 +42,7 @@ class RiderOrderProvider with ChangeNotifier {
   String? get error => _error;
 
   void _notifySafely() {
-    if (_isDisposed) {
-      return;
-    }
-    if (SchedulerBinding.instance.schedulerPhase == SchedulerPhase.persistentCallbacks) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!_isDisposed) {
-          notifyListeners();
-        }
-      });
-      return;
-    }
+    if (_isDisposed) return;
     notifyListeners();
   }
 
@@ -67,6 +55,7 @@ class RiderOrderProvider with ChangeNotifier {
     }
     try {
       final response = await _apiService.get('/api/rider/available-orders');
+      if (_isDisposed) return;
       if (response['success'] == true && response['orders'] is List) {
         final incoming = (response['orders'] as List)
             .map((j) => Order.fromJson(j))
@@ -78,13 +67,14 @@ class RiderOrderProvider with ChangeNotifier {
         _error = response['error']?.toString() ?? 'Failed to load available orders';
       }
     } catch (e) {
+      if (_isDisposed) return;
       _error = e.toString();
       print('❌ Error fetching available orders: $e');
     } finally {
-      if (!silent) {
-        _isLoading = false;
-        notifyListeners();
-      } else {
+      if (!_isDisposed) {
+        if (!silent) {
+          _isLoading = false;
+        }
         notifyListeners();
       }
     }
@@ -97,16 +87,19 @@ class RiderOrderProvider with ChangeNotifier {
         '/api/rider/orders/$orderId/accept',
         {},
       );
+      if (_isDisposed) return false;
       if (resp['success'] == true) {
         _declinedOrderIds.remove(orderId);
         _availableOrders.removeWhere((o) => o.id == orderId);
         await fetchAssignedOrders();
+        if (_isDisposed) return false;
         
         // Send notification
         await NotificationService().showLocalNotification(
           title: '🎉 Order Accepted',
           body: 'You have accepted order #$orderId',
         );
+        if (_isDisposed) return false;
         
         notifyListeners();
         return true;
@@ -115,6 +108,7 @@ class RiderOrderProvider with ChangeNotifier {
       notifyListeners();
       return false;
     } catch (e) {
+      if (_isDisposed) return false;
       _error = e.toString();
       notifyListeners();
       print('❌ Error accepting order: $e');
@@ -129,6 +123,7 @@ class RiderOrderProvider with ChangeNotifier {
         '/api/rider/orders/$orderId/reject',
         {},
       );
+      if (_isDisposed) return false;
       if (resp['success'] == true) {
         _declinedOrderIds.add(orderId);
         _availableOrders.removeWhere((o) => o.id == orderId);
@@ -139,6 +134,7 @@ class RiderOrderProvider with ChangeNotifier {
           title: '❌ Order Declined',
           body: 'You have declined order #$orderId',
         );
+        if (_isDisposed) return false;
         
         notifyListeners();
         return true;
@@ -147,6 +143,7 @@ class RiderOrderProvider with ChangeNotifier {
       notifyListeners();
       return false;
     } catch (e) {
+      if (_isDisposed) return false;
       _error = e.toString();
       notifyListeners();
       print('❌ Error declining order: $e');
@@ -163,6 +160,7 @@ class RiderOrderProvider with ChangeNotifier {
     }
     try {
       final response = await _apiService.get('/api/rider/orders');
+      if (_isDisposed) return;
       if (response['success'] == true && response['orders'] is List) {
         _orders = (response['orders'] as List)
             .map((j) => Order.fromJson(j))
@@ -171,13 +169,14 @@ class RiderOrderProvider with ChangeNotifier {
         _error = response['error']?.toString() ?? 'Failed to load orders';
       }
     } catch (e) {
+      if (_isDisposed) return;
       _error = e.toString();
       print('❌ Error fetching assigned orders: $e');
     } finally {
-      if (!silent) {
-        _isLoading = false;
-        notifyListeners();
-      } else {
+      if (!_isDisposed) {
+        if (!silent) {
+          _isLoading = false;
+        }
         notifyListeners();
       }
     }
@@ -190,6 +189,7 @@ class RiderOrderProvider with ChangeNotifier {
     notifyListeners();
     try {
       final response = await _apiService.get('/api/rider/orders/history');
+      if (_isDisposed) return;
       if (response['success'] == true && response['orders'] is List) {
         _deliveryHistory = (response['orders'] as List)
             .map((j) => Order.fromJson(j))
@@ -198,11 +198,14 @@ class RiderOrderProvider with ChangeNotifier {
         _error = response['error']?.toString() ?? 'Failed to load history';
       }
     } catch (e) {
+      if (_isDisposed) return;
       _error = e.toString();
       print('❌ Error fetching delivery history: $e');
     } finally {
-      _isLoadingHistory = false;
-      notifyListeners();
+      if (!_isDisposed) {
+        _isLoadingHistory = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -213,8 +216,10 @@ class RiderOrderProvider with ChangeNotifier {
         '/api/rider/orders/$orderId/status',
         {'status': status},
       );
+      if (_isDisposed) return false;
       if (resp['success'] == true) {
         await fetchAssignedOrders();
+        if (_isDisposed) return false;
         
         // Send notification
         String statusDisplay = status;
@@ -234,6 +239,7 @@ class RiderOrderProvider with ChangeNotifier {
           title: '✅ Order Status Updated',
           body: 'Order #$orderId is now $statusDisplay',
         );
+        if (_isDisposed) return false;
         
         return true;
       }
@@ -241,6 +247,7 @@ class RiderOrderProvider with ChangeNotifier {
       notifyListeners();
       return false;
     } catch (e) {
+      if (_isDisposed) return false;
       _error = e.toString();
       notifyListeners();
       print('❌ Error updating order status: $e');
@@ -255,17 +262,95 @@ class RiderOrderProvider with ChangeNotifier {
     _notifySafely();
     try {
       final response = await _apiService.get('/api/rider/earnings');
+      if (_isDisposed) return;
       if (response['success'] == true && response['earnings'] is Map) {
         _earnings = Map<String, dynamic>.from(response['earnings']);
       } else {
         _error = response['error']?.toString() ?? 'Failed to load earnings';
       }
     } catch (e) {
+      if (_isDisposed) return;
       _error = e.toString();
       print('❌ Error fetching earnings: $e');
     } finally {
-      _isLoadingEarnings = false;
-      _notifySafely();
+      if (!_isDisposed) {
+        _isLoadingEarnings = false;
+        _notifySafely();
+      }
+    }
+  }
+
+  /// Verify vendor pickup code (rider picks up from vendor)
+  Future<Map<String, dynamic>?> verifyVendorPickupCode(String orderId, String code) async {
+    try {
+      final resp = await _apiService.post(
+        '/api/rider/orders/$orderId/verify-vendor-pickup',
+        {'code': code},
+      );
+      if (_isDisposed) return null;
+      if (resp['success'] == true) {
+        await fetchAssignedOrders();
+        if (_isDisposed) return null;
+        return resp;
+      }
+      _error = resp['error']?.toString() ?? 'Invalid vendor pickup code';
+      notifyListeners();
+      return resp;
+    } catch (e) {
+      if (_isDisposed) return null;
+      _error = e.toString();
+      notifyListeners();
+      return null;
+    }
+  }
+
+  /// Verify customer delivery code (rider delivers to customer)
+  Future<Map<String, dynamic>?> verifyCustomerDeliveryCode(String orderId, String code) async {
+    try {
+      final resp = await _apiService.post(
+        '/api/rider/orders/$orderId/verify-customer-delivery',
+        {'code': code},
+      );
+      if (_isDisposed) return null;
+      if (resp['success'] == true) {
+        await fetchAssignedOrders();
+        if (_isDisposed) return null;
+        await fetchDeliveryHistory();
+        if (_isDisposed) return null;
+        return resp;
+      }
+      _error = resp['error']?.toString() ?? 'Invalid customer delivery code';
+      notifyListeners();
+      return resp;
+    } catch (e) {
+      if (_isDisposed) return null;
+      _error = e.toString();
+      notifyListeners();
+      return null;
+    }
+  }
+
+  /// Release stale orders that are blocking new acceptances
+  Future<bool> releaseStaleOrders() async {
+    try {
+      final resp = await _apiService.post('/api/rider/release-stale-orders', {});
+      if (_isDisposed) return false;
+      if (resp['success'] == true) {
+        await fetchAssignedOrders();
+        if (_isDisposed) return false;
+        await fetchAvailableOrders();
+        if (_isDisposed) return false;
+        notifyListeners();
+        return true;
+      }
+      _error = resp['error']?.toString() ?? 'Failed to release stale orders';
+      notifyListeners();
+      return false;
+    } catch (e) {
+      if (_isDisposed) return false;
+      _error = e.toString();
+      notifyListeners();
+      return false;
     }
   }
 
@@ -292,9 +377,17 @@ class RiderOrderProvider with ChangeNotifier {
   }
 
   @override
+  void notifyListeners() {
+    if (!_isDisposed) {
+      super.notifyListeners();
+    }
+  }
+
+  @override
   void dispose() {
     stopAutoRefresh();
     _isDisposed = true;
+    _orderUpdatesSub?.cancel();
     super.dispose();
   }
 }

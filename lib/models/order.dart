@@ -36,6 +36,26 @@ class Order {
   final int? minutesRemaining;
   final bool isRunningLate;
   final double deliveryDistanceKm;
+  // 🆕 Two-Code Delivery Verification System
+  final String? vendorPickupCode;
+  final String? customerDeliveryCode;
+  final DateTime? vendorPickupCodeVerifiedAt;
+  final DateTime? customerDeliveryCodeVerifiedAt;
+  // 🆕 Rating & Feedback
+  final int? vendorRating;
+  final String? vendorReview;
+  final int? riderRating;
+  final String? riderReview;
+
+  // 🆕 Cancellation Info
+  final String? cancellationReason;
+  final String? cancelledBy;
+  final DateTime? cancelledAt;
+
+  // 🆕 Refund Tracking
+  final String? refundStatus;
+  final DateTime? refundProcessedAt;
+  final String? refundProcessedBy;
 
   Order({
     required this.id,
@@ -70,6 +90,20 @@ class Order {
     this.minutesRemaining,
     this.isRunningLate = false,
     this.deliveryDistanceKm = 0.0,
+    this.vendorPickupCode,
+    this.customerDeliveryCode,
+    this.vendorPickupCodeVerifiedAt,
+    this.customerDeliveryCodeVerifiedAt,
+    this.vendorRating,
+    this.vendorReview,
+    this.riderRating,
+    this.riderReview,
+    this.cancellationReason,
+    this.cancelledBy,
+    this.cancelledAt,
+    this.refundStatus,
+    this.refundProcessedAt,
+    this.refundProcessedBy,
   });
 
   // Helper getters
@@ -81,11 +115,11 @@ class Order {
     return timeAgoFrom(createdAt);
   }
 
-  // ✅ UPDATED: Use 'confirmed' instead of 'accepted'
-  bool get canAccept => status == OrderStatus.pending;
-  bool get canReject => status == OrderStatus.pending;
-  bool get canMarkPreparing => status == OrderStatus.confirmed;
-  bool get canMarkReady => status == OrderStatus.preparing;
+  // Simplified flow: confirmed -> ready -> completed
+  bool get canAccept => false; // Orders auto-confirm now
+  bool get canReject => false; // No pending state
+  bool get canMarkPreparing => false; // Removed preparing step
+  bool get canMarkReady => status == OrderStatus.confirmed || status == OrderStatus.preparing;
   bool get canMarkCompleted => status == OrderStatus.ready;
 
   factory Order.fromJson(Map<String, dynamic> json) {
@@ -108,15 +142,19 @@ class Order {
     final Map<String, dynamic>? rider =
         riderObj is Map ? Map<String, dynamic>.from(riderObj) : null;
     
+    final dynamic vendorObj = json['vendor'];
+    final Map<String, dynamic>? vendor =
+        vendorObj is Map ? Map<String, dynamic>.from(vendorObj) : null;
+
     return Order(
       id: json['id']?.toString() ?? json['orderId']?.toString() ?? '',
       orderNumber: json['orderNumber'] ?? json['order_number'] ?? json['id']?.toString() ?? '',
       customerId: json['customerId']?.toString() ?? json['customer_id']?.toString() ?? '',
       customerName: json['customerName'] ?? json['customer_name'] ?? 'Customer',
       customerPhone: json['customerPhone'] ?? json['customer_phone'],
-      vendorId: json['vendorId']?.toString() ?? json['vendor_id']?.toString() ?? '',
-      vendorName: json['vendorName'] ?? json['vendor_name'] ?? '',
-      vendorPhone: json['vendorPhone'] ?? json['vendor_phone'],
+      vendorId: json['vendorId']?.toString() ?? json['vendor_id']?.toString() ?? vendor?['id']?.toString() ?? '',
+      vendorName: json['vendorName'] ?? json['vendor_name'] ?? vendor?['name'] ?? vendor?['business_name'] ?? '',
+      vendorPhone: json['vendorPhone'] ?? json['vendor_phone'] ?? vendor?['phone'],
       riderId: json['riderId']?.toString() ?? json['rider_id']?.toString() ?? rider?['id']?.toString(),
       riderName: json['riderName'] ?? json['rider_name'] ?? rider?['name'],
       riderPhone: json['riderPhone'] ?? json['rider_phone'] ?? rider?['phone'],
@@ -139,7 +177,11 @@ class Order {
           ? parseServerTime(json['completedAt'])
           : json['completed_at'] != null
             ? parseServerTime(json['completed_at'])
-            : null,
+            : json['deliveredAt'] != null
+              ? parseServerTime(json['deliveredAt'])
+              : json['delivered_at'] != null
+                ? parseServerTime(json['delivered_at'])
+                : null,
       items: (json['items'] as List?)?.map((i) => OrderItem.fromJson(i)).toList() ?? [],
       deliveryInfo: json['delivery_info'] != null 
         ? DeliveryInfo.fromJson(json['delivery_info']) 
@@ -165,6 +207,36 @@ class Order {
       minutesRemaining: json['minutesRemaining'] ?? json['minutes_remaining'],
       isRunningLate: json['isRunningLate'] ?? json['is_running_late'] ?? false,
       deliveryDistanceKm: (json['deliveryDistance'] ?? json['delivery_distance_km'] ?? 0).toDouble(),
+      vendorPickupCode: json['vendorPickupCode'] ?? json['vendor_pickup_code'],
+      customerDeliveryCode: json['customerDeliveryCode'] ?? json['customer_delivery_code'],
+      vendorPickupCodeVerifiedAt: json['vendorPickupCodeVerifiedAt'] != null
+          ? parseServerTime(json['vendorPickupCodeVerifiedAt'])
+          : json['vendor_pickup_code_verified_at'] != null
+            ? parseServerTime(json['vendor_pickup_code_verified_at'])
+            : null,
+      customerDeliveryCodeVerifiedAt: json['customerDeliveryCodeVerifiedAt'] != null
+          ? parseServerTime(json['customerDeliveryCodeVerifiedAt'])
+          : json['customer_delivery_code_verified_at'] != null
+            ? parseServerTime(json['customer_delivery_code_verified_at'])
+            : null,
+      vendorRating: json['rating'] != null ? (json['rating'] is int ? json['rating'] : int.tryParse(json['rating'].toString())) : null,
+      vendorReview: json['review'],
+      riderRating: json['rider_rating'] != null ? (json['rider_rating'] is int ? json['rider_rating'] : int.tryParse(json['rider_rating'].toString())) : null,
+      riderReview: json['rider_review'],
+      cancellationReason: json['cancellationReason'] ?? json['cancellation_reason'],
+      cancelledBy: json['cancelledBy'] ?? json['cancelled_by'],
+      cancelledAt: json['cancelledAt'] != null
+          ? parseServerTime(json['cancelledAt'])
+          : json['cancelled_at'] != null
+            ? parseServerTime(json['cancelled_at'])
+            : null,
+      refundStatus: json['refundStatus'] ?? json['refund_status'],
+      refundProcessedAt: json['refundProcessedAt'] != null
+          ? parseServerTime(json['refundProcessedAt'])
+          : json['refund_processed_at'] != null
+            ? parseServerTime(json['refund_processed_at'])
+            : null,
+      refundProcessedBy: json['refundProcessedBy'] ?? json['refund_processed_by'],
     );
   }
 
@@ -202,6 +274,16 @@ class Order {
       'minutes_remaining': minutesRemaining,
       'is_running_late': isRunningLate,
       'delivery_distance_km': deliveryDistanceKm,
+      'vendor_pickup_code': vendorPickupCode,
+      'customer_delivery_code': customerDeliveryCode,
+      'vendor_pickup_code_verified_at': vendorPickupCodeVerifiedAt?.toIso8601String(),
+      'customer_delivery_code_verified_at': customerDeliveryCodeVerifiedAt?.toIso8601String(),
+      'cancellation_reason': cancellationReason,
+      'cancelled_by': cancelledBy,
+      'cancelled_at': cancelledAt?.toIso8601String(),
+      'refund_status': refundStatus,
+      'refund_processed_at': refundProcessedAt?.toIso8601String(),
+      'refund_processed_by': refundProcessedBy,
     };
   }
 }

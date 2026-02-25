@@ -405,7 +405,7 @@ class VendorProfileScreen extends StatelessWidget {
                         child: Text(
                           'Close',
                           style: TextStyle(
-                            color: primaryColor,
+                            color: accentGreen,
                             fontWeight: FontWeight.w800,
                           ),
                         ),

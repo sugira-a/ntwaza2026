@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'dart:ui' as ui;
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 // Providers
 import 'providers/product_detail_provider.dart';
@@ -34,6 +36,13 @@ import 'routes/app_router.dart';
 // Constants
 import 'core/constants/api_endpoints.dart';
 
+// Background message handler - must be top-level function
+@pragma('vm:entry-point')
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  print('📨 Background message: ${message.notification?.title}');
+}
+
 void main() async {
   // Setup error handling for uncaught exceptions
   FlutterError.onError = (FlutterErrorDetails details) {
@@ -48,6 +57,16 @@ void main() async {
   };
 
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase
+  try {
+    await Firebase.initializeApp();
+    // Register background message handler
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    print('✅ Firebase initialized');
+  } catch (e) {
+    print('⚠️ Firebase initialization failed: $e');
+  }
 
   ApiEndpoints.logCurrentConfig();
 

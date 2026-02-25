@@ -31,6 +31,14 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
   @override
   void initState() {
     super.initState();
+    print('🔍 ProductDetailModal initialized for: ${widget.product.name}');
+    print('   Product has modifiers: ${widget.product.modifiers != null}');
+    if (widget.product.modifiers != null) {
+      print('   Modifier count: ${widget.product.modifiers!.length}');
+      for (var mod in widget.product.modifiers!) {
+        print('   - ${mod.name}: ${mod.options.length} options');
+      }
+    }
     _initializeDefaultModifiers();
   }
 
@@ -269,8 +277,17 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildProductHeader(isDarkMode, textColor, subtextColor, backgroundColor),
-                if (widget.product.modifiers != null && widget.product.modifiers!.isNotEmpty) 
-                  _buildModifiersSection(isDarkMode, backgroundColor, cardColor, textColor, subtextColor),
+                if (widget.product.modifiers != null && widget.product.modifiers!.isNotEmpty) ...[
+                  Builder(builder: (context) {
+                    print('🎨 Building modifiers section with ${widget.product.modifiers!.length} groups');
+                    return _buildModifiersSection(isDarkMode, backgroundColor, cardColor, textColor, subtextColor);
+                  }),
+                ] else ...[
+                  Builder(builder: (context) {
+                    print('⚠️ NOT building modifiers section - modifiers null or empty');
+                    return SizedBox.shrink();
+                  }),
+                ],
                 SizedBox(height: 16),
                 // Bottom bar inline with content
                 _buildBottomBar(isDarkMode, backgroundColor, cardColor, textColor, subtextColor),
@@ -333,14 +350,21 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
             ],
           ),
         ),
-        // Back button
+        // Back button (GREEN)
         Positioned(
           top: MediaQuery.of(context).padding.top + 8,
           left: 8,
-          child: IconButton(
-            icon: Icon(Icons.arrow_back, color: Colors.white, size: 28),
-            onPressed: () => Navigator.pop(context),
-            tooltip: 'Back',
+          child: Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.green.shade600,
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 8, offset: Offset(0, 2))],
+            ),
+            child: IconButton(
+              icon: Icon(Icons.arrow_back, color: Colors.white, size: 28),
+              onPressed: () => Navigator.pop(context),
+              tooltip: 'Back',
+            ),
           ),
         ),
         // Menu button

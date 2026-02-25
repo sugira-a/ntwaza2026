@@ -820,39 +820,61 @@ class _RiderOrderDetailScreenState extends State<RiderOrderDetailScreen> {
 
   Widget _buildStatusButtons(BuildContext context, RiderOrderProvider prov, bool isDark) {
     final statusValue = _currentOrder.status.value;
+    final hasVendorCode = _currentOrder.vendorPickupCode != null && _currentOrder.vendorPickupCode!.isNotEmpty;
+    final hasCustomerCode = _currentOrder.customerDeliveryCode != null && _currentOrder.customerDeliveryCode!.isNotEmpty;
     
     Widget? button;
     
-    if (statusValue == 'confirmed') {
-      button = _buildStatusActionButton(
-        context: context,
-        prov: prov,
-        icon: Icons.shopping_bag_outlined,
-        label: 'Mark as Picked Up',
-        targetStatus: 'picked_up',
-        color: accentGreen,
-        isDark: isDark,
-      );
-    } else if (statusValue == 'picked_up') {
-      button = _buildStatusActionButton(
-        context: context,
-        prov: prov,
-        icon: Icons.directions_outlined,
-        label: 'Mark as In Transit',
-        targetStatus: 'in_transit',
-        color: accentGreen,
-        isDark: isDark,
-      );
-    } else if (statusValue == 'in_transit') {
-      button = _buildStatusActionButton(
-        context: context,
-        prov: prov,
-        icon: Icons.check_circle_outline,
-        label: 'Mark as Delivered',
-        targetStatus: 'delivered',
-        color: accentGreen,
-        isDark: isDark,
-      );
+    if (statusValue == 'confirmed' || statusValue == 'ready') {
+      // Picking up = going in transit. Verify vendor code to confirm pickup.
+      if (hasVendorCode) {
+        button = _buildStatusActionButton(
+          context: context,
+          prov: prov,
+          icon: Icons.directions_outlined,
+          label: 'Mark as In Transit',
+          targetStatus: 'in_transit',
+          color: accentGreen,
+          isDark: isDark,
+          requiresVerification: true,
+          verificationType: 'vendor_pickup',
+        );
+      } else {
+        button = _buildStatusActionButton(
+          context: context,
+          prov: prov,
+          icon: Icons.directions_outlined,
+          label: 'Mark as In Transit',
+          targetStatus: 'in_transit',
+          color: accentGreen,
+          isDark: isDark,
+        );
+      }
+    } else if (statusValue == 'picked_up' || statusValue == 'in_transit') {
+      // Deliver: verify customer delivery code to confirm delivery.
+      if (hasCustomerCode) {
+        button = _buildStatusActionButton(
+          context: context,
+          prov: prov,
+          icon: Icons.check_circle_outline,
+          label: 'Mark as Delivered',
+          targetStatus: 'delivered',
+          color: accentGreen,
+          isDark: isDark,
+          requiresVerification: true,
+          verificationType: 'customer_delivery',
+        );
+      } else {
+        button = _buildStatusActionButton(
+          context: context,
+          prov: prov,
+          icon: Icons.check_circle_outline,
+          label: 'Mark as Delivered',
+          targetStatus: 'delivered',
+          color: accentGreen,
+          isDark: isDark,
+        );
+      }
     }
     
     return button ?? const SizedBox.shrink();
@@ -866,6 +888,8 @@ class _RiderOrderDetailScreenState extends State<RiderOrderDetailScreen> {
     required String targetStatus,
     required Color color,
     required bool isDark,
+    bool requiresVerification = false,
+    String? verificationType,
   }) {
     return SizedBox(
       width: double.infinity,
@@ -874,7 +898,11 @@ class _RiderOrderDetailScreenState extends State<RiderOrderDetailScreen> {
         onPressed: _isUpdating
             ? null
             : () async {
-                await _updateStatus(context, prov, targetStatus);
+                if (requiresVerification && verificationType != null) {
+                  await _promptVerificationCode(context, prov, targetStatus, verificationType);
+                } else {
+                  await _updateStatus(context, prov, targetStatus);
+                }
               },
         icon: _isUpdating
             ? const SizedBox(
@@ -966,6 +994,165 @@ class _RiderOrderDetailScreenState extends State<RiderOrderDetailScreen> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
             ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUpdating = false);
+    }
+  }
+
+  Future<void> _promptVerificationCode(
+    BuildContext context,
+    RiderOrderProvider prov,
+    String targetStatus,
+    String verificationType,
+  ) async {
+    final controller = TextEditingController();
+    final isVendor = verificationType == 'vendor_pickup';
+    final title = isVendor ? 'Enter Vendor Pickup Code' : 'Enter Customer Delivery Code';
+    final hint = isVendor
+        ? 'Ask the vendor for their 4-digit code'
+        : 'Ask the customer for their 4-digit code';
+    final accentColor = isVendor ? Colors.orange : Colors.blue;
+
+    final code = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Icon(isVendor ? Icons.store : Icons.person, color: accentColor, size: 22),
+              const SizedBox(width: 8),
+              Expanded(child: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700))),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(hint, style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                keyboardType: TextInputType.number,
+                maxLength: 4,
+                textAlign: TextAlign.center,
+                autofocus: true,
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 8,
+                  color: accentColor,
+                ),
+                decoration: InputDecoration(
+                  hintText: '0000',
+                  hintStyle: TextStyle(fontSize: 32, color: Colors.grey.withOpacity(0.3)),
+                  counterText: '',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: accentColor.withOpacity(0.3)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: accentColor, width: 2),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: accentColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text('Verify'),
+            ),
+          ],
+        );
+      },
+    );
+
+    controller.dispose();
+    if (code == null || code.isEmpty) return;
+
+    if (code.length != 4 || !RegExp(r'^\d{4}$').hasMatch(code)) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Code must be exactly 4 digits'),
+          backgroundColor: errorColor,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isUpdating = true);
+    try {
+      Map<String, dynamic>? resp;
+      if (isVendor) {
+        resp = await prov.verifyVendorPickupCode(_currentOrder.id, code);
+      } else {
+        resp = await prov.verifyCustomerDeliveryCode(_currentOrder.id, code);
+      }
+
+      if (!mounted) return;
+
+      if (resp != null && resp['success'] == true) {
+        await prov.fetchAssignedOrders();
+        final updatedOrder = prov.orders.firstWhereOrNull((o) => o.id == _currentOrder.id);
+        if (updatedOrder != null && mounted) {
+          setState(() => _currentOrder = updatedOrder);
+        }
+
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(isVendor ? 'Pickup verified - order is now in transit!' : 'Delivery verified successfully!'),
+            backgroundColor: accentGreen,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+
+        if (!isVendor) {
+          await Future.delayed(const Duration(milliseconds: 500));
+          if (mounted) Navigator.pop(context, true);
+        }
+      } else {
+        // Show user-friendly error message
+        final isInvalidCode = resp?['error']?.toString().toLowerCase().contains('invalid') ?? false;
+        final errorMsg = isInvalidCode ? 'Invalid code. Please try again.' : (resp?['error']?.toString() ?? prov.error ?? 'Verification failed');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMsg),
+            backgroundColor: Colors.red.shade700,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: errorColor,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
         );
       }

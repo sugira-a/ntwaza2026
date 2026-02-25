@@ -13,20 +13,23 @@ import '../screens/vendor/vendor_detail_screen.dart';
 import '../screens/customer/profile_screen.dart';
 import '../screens/customer/help_support_screen.dart';
 import '../screens/customer/my_orders_screen.dart';
+import '../screens/customer/pickup_orders_screen.dart';
 import '../screens/customer/privacy_policy_screen.dart';
 import '../screens/customer/terms_of_service_screen.dart';
 import '../screens/customer/create_pickup_order_screen.dart';
+import '../screens/customer/track_order_screen.dart';
 import '../screens/customer/order_detail_screen.dart';
 import '../screens/cart/cart_screen.dart';
 import '../screens/checkout/checkout_screen.dart';
 import '../screens/admin/admin_pickup_orders_screen.dart';
-import '../screens/admin/admin_dashboard_pro.dart';
+import '../screens/admin/admin_main_screen.dart';
 import '../screens/rider/rider_main_screen.dart';
 import '../screens/map/location_picker_screen.dart';
 import '../screens/splash/splash_screen.dart';
 import '../screens/auth/permissions_screen.dart';
 import '../providers/vendor_provider.dart';
 import '../models/vendor.dart';
+import '../models/order.dart';
 
 
 class AppRouter {
@@ -118,7 +121,7 @@ class AppRouter {
       GoRoute(
         path: '/admin',
         name: 'admin',
-        builder: (context, state) => const AdminDashboardPro(),
+        builder: (context, state) => const AdminMainScreen(),
       ),
 
       // Rider Dashboard
@@ -220,6 +223,12 @@ class AppRouter {
         name: 'create-pickup-order',
         builder: (context, state) => const CreatePickupOrderScreen(),
       ),
+
+      GoRoute(
+        path: '/pickup-orders',
+        name: 'pickup-orders',
+        builder: (context, state) => const PickupOrdersScreen(),
+      ),
       
       GoRoute(
         path: '/admin-pickup-orders',
@@ -232,7 +241,20 @@ class AppRouter {
         name: 'order-track',
         builder: (context, state) {
           final orderId = state.pathParameters['id']!;
-          return OrderTrackingScreen(orderId: orderId);
+          return TrackOrderScreen(orderId: orderId);
+        },
+      ),
+      // Order Details
+      GoRoute(
+        path: '/order/:id',
+        name: 'order-detail',
+        builder: (context, state) {
+          final orderId = state.pathParameters['id']!;
+          final extra = state.extra;
+          return OrderDetailScreen(
+            orderId: orderId,
+            initialOrder: extra is Order ? extra : null,
+          );
         },
       ),
     ],

@@ -6,7 +6,9 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:async';
 import '../../providers/pickup_order_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../models/pickup_order.dart';
+import '../../widgets/order_rating_dialog.dart';
 
 class TrackOrderScreen extends StatefulWidget {
   final String orderId;
@@ -22,6 +24,8 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
   Timer? _refreshTimer;
   PickupOrder? _order;
   bool _isLoading = true;
+  bool _ratingShown = false;
+  PickupOrderStatus? _previousStatus;
 
   @override
   void initState() {
@@ -51,15 +55,47 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
       await provider.fetchOrderById(widget.orderId);
       
       if (mounted) {
+        final newOrder = provider.selectedOrder;
+        final wasDelivered = _previousStatus != PickupOrderStatus.delivered &&
+            newOrder?.status == PickupOrderStatus.delivered;
         setState(() {
-          _order = provider.selectedOrder;
+          _previousStatus = _order?.status;
+          _order = newOrder;
           _isLoading = false;
         });
+        if (wasDelivered || (newOrder?.status == PickupOrderStatus.delivered && !_ratingShown && newOrder?.riderRating == null)) {
+          _showRiderRating();
+        }
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
       }
+    }
+  }
+
+  Future<void> _showRiderRating() async {
+    if (_ratingShown) return;
+    if (_order == null || _order!.riderId == null) return;
+    _ratingShown = true;
+
+    await Future.delayed(const Duration(milliseconds: 800));
+    if (!mounted) return;
+
+    final apiService = context.read<AuthProvider>().apiService;
+
+    final submitted = await OrderRatingDialog.show(
+      context,
+      orderId: widget.orderId,
+      vendorName: 'Pickup Service',
+      riderName: _order!.riderName,
+      hasRider: true,
+      apiService: apiService,
+      pickupOrderMode: true,
+    );
+
+    if (submitted && mounted) {
+      _loadOrder();
     }
   }
 

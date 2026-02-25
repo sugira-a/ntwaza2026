@@ -273,8 +273,8 @@ class _AdminDashboardProState extends State<AdminDashboardPro> {
             // Menu Items
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
+                  padding: const EdgeInsets.all(16),
+                  children: [
                   // Dark/Light Mode Toggle
                   _MenuSection(
                     title: 'Theme',
@@ -609,8 +609,8 @@ class _OrdersOverviewTabState extends State<OrdersOverviewTab> {
       child: RefreshIndicator(
         onRefresh: _loadData,
         child: ListView(
-          padding: const EdgeInsets.all(20),
-          children: [
+            padding: const EdgeInsets.all(20),
+            children: [
             _buildHeader(context),
             const SizedBox(height: 24),
             
@@ -1184,8 +1184,8 @@ class _OrderDetailsSheetState extends State<_OrderDetailsSheet> {
           // Content
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(32, 0, 32, 32),
-              children: [
+                padding: const EdgeInsets.fromLTRB(32, 0, 32, 32),
+                children: [
                 // Status Timeline
                 _buildStatusTimeline(isDarkMode(context)),
                 const SizedBox(height: 32),
@@ -1268,8 +1268,8 @@ class _OrderDetailsSheetState extends State<_OrderDetailsSheet> {
                   else
                     ..._comments.map((comment) => _CommentBubble(comment, isDarkMode(context))).toList(),
                 ],
-              ],
-            ),
+                ],
+              ),
           ),
           
           // Comment Input (for in-transit orders)
@@ -2515,8 +2515,8 @@ class _RidersManagementTabState extends State<RidersManagementTab> {
       onRefresh: _loadData,
       color: const Color(0xFF10B981),
       child: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        children: [
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          children: [
           // Unassigned Orders Section
           if (unassignedOrders.isNotEmpty) ...[
             Row(
@@ -2963,8 +2963,8 @@ class _RiderDetailsSheet extends StatelessWidget {
           // Content
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.all(20),
-              children: [
+                padding: const EdgeInsets.all(20),
+                children: [
                 // Header with Avatar
                 Row(
                   children: [
@@ -3144,8 +3144,8 @@ class _RiderDetailsSheet extends StatelessWidget {
               ],
             ),
           ),
-        ],
-      ),
+          ],
+        ),
     );
   }
 

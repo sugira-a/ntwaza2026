@@ -43,10 +43,30 @@ class _RiderDashboardState extends State<RiderDashboard> {
   @override
   void initState() {
     super.initState();
-    // Don't load online status here - keep existing state across rebuilds/theme changes
-    // _isOnline defaults to false when widget is first created only
-    // Store reference to provider for safe disposal
     _riderOrderProvider = context.read<RiderOrderProvider>();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !_dataInitialized) {
+        _initializeData();
+      }
+    });
+  }
+
+  void _initializeData() {
+    if (_dataInitialized) return;
+    final authProvider = context.read<AuthProvider>();
+    if (!authProvider.isAuthenticated || authProvider.user == null) return;
+    _dataInitialized = true;
+
+    final riderProvider = context.read<RiderOrderProvider>();
+    final riderId = authProvider.user!.id;
+    riderProvider.fetchAvailableOrders();
+    riderProvider.fetchAssignedOrders();
+    riderProvider.fetchDeliveryHistory();
+    riderProvider.startAutoRefresh(_pollSeconds);
+    if (riderId != null) {
+      context.read<PickupOrderProvider>().fetchRiderPickupOrders(riderId);
+    }
+    context.read<NotificationProvider>().initialize(pollingInterval: _pollSeconds);
   }
 
   Future<void> _loadOnlineStatus() async {
@@ -181,27 +201,6 @@ class _RiderDashboardState extends State<RiderDashboard> {
         bottom: false,
         child: Consumer<RiderOrderProvider>(
           builder: (context, riderProvider, _) {
-            if (authProvider.isAuthenticated &&
-                authProvider.user != null &&
-                !_dataInitialized) {
-              _dataInitialized = true;
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) {
-                  final riderId = authProvider.user!.id;
-                  riderProvider.fetchAvailableOrders();
-                  riderProvider.fetchAssignedOrders();
-                  riderProvider.fetchDeliveryHistory();
-                  riderProvider.startAutoRefresh(_pollSeconds);
-                  if (riderId != null) {
-                    context.read<PickupOrderProvider>().fetchRiderPickupOrders(riderId);
-                  }
-                  context
-                      .read<NotificationProvider>()
-                      .initialize(pollingInterval: _pollSeconds);
-                }
-              });
-            }
-
             if (riderProvider.isLoading &&
                 riderProvider.availableOrders.isEmpty) {
               return Center(
@@ -220,8 +219,8 @@ class _RiderDashboardState extends State<RiderDashboard> {
               },
               color: isDark ? pureWhite : pureBlack,
               child: ListView(
-                padding: EdgeInsets.zero,
-                children: [
+                  padding: EdgeInsets.zero,
+                  children: [
                   _buildHeader(
                     authProvider,
                     isDark,
@@ -1646,15 +1645,24 @@ class _RiderDashboardState extends State<RiderDashboard> {
     Color borderColor,
     Color cardColor,
   ) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(14),
-        
-      ),
-      child: Row(
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => RiderOrderDetailScreen(order: order),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: cardColor,
+          borderRadius: BorderRadius.circular(14),
+          
+        ),
+        child: Row(
         children: [
           CircleAvatar(
             radius: 20,
@@ -1720,6 +1728,7 @@ class _RiderDashboardState extends State<RiderDashboard> {
             ],
           ),
         ],
+      ),
       ),
     );
   }

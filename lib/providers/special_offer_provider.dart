@@ -34,7 +34,9 @@ class SpecialOfferProvider with ChangeNotifier {
     try {
       _isLoading = true;
       _error = null;
-      notifyListeners();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        notifyListeners();
+      });
       
       final offers = await _apiService.getSpecialOffers(
         activeOnly: activeOnly,
@@ -58,7 +60,9 @@ class SpecialOfferProvider with ChangeNotifier {
     try {
       _isLoading = true;
       _error = null;
-      notifyListeners();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        notifyListeners();
+      });
       
       final offers = await _apiService.getHomepageSpecialOffers();
       

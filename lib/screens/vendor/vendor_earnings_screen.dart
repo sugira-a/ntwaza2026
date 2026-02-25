@@ -86,15 +86,12 @@ class _VendorEarningsScreenState extends State<VendorEarningsScreen> with Single
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.black.withOpacity(0.75),
-                      Colors.black.withOpacity(0.45),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  color: isDarkMode ? const Color(0xFF24262B) : const Color(0xFF111827),
                   borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.08),
+                    width: 1,
+                  ),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.2),
@@ -152,43 +149,14 @@ class _VendorEarningsScreenState extends State<VendorEarningsScreen> with Single
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Ready for payout',
+                      'Management view only',
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.7),
                         fontSize: 11,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () => _showPayoutDialog(context, todayEarnings, isDarkMode, cardColor, isDarkMode ? Colors.white : Colors.black),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.black,
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.account_balance_wallet, size: 16),
-                            SizedBox(width: 6),
-                            Text(
-                              'Request Payout',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                    const SizedBox(height: 6),
                   ],
                 ),
               ),
@@ -334,17 +302,17 @@ class _VendorEarningsScreenState extends State<VendorEarningsScreen> with Single
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFFE3F2FD), // Light blue background
+        color: cardColor,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.12),
+            color: Colors.black.withOpacity(0.18),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
         ],
         border: Border.all(
-          color: const Color(0xFFBBDEFB),
+          color: subtextColor.withOpacity(0.15),
           width: 1,
         ),
       ),
@@ -410,19 +378,19 @@ class _VendorEarningsScreenState extends State<VendorEarningsScreen> with Single
   double _calculateTodayEarnings(VendorOrderProvider provider) {
     return provider.orders
         .where((o) => _isToday(o.createdAt) && o.status.index >= 4)
-        .fold(0.0, (sum, order) => sum + order.total);
+        .fold(0.0, (sum, order) => sum + order.subtotal);
   }
 
   double _calculateWeekEarnings(VendorOrderProvider provider) {
     return provider.orders
         .where((o) => _isThisWeek(o.createdAt) && o.status.index >= 4)
-        .fold(0.0, (sum, order) => sum + order.total);
+        .fold(0.0, (sum, order) => sum + order.subtotal);
   }
 
   double _calculateMonthEarnings(VendorOrderProvider provider) {
     return provider.orders
         .where((o) => _isThisMonth(o.createdAt) && o.status.index >= 4)
-        .fold(0.0, (sum, order) => sum + order.total);
+        .fold(0.0, (sum, order) => sum + order.subtotal);
   }
 
   bool _isToday(DateTime date) {
@@ -589,31 +557,47 @@ class _VendorEarningsScreenState extends State<VendorEarningsScreen> with Single
       );
 
       if (mounted) {
-        if (response['success'] == true) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Payout request submitted successfully'),
-              backgroundColor: Colors.green,
-              duration: const Duration(seconds: 3),
-            ),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(response['error'] ?? 'Failed to submit payout request'),
-              backgroundColor: Colors.red,
-            ),
-          );
+        try {
+          if (response['success'] == true) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('Payout request submitted successfully'),
+                backgroundColor: Colors.green,
+                duration: const Duration(seconds: 3),
+                margin: const EdgeInsets.all(16),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(response['error'] ?? 'Failed to submit payout request'),
+                backgroundColor: Colors.red,
+                margin: const EdgeInsets.all(16),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        } catch (e) {
+          // Silently ignore if widget is no longer active
+          print('Snackbar error: $e');
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        try {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: $e'),
+              backgroundColor: Colors.red,
+              margin: const EdgeInsets.all(16),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        } catch (e) {
+          // Silently ignore if widget is no longer active
+          print('Snackbar error: $e');
+        }
       }
     }
   }

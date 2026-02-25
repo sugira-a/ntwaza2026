@@ -19,6 +19,8 @@ class AdminOrderProvider with ChangeNotifier {
   int _pages = 0;
   String? _statusFilter;
 
+  bool _isDisposed = false;
+
   AdminOrderProvider({required ApiService apiService}) : _apiService = apiService;
 
   List<Order> get orders => _orders;
@@ -121,7 +123,15 @@ class AdminOrderProvider with ChangeNotifier {
   }
 
   @override
+  void notifyListeners() {
+    if (!_isDisposed) {
+      super.notifyListeners();
+    }
+  }
+
+  @override
   void dispose() {
+    _isDisposed = true;
     stopAutoRefresh();
     _orderUpdatesSub?.cancel();
     super.dispose();

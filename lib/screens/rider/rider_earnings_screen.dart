@@ -74,14 +74,7 @@ class _RiderEarningsScreenState extends State<RiderEarningsScreen> {
         systemOverlayStyle: SystemUiOverlayStyle.light,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () {
-            if (mounted) {
-              Navigator.pop(context);
-            }
-          },
-        ),
+        centerTitle: true,
         title: Text(
           'Earnings',
           style: TextStyle(

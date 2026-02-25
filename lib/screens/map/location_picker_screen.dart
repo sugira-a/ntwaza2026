@@ -9,6 +9,7 @@ import '../../models/delivery_address.dart';
 import '../../providers/address_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../utils/location_validator.dart';
+import '../../services/api/api_service.dart';
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/gestures.dart';
@@ -32,6 +33,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   String _selectedAddress = 'Move map to select location';
   bool _isLoadingAddress = false;
   bool _isLoadingLocation = true;
+  bool _isMapReady = false;
   String? _addressError;
   bool _isOutsideServiceArea = false;
   final TextEditingController _searchController = TextEditingController();
@@ -293,83 +295,62 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
 
   Future<void> _searchLocationByName(String query) async {
     try {
-      // Bias search towards Kigali area
-      final String geocodeUrl =
-          'https://maps.googleapis.com/maps/api/geocode/json?address=$query&components=country:RW&location=${LocationValidator.kigaliCenterLat},${LocationValidator.kigaliCenterLng}&radius=50000&key=${EnvConfig.googleMapsApiKey}';
+      print('🔍 Searching for: $query');
+      
+      // Use backend endpoint to avoid CORS issues on web
+      final String searchUrl = '${ApiService.baseUrl}/api/geocode/places-search';
 
-      final response = await http.get(Uri.parse(geocodeUrl)).timeout(
-        const Duration(seconds: 8),
-        onTimeout: () => http.Response('', 408),
+      final response = await http.post(
+        Uri.parse(searchUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'query': query}),
+      ).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => http.Response('{"success":false,"error":"timeout"}', 408),
       );
+
+      print('📡 Search response: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
+        print('📦 Search response: ${data['success']}');
 
-        if (data['status'] == 'OK' && data['results'] != null) {
+        if (data['success'] == true && data['results'] != null) {
           final List<dynamic> results = data['results'] as List;
-          
-          // Filter and rank results by distance from Kigali center
+          print('✅ Found ${results.length} results');
+
           final suggestions = results.map((result) {
-            final geometry = result['geometry'] as Map;
-            final location = geometry['location'] as Map;
-            final lat = location['lat'] as double;
-            final lng = location['lng'] as double;
-            
-            // Calculate distance from Kigali center
-            final distance = _calculateDistance(
-              LocationValidator.kigaliCenterLat,
-              LocationValidator.kigaliCenterLng,
-              lat,
-              lng,
-            );
-            
             return {
-              'address': result['formatted_address'] as String,
-              'lat': lat,
-              'lng': lng,
-              'placeId': result['place_id'] as String,
-              'distance': distance, // Distance in meters
+              'address': result['address'] ?? '',
+              'secondaryText': result['secondaryText'] ?? '',
+              'placeType': result['placeType'] ?? 'Place',
+              'fullAddress': result['fullAddress'] ?? '',
+              'lat': (result['lat'] as num).toDouble(),
+              'lng': (result['lng'] as num).toDouble(),
+              'placeId': result['placeId'] ?? '',
+              'distance': (result['distance'] as num).toDouble(),
             };
           }).toList();
-          
-          // Sort by distance from Kigali center (closest first)
-          suggestions.sort((a, b) => (a['distance'] as double).compareTo(b['distance'] as double));
-          
-          // Take only results within service area + 10km buffer
-          final maxDistance = (LocationValidator.serviceRadiusKm + 10) * 1000; // meters
-          final filteredSuggestions = suggestions
-            .where((s) => (s['distance'] as double) <= maxDistance)
-            .take(5)
-            .toList();
+
+          print('📍 Showing ${suggestions.length} suggestions');
 
           if (mounted) {
             setState(() {
-              _searchSuggestions = filteredSuggestions;
+              _searchSuggestions = suggestions;
               _isSearching = false;
             });
           }
-          
-          // Show warning if no results in service area
-          if (filteredSuggestions.isEmpty && suggestions.isNotEmpty) {
-            if (mounted) {
-              final distanceKm =
-                  (((suggestions.first['distance'] as double) / 1000).toStringAsFixed(1));
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                      'Location "$query" found but ${distanceKm}km away - outside service area'),
-                  backgroundColor: Colors.amber,
-                  duration: const Duration(seconds: 3),
-                ),
-              );
-            }
-          }
         } else {
+          print('⚠️ No results in response');
           if (mounted) {
-            setState(() => _isSearching = false);
+            setState(() {
+              _searchSuggestions = [];
+              _isSearching = false;
+            });
           }
         }
       } else {
+        print('❌ HTTP Error: ${response.statusCode}');
         if (mounted) {
           setState(() => _isSearching = false);
         }
@@ -380,6 +361,12 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         setState(() => _isSearching = false);
       }
     }
+  }
+
+  // Fallback geocoding search for addresses - no longer needed with backend proxy
+  Future<void> _searchWithGeocoding(String query) async {
+    // Backend already handles fallback, so this is now a no-op
+    return;
   }
 
   // Calculate distance between two coordinates using Haversine formula
@@ -396,6 +383,33 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
 
   double _toRadian(double degree) {
     return degree * 3.141592653589793 / 180;
+  }
+
+  IconData _getIconForPlaceType(String? placeType) {
+    if (placeType == null || placeType.isEmpty) return Icons.location_on;
+    
+    switch (placeType.toLowerCase()) {
+      case 'bus station':
+      case 'transit':
+        return Icons.directions_bus;
+      case 'restaurant':
+        return Icons.restaurant;
+      case 'park':
+        return Icons.park;
+      case 'mall':
+      case 'shopping mall':
+        return Icons.shopping_bag;
+      case 'store':
+        return Icons.store;
+      case 'hotel':
+      case 'lodging':
+        return Icons.hotel;
+      case 'address':
+        return Icons.home_outlined;
+      case 'place':
+      default:
+        return Icons.location_on;
+    }
   }
 
   void _selectSearchSuggestion(Map<String, dynamic> suggestion) {
@@ -470,39 +484,61 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     });
 
     try {
-      final url = Uri.parse(
-        'https://maps.googleapis.com/maps/api/geocode/json'
-        '?latlng=${position.latitude},${position.longitude}'
-        '&key=${EnvConfig.googleMapsApiKey}'
-      );
+      // Use backend endpoint to avoid CORS issues on web
+      final url = Uri.parse('${ApiService.baseUrl}/api/geocode/reverse');
 
-      final response = await http.get(url).timeout(
+      print('🔍 Fetching address for: ${position.latitude}, ${position.longitude}');
+
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'latitude': position.latitude,
+          'longitude': position.longitude,
+        }),
+      ).timeout(
         const Duration(seconds: 10),
         onTimeout: () {
           throw TimeoutException('Address lookup timeout');
         },
       );
 
+      print('📡 Geocoding response: ${response.statusCode}');
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         
-        if (data['status'] == 'OK' && data['results'] != null && data['results'].isNotEmpty) {
-          final address = data['results'][0]['formatted_address'] as String;
+        print('📦 Geocoding success: ${data['success']}');
+        
+        if (data['success'] == true && data['address'] != null) {
+          String displayAddress = data['address'] as String;
+          
+          print('✅ Address found: $displayAddress');
           
           setState(() {
-            _selectedAddress = address;
+            _selectedAddress = displayAddress;
             _isLoadingAddress = false;
             _addressError = null;
           });
         } else {
+          print('⚠️ No address found for this location');
           _setCoordinatesAsAddress(position);
           if (showError && mounted) {
             setState(() {
-              _addressError = 'Unable to fetch address. Tap to enter manually.';
+              _addressError = 'No address found. You can enter it manually below.';
             });
           }
         }
+      } else if (response.statusCode == 404) {
+        print('⚠️ No address found (404)');
+        _setCoordinatesAsAddress(position);
+        if (showError && mounted) {
+          setState(() {
+            _addressError = 'No address found. You can enter it manually below.';
+          });
+        }
       } else {
+        print('❌ HTTP Error: ${response.statusCode} - ${response.body}');
         _setCoordinatesAsAddress(position);
         if (showError && mounted) {
           setState(() {
@@ -514,24 +550,86 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       print('❌ Geocoding error: $e');
       if (showError && mounted) {
         setState(() {
-          _addressError = 'Unable to fetch address. Tap to enter manually.';
+          _addressError = kIsWeb 
+            ? 'Address lookup unavailable on web. Please enter manually.'
+            : 'Unable to fetch address. Tap to enter manually.';
         });
       }
       _setCoordinatesAsAddress(position);
     }
   }
 
+  String _extractBestAddress(Map<String, dynamic> result) {
+    // Try to build a nice short address from components
+    String? placeName;
+    String? neighborhood;
+    String? locality;
+    String? route;
+    String? streetNumber;
+    
+    if (result['address_components'] != null) {
+      for (var component in result['address_components']) {
+        final types = component['types'] as List<dynamic>;
+        final name = component['long_name'] as String?;
+        
+        if (name != null) {
+          if (types.contains('establishment') || types.contains('point_of_interest')) {
+            placeName = name;
+          } else if (types.contains('neighborhood') || types.contains('sublocality')) {
+            neighborhood = name;
+          } else if (types.contains('locality')) {
+            locality = name;
+          } else if (types.contains('route')) {
+            route = name;
+          } else if (types.contains('street_number')) {
+            streetNumber = name;
+          }
+        }
+      }
+    }
+    
+    // Build the display address in order of preference
+    List<String> parts = [];
+    
+    if (placeName != null && placeName.isNotEmpty) {
+      parts.add(placeName);
+    }
+    
+    if (route != null && route.isNotEmpty) {
+      String streetPart = route;
+      if (streetNumber != null && streetNumber.isNotEmpty) {
+        streetPart = '$streetNumber $route';
+      }
+      parts.add(streetPart);
+    }
+    
+    if (neighborhood != null && neighborhood.isNotEmpty && neighborhood != locality) {
+      parts.add(neighborhood);
+    }
+    
+    if (locality != null && locality.isNotEmpty) {
+      parts.add(locality);
+    }
+    
+    if (parts.isEmpty) {
+      // Fallback to formatted address
+      return result['formatted_address'] as String;
+    }
+    
+    // Join with commas, but limit to 3 parts for readability
+    return parts.take(3).join(', ');
+  }
+
   void _setCoordinatesAsAddress(LatLng position) {
     setState(() {
-      _selectedAddress = 'Lat: ${position.latitude.toStringAsFixed(6)}, '
-                        'Lng: ${position.longitude.toStringAsFixed(6)}';
+      _selectedAddress = 'Location: ${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}';
       _isLoadingAddress = false;
     });
   }
 
   void _showManualAddressInput() {
     final TextEditingController addressController = TextEditingController(
-      text: _selectedAddress.startsWith('Lat:') ? '' : _selectedAddress,
+      text: _selectedAddress.startsWith('Location:') ? '' : _selectedAddress,
     );
 
     showDialog(
@@ -550,7 +648,9 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Automatic address lookup is unavailable. Please enter the address manually.',
+                kIsWeb 
+                  ? 'Enter the delivery address for this location.'
+                  : 'Automatic address lookup failed. Please enter the address manually.',
                 style: TextStyle(
                   fontSize: 13,
                   color: isDarkMode ? Colors.grey[400] : Colors.grey[700],
@@ -566,7 +666,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                   labelStyle: TextStyle(
                     color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                   ),
-                  hintText: 'e.g., KN 4 Ave, Kigali',
+                  hintText: 'e.g., KN 4 Ave, Kimihurura, Kigali',
                   hintStyle: TextStyle(
                     color: isDarkMode ? Colors.grey[600] : Colors.grey[400],
                   ),
@@ -609,19 +709,25 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   }
 
   void _onMapCreated(GoogleMapController controller) {
+    print('🗺️ Google Map Created Successfully!');
+    print('📍 Initial Location: $_selectedLocation');
+    
     if (!mounted) return;
     
     _mapController = controller;
+    setState(() => _isMapReady = true);
+    
     if (_selectedLocation != null && mounted) {
       // Delay animation to ensure map is fully initialized
       Future.delayed(const Duration(milliseconds: 300), () {
         if (mounted && _mapController != null) {
           try {
+            print('📹 Animating camera to: $_selectedLocation');
             _mapController!.animateCamera(
               CameraUpdate.newLatLngZoom(_selectedLocation!, 13),
             );
           } catch (e) {
-            // Silently ignore - controller may be disposed
+            print('❌ Camera animation error: $e');
           }
         }
       });
@@ -950,7 +1056,7 @@ GoogleMap(
   onMapCreated: _onMapCreated,
   initialCameraPosition: CameraPosition(
     target: _selectedLocation ?? _kigaliCenter,
-    zoom: 13,
+    zoom: 14,
   ),
   onCameraMove: _onCameraMove,
   onCameraIdle: _onCameraIdle,
@@ -958,7 +1064,14 @@ GoogleMap(
   myLocationButtonEnabled: false,
   zoomControlsEnabled: false,
   mapToolbarEnabled: false,
+  compassEnabled: true,
+  rotateGesturesEnabled: true,
+  scrollGesturesEnabled: true,
+  tiltGesturesEnabled: false,
+  zoomGesturesEnabled: true,
   circles: _circles,
+  mapType: MapType.normal,
+  minMaxZoomPreference: const MinMaxZoomPreference(10, 20),
   gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
     Factory<PanGestureRecognizer>(() => PanGestureRecognizer()),
     Factory<ScaleGestureRecognizer>(() => ScaleGestureRecognizer()),
@@ -966,6 +1079,43 @@ GoogleMap(
     Factory<VerticalDragGestureRecognizer>(() => VerticalDragGestureRecognizer()),
   },
 ),
+
+          // Map Loading Overlay
+          if (!_isMapReady)
+            Container(
+              color: Colors.grey[300],
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const CircularProgressIndicator(
+                      color: Color(0xFF2E7D32),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Loading Map...',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 32),
+                      child: Text(
+                        'If the map doesn\'t load, please fully restart the app',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.black54,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
 
           // Center Pin - Changes color based on service area
           Center(
@@ -1105,7 +1255,7 @@ GoogleMap(
                             fontSize: 15,
                           ),
                           decoration: InputDecoration(
-                            hintText: 'Search location, address...',
+                            hintText: 'Search places, streets, restaurants...',
                             hintStyle: TextStyle(
                               color: isDarkMode ? Colors.grey[500] : Colors.grey[400],
                               fontSize: 14,
@@ -1150,10 +1300,15 @@ GoogleMap(
                             itemCount: _searchSuggestions.length,
                             itemBuilder: (context, index) {
                               final suggestion = _searchSuggestions[index];
+                              final String mainText = suggestion['address'].toString();
+                              final String? secondaryText = suggestion['secondaryText']?.toString();
+                              final String? placeType = suggestion['placeType']?.toString();
+                              final double distanceKm = (suggestion['distance'] as double) / 1000;
+                              
                               return GestureDetector(
                                 onTap: () => _selectSearchSuggestion(suggestion),
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                                   decoration: BoxDecoration(
                                     border: index < _searchSuggestions.length - 1
                                         ? Border(
@@ -1165,40 +1320,90 @@ GoogleMap(
                                   ),
                                   child: Row(
                                     children: [
-                                      Icon(
-                                        Icons.location_on_outlined,
-                                        size: 18,
-                                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                                      Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF2E7D32).withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Icon(
+                                          _getIconForPlaceType(placeType),
+                                          size: 20,
+                                          color: const Color(0xFF2E7D32),
+                                        ),
                                       ),
                                       const SizedBox(width: 12),
                                       Expanded(
                                         child: Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
-                                            Text(
-                                              suggestion['address'].toString().split(',').first,
-                                              style: TextStyle(
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w600,
-                                                color: isDarkMode ? Colors.white : Colors.black,
-                                              ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                            if (suggestion['address'].toString().contains(','))
-                                              Text(
-                                                suggestion['address'].toString().substring(
-                                                      suggestion['address'].toString().indexOf(',') + 1,
+                                            Row(
+                                              children: [
+                                                Expanded(
+                                                  child: Text(
+                                                    mainText,
+                                                    style: TextStyle(
+                                                      fontSize: 15,
+                                                      fontWeight: FontWeight.w600,
+                                                      color: isDarkMode ? Colors.white : Colors.black,
                                                     ),
-                                                style: TextStyle(
-                                                  fontSize: 12,
-                                                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                                                    maxLines: 1,
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
                                                 ),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
+                                                if (placeType != null && placeType.isNotEmpty)
+                                                  Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                    decoration: BoxDecoration(
+                                                      color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+                                                      borderRadius: BorderRadius.circular(4),
+                                                    ),
+                                                    child: Text(
+                                                      placeType,
+                                                      style: TextStyle(
+                                                        fontSize: 10,
+                                                        fontWeight: FontWeight.w500,
+                                                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                                                      ),
+                                                    ),
+                                                  ),
+                                              ],
+                                            ),
+                                            if (secondaryText != null && secondaryText.isNotEmpty) ...[
+                                              const SizedBox(height: 4),
+                                              Row(
+                                                children: [
+                                                  Expanded(
+                                                    child: Text(
+                                                      secondaryText,
+                                                      style: TextStyle(
+                                                        fontSize: 13,
+                                                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                                                      ),
+                                                      maxLines: 1,
+                                                      overflow: TextOverflow.ellipsis,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Text(
+                                                    '${distanceKm.toStringAsFixed(1)}km',
+                                                    style: TextStyle(
+                                                      fontSize: 11,
+                                                      fontWeight: FontWeight.w500,
+                                                      color: isDarkMode ? Colors.grey[500] : Colors.grey[500],
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
+                                            ],
                                           ],
                                         ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Icon(
+                                        Icons.arrow_forward_ios,
+                                        size: 14,
+                                        color: isDarkMode ? Colors.grey[600] : Colors.grey[400],
                                       ),
                                     ],
                                   ),

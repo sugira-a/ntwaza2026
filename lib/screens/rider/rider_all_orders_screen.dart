@@ -76,12 +76,7 @@ class _RiderAllOrdersScreenState extends State<RiderAllOrdersScreen> {
       appBar: AppBar(
         backgroundColor: Colors.black,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () {
-            if (mounted) Navigator.pop(context);
-          },
-        ),
+        centerTitle: true,
         title: Text(
           'All Available Orders',
           style: TextStyle(
@@ -91,7 +86,6 @@ class _RiderAllOrdersScreenState extends State<RiderAllOrdersScreen> {
             letterSpacing: -0.5,
           ),
         ),
-        centerTitle: false,
       ),
       body: Column(
         children: [

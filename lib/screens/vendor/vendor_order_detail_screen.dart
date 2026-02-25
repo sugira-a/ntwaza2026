@@ -6,6 +6,7 @@ import '../../providers/vendor_order_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../models/order.dart';
+import '../../services/api/api_service.dart';
 import '../../utils/helpers.dart';
 
 class VendorOrderDetailScreen extends StatefulWidget {
@@ -51,7 +52,7 @@ class _VendorOrderDetailScreenState extends State<VendorOrderDetailScreen> {
     
     final order = orderProvider.orders.firstWhere((o) => o.id == widget.orderId);
     final isDark = themeProvider.isDarkMode;
-    final bgColor = isDark ? const Color(0xFF121212) : const Color(0xFFF5F5F5);
+    final bgColor = isDark ? const Color(0xFF121212) : const Color(0xFFDADDE2);
     final cardColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
     final textColor = isDark ? Colors.white : Colors.black;
     final subtextColor = isDark ? Colors.grey[400]! : Colors.grey[600]!;
@@ -74,31 +75,37 @@ class _VendorOrderDetailScreenState extends State<VendorOrderDetailScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            _buildStatusBanner(order, isDark),
-            const SizedBox(height: 10),
+            _buildStatusBanner(order, isDark, cardColor),
+            const SizedBox(height: 14),
             _buildStatusChips(order, isDark),
-            const SizedBox(height: 12),
-            _buildSearchBar(cardColor, textColor, subtextColor),
-            if (query.isNotEmpty && (matchesOrderNumber || matchesCustomer)) ...[
-              const SizedBox(height: 8),
-              _buildMatchHint(matchesOrderNumber, matchesCustomer, isDark),
+            if (order.vendorPickupCode != null) ...[
+              const SizedBox(height: 16),
+              _buildVendorPickupCodeCard(order, cardColor, textColor, subtextColor, isDark),
             ],
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             _buildInfoCard('Customer Information', Icons.person, [
               _InfoItem(Icons.person_outline, order.customerName),
               if (order.customerPhone != null) _InfoItem(Icons.phone, order.customerPhone!),
-            ], cardColor, textColor, subtextColor),
-            const SizedBox(height: 12),
-            _buildOrderItemsCard(order, filteredItems, query, cardColor, textColor, subtextColor),
-            const SizedBox(height: 12),
+            ], cardColor, textColor, subtextColor, isDark),
+            if (order.riderId != null && order.riderName != null) ...[
+              const SizedBox(height: 14),
+              _buildInfoCard('Delivery Rider', Icons.two_wheeler, [
+                _InfoItem(Icons.person_outline, order.riderName!),
+                if (order.riderPhone != null) _InfoItem(Icons.phone, order.riderPhone!),
+                _InfoItem(Icons.badge, 'ID: ${order.riderId!.substring(0, 12)}'),
+              ], cardColor, const Color(0xFF2E7D32), subtextColor, isDark),
+            ],
+            const SizedBox(height: 14),
+            _buildOrderItemsCard(order, order.items, '', cardColor, textColor, subtextColor, isDark),
+            const SizedBox(height: 14),
             _buildPricingCard(order, cardColor, textColor, subtextColor, isDark),
             if (order.deliveryInfo != null) ...[
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
               _buildInfoCard('Delivery Information', Icons.location_on, [
                 _InfoItem(Icons.home, order.deliveryInfo!.address),
                 if (order.deliveryInfo!.notes != null) 
                   _InfoItem(Icons.note, order.deliveryInfo!.notes!),
-              ], cardColor, textColor, subtextColor),
+              ], cardColor, textColor, subtextColor, isDark),
             ],
             const SizedBox(height: 80),
           ],
@@ -146,34 +153,49 @@ class _VendorOrderDetailScreenState extends State<VendorOrderDetailScreen> {
     );
   }
   
-  Widget _buildStatusBanner(Order order, bool isDark) {
+  Widget _buildStatusBanner(Order order, bool isDark, Color cardColor) {
     final config = _getStatusConfig(order.status.value);
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: config.color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: config.color.withOpacity(0.3)),
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF1B1B1B),
+            const Color(0xFF0F0F0F),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.black.withOpacity(0.2), width: 1),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: config.color.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(8),
+              color: Colors.black.withOpacity(0.35),
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.25),
+                  blurRadius: 6,
+                  offset: const Offset(0, 1),
+                ),
+              ],
             ),
-            child: Icon(config.icon, color: config.color, size: 24),
+            child: Icon(config.icon, color: config.color, size: 22),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(order.statusDisplay, 
-                  style: TextStyle(color: config.color, fontSize: 18, fontWeight: FontWeight.bold)),
+                  style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 2),
                 Text(config.message, 
-                  style: TextStyle(color: config.color.withOpacity(0.8), fontSize: 12)),
+                  style: TextStyle(color: Colors.white.withOpacity(0.75), fontSize: 11, fontWeight: FontWeight.w500)),
               ],
             ),
           ),
@@ -184,9 +206,7 @@ class _VendorOrderDetailScreenState extends State<VendorOrderDetailScreen> {
 
   Widget _buildStatusChips(Order order, bool isDark) {
     final statuses = [
-      'pending',
       'confirmed',
-      'preparing',
       'ready',
       'completed',
     ];
@@ -196,29 +216,170 @@ class _VendorOrderDetailScreenState extends State<VendorOrderDetailScreen> {
       runSpacing: 8,
       children: statuses.map((status) {
         final config = _getStatusConfig(status);
-        final isActive = order.status.value == status ||
-            (status == 'confirmed' && (order.status.value == 'accepted')) ||
-            (status == 'completed' && order.status.value == 'delivered');
+        final currentVal = order.status.value;
+        final isActive = currentVal == status ||
+            (status == 'confirmed' && (currentVal == 'accepted' || currentVal == 'pending' || currentVal == 'preparing')) ||
+            (status == 'completed' && currentVal == 'delivered');
+        // Determine if step is done (past)
+        final statusOrder = ['confirmed', 'ready', 'completed'];
+        final currentIdx = statusOrder.indexOf(currentVal == 'accepted' || currentVal == 'pending' || currentVal == 'preparing' ? 'confirmed' : currentVal == 'delivered' ? 'completed' : currentVal);
+        final chipIdx = statusOrder.indexOf(status);
+        final isDone = currentIdx >= 0 && chipIdx >= 0 && chipIdx < currentIdx;
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: isActive ? config.color.withOpacity(0.15) : Colors.transparent,
+            color: isActive ? config.color.withOpacity(0.15) 
+                   : isDone ? const Color(0xFF2E7D32).withOpacity(0.10) 
+                   : Colors.transparent,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: isActive ? config.color : (isDark ? Colors.grey[800]! : Colors.grey[300]!),
+              color: isActive ? config.color 
+                     : isDone ? const Color(0xFF2E7D32).withOpacity(0.5) 
+                     : (isDark ? Colors.grey[800]! : Colors.grey[300]!),
             ),
           ),
-          child: Text(
-            status.toUpperCase(),
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.6,
-              color: isActive ? config.color : (isDark ? Colors.grey[400] : Colors.grey[600]),
-            ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (isDone) ...[
+                Icon(Icons.check_circle, size: 12, color: const Color(0xFF2E7D32)),
+                const SizedBox(width: 4),
+              ],
+              Text(
+                status.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.6,
+                  color: isActive ? config.color 
+                         : isDone ? const Color(0xFF2E7D32) 
+                         : (isDark ? Colors.grey[400] : Colors.grey[600]),
+                ),
+              ),
+            ],
           ),
         );
       }).toList(),
+    );
+  }
+
+  Widget _buildVendorPickupCodeCard(Order order, Color cardColor, Color textColor, Color subtextColor, bool isDark) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+            colors: isDark
+              ? [const Color(0xFF081529), const Color(0xFF0E2854)]
+              : [const Color(0xFF0E2854), const Color(0xFF1A3E7A)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.4 : 0.2),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(7),
+                  ),
+                  child: const Icon(Icons.local_shipping, color: Colors.white, size: 18),
+                ),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Text(
+                    'Pickup Code',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.25),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: const Text(
+                    'For Rider',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                order.vendorPickupCode ?? 'N/A',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF1D4ED8),
+                  letterSpacing: 6,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.info_outline, size: 12, color: Colors.white.withOpacity(0.9)),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Show this code to the rider on arrival',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.white.withOpacity(0.9),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(Icons.lock_outline, size: 12, color: Colors.white.withOpacity(0.75)),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Valid for this order only',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Colors.white.withOpacity(0.75),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -284,34 +445,47 @@ class _VendorOrderDetailScreenState extends State<VendorOrderDetailScreen> {
   }
   
   Widget _buildInfoCard(String title, IconData icon, List<_InfoItem> items, 
-      Color cardColor, Color textColor, Color subtextColor) {
+      Color cardColor, Color textColor, Color subtextColor, bool isDark) {
     return Card(
       color: cardColor,
-      elevation: 0,
+      elevation: 2,
+      shadowColor: Colors.black.withOpacity(isDark ? 0.5 : 0.2),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         side: BorderSide(color: Colors.grey.withOpacity(0.1)),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(icon, color: const Color(0xFF2E7D32), size: 20),
-                const SizedBox(width: 8),
-                Text(title, style: TextStyle(color: textColor, fontSize: 14, fontWeight: FontWeight.bold)),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2E7D32).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(icon, color: const Color(0xFF2E7D32), size: 20),
+                ),
+                const SizedBox(width: 10),
+                Text(title, style: TextStyle(color: textColor, fontSize: 15, fontWeight: FontWeight.w700)),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             ...items.map((item) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.only(bottom: 10),
               child: Row(
                 children: [
-                  Icon(item.icon, size: 16, color: subtextColor),
-                  const SizedBox(width: 8),
-                  Expanded(child: Text(item.text, style: TextStyle(color: textColor, fontSize: 13))),
+                  Icon(item.icon, size: 18, color: subtextColor),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      item.text,
+                      style: TextStyle(color: textColor, fontSize: 14, fontWeight: FontWeight.w500),
+                    ),
+                  ),
                 ],
               ),
             )),
@@ -328,149 +502,251 @@ class _VendorOrderDetailScreenState extends State<VendorOrderDetailScreen> {
     Color cardColor,
     Color textColor,
     Color subtextColor,
+    bool isDark,
   ) {
-    final showingFiltered = query.isNotEmpty && items.length != order.itemCount;
     return Card(
       color: cardColor,
-      elevation: 0,
+      elevation: 2,
+      shadowColor: Colors.black.withOpacity(isDark ? 0.5 : 0.2),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         side: BorderSide(color: Colors.grey.withOpacity(0.1)),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(Icons.shopping_bag, color: const Color(0xFF2E7D32), size: 20),
-                const SizedBox(width: 8),
-                Text('Order Items', style: TextStyle(color: textColor, fontSize: 14, fontWeight: FontWeight.bold)),
-                const Spacer(),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: const Color(0xFF2E7D32).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
+                  child: const Icon(Icons.restaurant_menu, color: Color(0xFF2E7D32), size: 20),
+                ),
+                const SizedBox(width: 10),
+                Text('Order Items', style: TextStyle(color: textColor, fontSize: 15, fontWeight: FontWeight.w700)),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2E7D32).withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   child: Text(
-                    showingFiltered
-                        ? '${items.length} of ${order.itemCount}'
-                        : '${order.itemCount} items',
+                    '${order.itemCount} ${order.itemCount == 1 ? 'item' : 'items'}',
                     style: const TextStyle(
                       color: Color(0xFF2E7D32),
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            if (items.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Text(
-                  'No items match your search',
-                  style: TextStyle(color: subtextColor, fontSize: 12),
+            const SizedBox(height: 16),
+            ...items.asMap().entries.map((entry) {
+              final index = entry.key;
+              final item = entry.value;
+              final imageUrl = _resolveImageUrl(item.imageUrl);
+              final modifierTotal = item.modifiers == null
+                  ? 0.0
+                  : item.modifiers!.fold<double>(0, (sum, mod) => sum + mod.priceAdjustment);
+              return Container(
+                margin: EdgeInsets.only(bottom: index < items.length - 1 ? 12 : 0),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF141414) : const Color(0xFFF7F8FA),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
                 ),
-              )
-            else
-              ...items.map((item) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[200],
-                            borderRadius: BorderRadius.circular(8),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF1C1C1C) : const Color(0xFFF3F4F6),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
+                      ),
+                      child: imageUrl == null
+                          ? const Icon(Icons.image_outlined, color: Color(0xFF9CA3AF))
+                          : ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.network(
+                                imageUrl,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => const Icon(
+                                  Icons.broken_image_outlined,
+                                  color: Color(0xFF9CA3AF),
+                                ),
+                              ),
+                            ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.productName,
+                            style: TextStyle(
+                              color: textColor,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          child: item.imageUrl != null
-                              ? ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Image.network(
-                                    item.imageUrl!,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => Icon(
-                                      Icons.restaurant,
-                                      color: Colors.grey[400],
-                                      size: 18,
-                                    ),
-                                  ),
-                                )
-                              : Icon(Icons.restaurant, color: Colors.grey[400], size: 18),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          const SizedBox(height: 8),
+                          Row(
                             children: [
                               Text(
-                                item.productName,
-                                style: TextStyle(
-                                  color: textColor,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
+                                '•',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF2E7D32),
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              if (item.notes != null)
-                                Text(
-                                  item.notes!,
-                                  style: TextStyle(
-                                    color: subtextColor,
-                                    fontSize: 11,
-                                    fontStyle: FontStyle.italic,
-                                  ),
+                              const SizedBox(width: 6),
+                              Text(
+                                '${item.quantity} x RWF ${NumberFormat('#,###').format(item.price)}',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: isDark ? Colors.white60 : Colors.black87,
+                                  fontWeight: FontWeight.w500,
                                 ),
+                              ),
                             ],
                           ),
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              'x${item.quantity}',
-                              style: TextStyle(
-                                color: textColor,
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              '${NumberFormat('#,###').format(item.total)} Rwf',
-                              style: TextStyle(color: subtextColor, fontSize: 11),
+                          if (modifierTotal > 0) ...[
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                Text(
+                                  '•',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF2E7D32),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    'Modifiers: +RWF ${NumberFormat('#,###').format(modifierTotal)}',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: Color(0xFF2E7D32),
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
-                        ),
-                      ],
+                          if (item.modifiers != null && item.modifiers!.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            ...item.modifiers!.map((mod) => Padding(
+                              padding: const EdgeInsets.only(bottom: 4),
+                              child: Row(
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: 12),
+                                    child: Text(
+                                      '–',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: Color(0xFF2E7D32),
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      mod.name,
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: Color(0xFF2E7D32),
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )).toList(),
+                          ],
+                          if (item.notes != null) ...[
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Icon(Icons.note_outlined, size: 12, color: subtextColor),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    item.notes!,
+                                    style: TextStyle(
+                                      color: subtextColor,
+                                      fontSize: 11,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
-                  )),
+                    const SizedBox(width: 8),
+                    Text(
+                      'RWF ${NumberFormat('#,###').format(item.total)}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
           ],
         ),
       ),
     );
   }
+
+  String? _resolveImageUrl(String? imageUrl) {
+    if (imageUrl == null || imageUrl.trim().isEmpty) return null;
+    final trimmed = imageUrl.trim();
+    final uri = Uri.tryParse(trimmed);
+    if (uri != null && uri.hasScheme) return trimmed;
+    if (trimmed.startsWith('/')) {
+      return '${ApiService.baseUrl}$trimmed';
+    }
+    return '${ApiService.baseUrl}/$trimmed';
+  }
   
   Widget _buildPricingCard(Order order, Color cardColor, Color textColor, Color subtextColor, bool isDark) {
     return Card(
       color: cardColor,
-      elevation: 0,
+      elevation: 2,
+      shadowColor: Colors.black.withOpacity(isDark ? 0.5 : 0.2),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         side: BorderSide(color: Colors.grey.withOpacity(0.1)),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(18),
         child: Column(
           children: [
-            _priceRow('Subtotal', order.subtotal, textColor, subtextColor),
-            const SizedBox(height: 8),
-            _priceRow('Delivery Fee', order.deliveryFee, textColor, subtextColor),
-            Divider(height: 20, color: isDark ? Colors.grey[800] : Colors.grey[300]),
-            _priceRow('Total', order.total, textColor, textColor, bold: true),
+            _priceRow('Total Order Value', order.subtotal, textColor, const Color(0xFF2E7D32), bold: true),
           ],
         ),
       ),
@@ -481,11 +757,11 @@ class _VendorOrderDetailScreenState extends State<VendorOrderDetailScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: TextStyle(color: labelColor, fontSize: bold ? 16 : 13, 
-          fontWeight: bold ? FontWeight.bold : FontWeight.w500)),
+        Text(label, style: TextStyle(color: labelColor, fontSize: bold ? 16 : 14, 
+          fontWeight: bold ? FontWeight.w700 : FontWeight.w500)),
         Text('${NumberFormat('#,###').format(amount)} Rwf', 
-          style: TextStyle(color: amountColor, fontSize: bold ? 17 : 13, 
-            fontWeight: bold ? FontWeight.bold : FontWeight.w600)),
+          style: TextStyle(color: amountColor, fontSize: bold ? 18 : 14, 
+            fontWeight: bold ? FontWeight.w800 : FontWeight.w600)),
       ],
     );
   }
@@ -510,94 +786,76 @@ class _VendorOrderDetailScreenState extends State<VendorOrderDetailScreen> {
     if (_isProcessing) return const Center(child: CircularProgressIndicator(color: Color(0xFF2E7D32)));
     
     final status = order.status.value;
-    final preparingLabel = isRestaurant ? 'Preparing' : 'Packing';
     
-    // Show info message for confirmed/preparing status
-    Widget? infoMessage;
-    if (status == 'confirmed' || status == 'accepted' || status == 'preparing') {
-      infoMessage = Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: const Color(0xFF3B82F6).withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: const Color(0xFF3B82F6).withOpacity(0.3),
-            width: 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              Icons.info_outline,
-              size: 18,
-              color: const Color(0xFF3B82F6),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Mark as "Ready" when finished to notify riders',
-                style: TextStyle(
-                  color: const Color(0xFF3B82F6),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-    
+    // Pending: Confirm order first
     if (status == 'pending') {
-      return Row(
+      return Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(
-            child: OutlinedButton(
-              onPressed: () => _handleReject(context, order, provider),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.red,
-                side: const BorderSide(color: Colors.red, width: 1.5),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF3B82F6).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: const Color(0xFF3B82F6).withOpacity(0.3),
+                width: 1,
               ),
-              child: const Text('Reject', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, size: 18, color: const Color(0xFF3B82F6)),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'Confirm this order to accept and prepare it',
+                    style: TextStyle(color: Color(0xFF3B82F6), fontSize: 12, fontWeight: FontWeight.w500),
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            flex: 2,
-            child: ElevatedButton(
-              onPressed: () => _handleAccept(context, order, provider),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2E7D32),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              child: const Text('Accept Order', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-            ),
+          _actionButton('Confirm Order', () => _updateStatus(order, provider, 'confirmed')),
+          const SizedBox(height: 12),
+          _actionButton(
+            'Reject Order',
+            () => _handleReject(context, order, provider),
+            backgroundColor: Colors.red.shade600,
           ),
         ],
       );
     }
     
-    if (status == 'confirmed' || status == 'accepted') {
+    // Confirmed/Accepted/Preparing: Mark as ready
+    if (status == 'confirmed' || status == 'accepted' || status == 'preparing') {
       return Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (infoMessage != null) infoMessage,
-          _actionButton('Start $preparingLabel', () => _updateStatus(order, provider, 'preparing')),
-        ],
-      );
-    }
-    
-    if (status == 'preparing') {
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (infoMessage != null) infoMessage,
+          Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF3B82F6).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: const Color(0xFF3B82F6).withOpacity(0.3),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, size: 18, color: const Color(0xFF3B82F6)),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'Mark as "Ready" when the order is prepared',
+                    style: TextStyle(color: Color(0xFF3B82F6), fontSize: 12, fontWeight: FontWeight.w500),
+                  ),
+                ),
+              ],
+            ),
+          ),
           _actionButton('Mark as Ready', () => _updateStatus(order, provider, 'ready')),
         ],
       );
@@ -610,13 +868,13 @@ class _VendorOrderDetailScreenState extends State<VendorOrderDetailScreen> {
     return const SizedBox.shrink();
   }
   
-  Widget _actionButton(String label, VoidCallback onPressed) {
+  Widget _actionButton(String label, VoidCallback onPressed, {Color backgroundColor = const Color(0xFF2E7D32)}) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF2E7D32),
+          backgroundColor: backgroundColor,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 14),
           elevation: 0,
@@ -654,42 +912,104 @@ class _VendorOrderDetailScreenState extends State<VendorOrderDetailScreen> {
     if (reason == null) return;
     
     setState(() => _isProcessing = true);
-    final success = await provider.rejectOrder(order.id, reason);
-    setState(() => _isProcessing = false);
-    
-    if (success && mounted) {
-      _showSnackBar(context, 'Order rejected', Colors.red);
-      if (context.canPop()) {
-        context.pop();
-      } else {
-        Navigator.pop(context);
+    try {
+      final success = await provider.rejectOrder(order.id, reason);
+      
+      if (success && mounted) {
+        _showSnackBar(context, 'Order rejected', Colors.red);
+        await Future.delayed(const Duration(milliseconds: 800));
+        if (mounted && context.canPop()) {
+          context.pop();
+        }
+      } else if (mounted) {
+        _showSnackBar(context, 'Failed to reject order', Colors.red);
+      }
+    } catch (e) {
+      if (mounted) {
+        _showSnackBar(context, 'Error: ${e.toString()}', Colors.red);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isProcessing = false);
       }
     }
   }
   
   Future<void> _updateStatus(Order order, VendorOrderProvider provider, String status) async {
     setState(() => _isProcessing = true);
-    if (status == 'preparing') await provider.markOrderPreparing(order.id);
-    if (status == 'ready') await provider.markOrderReady(order.id);
-    setState(() => _isProcessing = false);
+    try {
+      bool success = false;
+      
+      if (status == 'confirmed') {
+        success = await provider.updateOrderStatus(order.id, OrderStatus.confirmed);
+      } else if (status == 'ready') {
+        success = await provider.markOrderReady(order.id);
+      }
+      
+      if (success) {
+        await provider.getOrderById(widget.orderId);
+        if (mounted) {
+          final message = status == 'confirmed' 
+              ? 'Order confirmed! Start preparing...'
+              : 'Order marked as ready for pickup';
+          _showSnackBar(context, message, const Color(0xFF2E7D32));
+        }
+      } else {
+        if (mounted) {
+          _showSnackBar(context, 'Failed to update order status', Colors.red);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        _showSnackBar(context, 'Error: ${e.toString()}', Colors.red);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isProcessing = false);
+      }
+    }
   }
   
   Future<void> _handleComplete(Order order, VendorOrderProvider provider) async {
     setState(() => _isProcessing = true);
-    await provider.markOrderCompleted(order.id);
-    setState(() => _isProcessing = false);
-    
-    if (mounted) {
-      _showSnackBar(context, 'Order completed!', const Color(0xFF2E7D32));
-      if (context.canPop()) {
-        context.pop();
+    try {
+      bool success = await provider.markOrderCompleted(order.id);
+      
+      if (success) {
+        await provider.getOrderById(widget.orderId);
+        if (mounted) {
+          _showSnackBar(context, 'Order completed! ✓', const Color(0xFF2E7D32));
+          // Give user feedback before navigating
+          await Future.delayed(const Duration(milliseconds: 1000));
+          if (mounted && context.canPop()) {
+            context.pop();
+          }
+        }
+      } else {
+        if (mounted) {
+          _showSnackBar(context, 'Failed to complete order', Colors.red);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        _showSnackBar(context, 'Error: ${e.toString()}', Colors.red);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isProcessing = false);
       }
     }
   }
   
   void _showSnackBar(BuildContext context, String message, Color color) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: color, behavior: SnackBarBehavior.floating),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: color,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
     );
   }
   
@@ -747,11 +1067,10 @@ class _VendorOrderDetailScreenState extends State<VendorOrderDetailScreen> {
   
   _StatusConfig _getStatusConfig(String status) {
     switch (status) {
-      case 'pending': return _StatusConfig(Colors.orange, Icons.schedule, 'Awaiting confirmation');
-      case 'confirmed': case 'accepted': return _StatusConfig(Colors.blue, Icons.check_circle, 'Ready to prepare');
-      case 'preparing': return _StatusConfig(Colors.purple, Icons.restaurant_menu, 'Being prepared');
+      case 'pending': case 'confirmed': case 'accepted': case 'preparing': 
+        return _StatusConfig(Colors.blue, Icons.check_circle, 'Order confirmed - preparing');
       case 'ready': return _StatusConfig(Colors.green, Icons.done_all, 'Ready for pickup/delivery');
-      case 'completed': case 'delivered': return _StatusConfig(Colors.grey, Icons.check_circle_outline, 'Completed');
+      case 'completed': case 'delivered': return _StatusConfig(const Color(0xFF2E7D32), Icons.check_circle_outline, 'Completed');
       case 'cancelled': case 'rejected': return _StatusConfig(Colors.red, Icons.cancel, 'Cancelled');
       default: return _StatusConfig(Colors.grey, Icons.help_outline, 'Unknown status');
     }

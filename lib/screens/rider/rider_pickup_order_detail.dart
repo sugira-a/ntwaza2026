@@ -327,8 +327,6 @@ class _RiderPickupOrderDetailScreenState extends State<RiderPickupOrderDetailScr
           const SizedBox(height: 8),
           _buildPriceRow('Delivery Fee', _currentOrder.deliveryFee, textColor, subtextColor),
           const SizedBox(height: 12),
-          Divider(color: borderColor, height: 1),
-          const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [

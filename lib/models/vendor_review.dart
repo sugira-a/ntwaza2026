@@ -1,7 +1,7 @@
 // lib/models/vendor_review.dart
 import '../utils/helpers.dart';
 class VendorReview {
-  final int id;
+  final dynamic id;
   final String userName;
   final double rating;
   final String comment;

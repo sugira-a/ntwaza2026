@@ -5,75 +5,77 @@ import 'package:logger/logger.dart';
 import 'dart:math';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../config/env_config.dart';
+import '../core/constants/api_endpoints.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class GoogleMapsService {
   static final _logger = Logger();
   
-  /// Get accurate road distance & duration
+  /// Get accurate road distance & duration via backend API
   static Future<Map<String, dynamic>?> getRoadDistance({
     required Position userLocation,
     required double destinationLat,
     required double destinationLng,
   }) async {
-    final origin = '${userLocation.latitude},${userLocation.longitude}';
-    final destination = '$destinationLat,$destinationLng';
-    
-    // ✅ Get platform-specific API key
-    final apiKey = _getPlatformApiKey();
-    
-    final url = Uri.parse(
-      'https://maps.googleapis.com/maps/api/distancematrix/json'
-      '?origins=$origin'
-      '&destinations=$destination'
-      '&mode=driving'
-      '&key=$apiKey'
-      '&departure_time=now'
-    );
-
     try {
-      _logger.i('🚗 Calculating road distance: $origin → $destination');
-      _logger.i('📱 Platform: ${_getCurrentPlatform()}');
+      _logger.i('🚗 Calculating road distance via backend API');
+      _logger.i('📍 From: ${userLocation.latitude},${userLocation.longitude}');
+      _logger.i('📍 To: $destinationLat,$destinationLng');
       
-      final response = await http.get(url).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () => throw Exception('Google Maps timeout'),
+      // Get auth token
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      
+      if (token == null) {
+        _logger.w('⚠️ No auth token found, using fallback');
+        return _calculateHaversineFallback(userLocation, destinationLat, destinationLng);
+      }
+      
+      // Call backend endpoint
+      final url = Uri.parse('${ApiEndpoints.baseUrl}/api/maps/road-distance');
+      
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: json.encode({
+          'origin_lat': userLocation.latitude,
+          'origin_lng': userLocation.longitude,
+          'dest_lat': destinationLat,
+          'dest_lng': destinationLng,
+        }),
+      ).timeout(
+        const Duration(seconds: 15),
+        onTimeout: () => throw Exception('Backend timeout'),
       );
       
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         
-        if (data['status'] == 'OK' && 
-            data['rows'].isNotEmpty && 
-            data['rows'][0]['elements'].isNotEmpty) {
-          
-          final element = data['rows'][0]['elements'][0];
-          
-          if (element['status'] == 'OK') {
-            final distanceKm = element['distance']['value'] / 1000.0;
-            final durationMinutes = (element['duration']['value'] / 60).round();
-            
-            _logger.i('✅ Road distance: ${element['distance']['text']}, '
-                      'Duration: ${element['duration']['text']}');
-            
-            return {
-              'distanceKm': distanceKm,
-              'distanceText': element['distance']['text'],
-              'durationMinutes': durationMinutes,
-              'durationText': element['duration']['text'],
-              'isAccurate': true,
-              'source': 'google_maps',
-            };
-          }
-        }
+        _logger.i('✅ Road distance: ${data['distanceText']}, '
+                  'Duration: ${data['durationText']}');
+        
+        return {
+          'distanceKm': data['distanceKm'],
+          'distanceText': data['distanceText'],
+          'durationMinutes': data['durationMinutes'],
+          'durationText': data['durationText'],
+          'isAccurate': data['isAccurate'],
+          'source': data['source'],
+        };
+      } else {
+        _logger.w('⚠️ Backend returned ${response.statusCode}, using fallback');
       }
       
-      _logger.w('⚠️ Google Maps API failed, using fallback');
-      return _calculateHaversineFallback(userLocation, destinationLat, destinationLng);
-      
     } catch (e) {
-      _logger.e('❌ Google Maps error: $e');
-      return _calculateHaversineFallback(userLocation, destinationLat, destinationLng);
+      _logger.e('❌ Backend API error: $e');
     }
+    
+    // Fallback to Haversine
+    _logger.w('⚠️ Using fallback distance calculation');
+    return _calculateHaversineFallback(userLocation, destinationLat, destinationLng);
   }
   
   /// Platform-specific API key selection via EnvConfig (build-time injection)

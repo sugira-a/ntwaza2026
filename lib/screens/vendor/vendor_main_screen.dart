@@ -648,7 +648,7 @@ class _VendorMainScreenState extends State<VendorMainScreen> with SingleTickerPr
               ),
             ),
             Text(
-              'Rwf ${order.total.toStringAsFixed(0)}',
+              'Rwf ${order.subtotal.toStringAsFixed(0)}',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w900,
@@ -847,18 +847,6 @@ class _VendorMainScreenState extends State<VendorMainScreen> with SingleTickerPr
                         MaterialPageRoute(builder: (_) => const VendorEarningsScreen()),
                       );
                     },
-                  ),
-                  
-
-                  
-                  // Divider
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    child: Divider(
-                      color: isDark ? Colors.grey[800] : Colors.grey[300],
-                      height: 1,
-                      thickness: 1,
-                    ),
                   ),
                   
                   // Logout Button
@@ -1435,7 +1423,7 @@ class _OrdersList extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  'Rwf ${order.total.toStringAsFixed(0)}',
+                  'Rwf ${order.subtotal.toStringAsFixed(0)}',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w900,

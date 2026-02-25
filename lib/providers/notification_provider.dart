@@ -20,6 +20,9 @@ class NotificationProvider with ChangeNotifier {
   String? _error;
   Timer? _pollingTimer;
   bool _isPolling = false;
+  bool _disposed = false;
+  int _consecutiveFailures = 0;
+  DateTime? _lastErrorLogTime;
 
   List<models.Notification> get notifications => _notifications;
   int get unreadCount => _unreadCount;
@@ -125,6 +128,7 @@ class NotificationProvider with ChangeNotifier {
   }
 
   Future<void> _pollNotifications() async {
+    if (_disposed) return;
     try {
       // Ensure we have a token before polling
       if ((_apiService.authToken ?? _apiService.token) == null) {
@@ -133,11 +137,14 @@ class NotificationProvider with ChangeNotifier {
       }
 
       final response = await _apiService.get('/api/notifications/unread-count');
+      if (_disposed) return;
       if (response['success'] == true) {
+        _resetFailureCount();
         final newUnreadCount = (response['unread_count'] ?? response['count'] ?? 0) as int;
         if (newUnreadCount > _unreadCount) {
           print('🔔 New notifications detected! ($newUnreadCount)');
           await fetchNotifications();
+          if (_disposed) return;
           _notificationService.showLocalNotification(
             title: 'New Order!',
             body: 'You have ${newUnreadCount - _unreadCount} new order(s)',
@@ -147,12 +154,38 @@ class NotificationProvider with ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      print('⚠️ Polling error: $e');
+      _consecutiveFailures++;
       final err = e.toString().toLowerCase();
+      
+      // Only log errors once per minute to avoid spam
+      final now = DateTime.now();
+      final shouldLog = _lastErrorLogTime == null || 
+                        now.difference(_lastErrorLogTime!).inSeconds > 60;
+      
+      if (shouldLog) {
+        print('⚠️ Notification polling error (${_consecutiveFailures} consecutive): $e');
+        _lastErrorLogTime = now;
+      }
+      
+      // Stop polling on auth errors
       if (err.contains('401') || err.contains('authorization') || err.contains('invalid token')) {
         print('🛑 Polling encountered authorization error — stopping polling');
         stopPolling();
       }
+      // Stop polling after 5 consecutive connection failures
+      else if (_consecutiveFailures >= 5 && (err.contains('failed to fetch') || err.contains('connection'))) {
+        print('🛑 Server unreachable after $_consecutiveFailures attempts — stopping polling');
+        stopPolling();
+      }
+    }
+  }
+
+  // Reset failure counter on successful poll
+  void _resetFailureCount() {
+    if (_consecutiveFailures > 0) {
+      print('✅ Notification polling recovered after $_consecutiveFailures failures');
+      _consecutiveFailures = 0;
+      _lastErrorLogTime = null;
     }
   }
 
@@ -277,7 +310,15 @@ class NotificationProvider with ChangeNotifier {
   }
 
   @override
+  void notifyListeners() {
+    if (!_disposed) {
+      super.notifyListeners();
+    }
+  }
+
+  @override
   void dispose() {
+    _disposed = true;
     stopPolling();
     super.dispose();
   }

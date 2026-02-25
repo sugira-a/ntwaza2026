@@ -1,6 +1,7 @@
 ﻿// lib/models/product.dart
 // FIXED: vendorId is now non-nullable (required)
 
+import 'dart:convert';
 import '../services/api/api_service.dart';
 
 class Product {
@@ -128,11 +129,63 @@ class Product {
     return null;
   }
 
+  /// Helper to parse modifiers from JSON (handles both String JSON and List formats)
+  static List<ProductModifier>? _parseModifiers(dynamic value) {
+    if (value == null) return null;
+    
+    List modifiersList;
+    
+    // If it's a JSON string, parse it first
+    if (value is String) {
+      if (value.isEmpty) return null;
+      try {
+        modifiersList = jsonDecode(value) as List;
+        print('✅ Parsed modifiers from JSON string: ${modifiersList.length} groups');
+      } catch (e) {
+        print('❌ Error parsing modifiers JSON string: $e');
+        return null;
+      }
+    } 
+    // If it's already a list, use it directly
+    else if (value is List) {
+      modifiersList = value;
+      print('✅ Modifiers already a list: ${modifiersList.length} groups');
+    } 
+    else {
+      print('⚠️ Unexpected modifiers type: ${value.runtimeType}');
+      return null;
+    }
+    
+    try {
+      final parsed = modifiersList.map((m) {
+        try {
+          return ProductModifier.fromJson(m as Map<String, dynamic>);
+        } catch (e) {
+          print('❌ Error parsing modifier: $e, data: $m');
+          return null;
+        }
+      }).whereType<ProductModifier>().toList();
+      
+      print('✅ Successfully parsed ${parsed.length} modifiers');
+      return parsed.isEmpty ? null : parsed;
+    } catch (e) {
+      print('❌ Error converting modifiers to ProductModifier objects: $e');
+      return null;
+    }
+  }
+
   factory Product.fromJson(Map<String, dynamic> json) {
     final rawImageUrl = json['image_url'] ?? '';
     final processedImageUrl = _buildProductImageUrl(rawImageUrl);
     
     print('🖼️ Product image: "$rawImageUrl" → "$processedImageUrl"');
+    print('📦 Product: ${json['name']}');
+    print('   Modifiers raw value: ${json['modifiers']}');
+    print('   Modifiers type: ${json['modifiers']?.runtimeType}');
+    if (json['modifiers'] != null) {
+      final modifierPreview = json['modifiers'].toString();
+      print('   Modifiers preview: ${modifierPreview.length > 200 ? modifierPreview.substring(0, 200) + "..." : modifierPreview}');
+    }
     
     return Product(
       id: json['id']?.toString() ?? '',
@@ -165,7 +218,7 @@ class Product {
       rating: json['rating'] != null ? (json['rating'] as num).toDouble() : null,
       ratingCount: json['rating_count'],
       modifiers: json['modifiers'] != null 
-        ? (json['modifiers'] as List).map((m) => ProductModifier.fromJson(m)).toList()
+        ? _parseModifiers(json['modifiers'])
         : null,
     );
   }

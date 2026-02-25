@@ -354,13 +354,12 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
                 ],
               ),
             ),
-            Divider(height: 24, color: isDarkMode ? Colors.grey[800] : Colors.grey[200]),
             
             // Categories List
             Expanded(
               child: ListView(
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                children: [
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  children: [
                   // All Products
                   _buildCategoryItem(
                     context,

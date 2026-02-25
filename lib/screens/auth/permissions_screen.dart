@@ -207,123 +207,203 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0B0D0E),
+      backgroundColor: const Color(0xFF0A0A0A),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0B0D0E),
+        backgroundColor: const Color(0xFF0A0A0A),
         elevation: 0,
         leading: null,
         automaticallyImplyLeading: false,
       ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            children: [
-              const SizedBox(height: 20),
-              const Text(
-                'Let\'s Get Started',
-                style: TextStyle(
-                  color: Color(0xFFEDEFF2),
-                  fontSize: 24,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'We need a couple of permissions to serve you better',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Color(0xFFA7AFB6),
-                  fontSize: 13,
-                  letterSpacing: 0.3,
-                ),
-              ),
-              const SizedBox(height: 32),
-              _permissionCard(
-                stepNumber: 1,
-                icon: Icons.location_on_rounded,
-                title: 'Location Access',
-                subtitle: 'Required to find restaurants \nand track deliveries',
-                required: true,
-                isGranted: _locationGranted,
-                isLoading: _isLoadingLocation,
-                onRequest: _requestLocationPermission,
-              ),
-              if (_locationGranted) ...[
-                const SizedBox(height: 20),
-                _permissionCard(
-                  stepNumber: 2,
-                  icon: Icons.notifications_on_rounded,
-                  title: 'Notifications',
-                  subtitle: 'Get updates on your \norders and offers',
-                  required: false,
-                  isGranted: _notificationGranted,
-                  isLoading: _isLoadingNotification,
-                  onRequest: _requestNotificationPermission,
-                  onSkip: () => setState(() {}), // Allow skipping
-                ),
-              ],
-              const Spacer(),
-              if (_locationGranted)
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF111416),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: const Color(0xFF1F262A),
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(
-                        Icons.check_circle_rounded,
-                        color: const Color(0xFF66D36E),
-                        size: 20,
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'You\'re all set! Permission granted.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Color(0xFFA7AFB6),
-                          fontSize: 12,
-                          letterSpacing: 0.3,
+      body: Stack(
+        children: [
+          _buildBackground(),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                children: [
+                  const SizedBox(height: 10),
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: const Color(0xFF101010),
+                      border: Border.all(color: const Color(0xFF1F1F1F)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.5),
+                          blurRadius: 18,
+                          offset: const Offset(0, 8),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _locationGranted ? _proceedToApp : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF66D36E),
-                    foregroundColor: Colors.black,
-                    disabledBackgroundColor: const Color(0xFF22282B),
-                    disabledForegroundColor: const Color(0xFF6B7682),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.shield_moon_outlined,
+                      color: Color(0xFFEDEFF2),
+                      size: 28,
                     ),
                   ),
-                  child: Text(
-                    _locationGranted ? 'Continue' : 'Enable Location to Continue',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF101010),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: const Color(0xFF1F1F1F)),
+                    ),
+                    child: const Text(
+                      'Step 1 of 2',
+                      style: TextStyle(
+                        color: Color(0xFFA7AFB6),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.4,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Let\'s Get Started',
+                    style: TextStyle(
+                      color: Color(0xFFEDEFF2),
+                      fontSize: 24,
+                      fontWeight: FontWeight.w700,
                       letterSpacing: 0.5,
                     ),
                   ),
-                ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'We need a couple of permissions to serve you better',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Color(0xFFA7AFB6),
+                      fontSize: 13,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Tap each card to allow and continue',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Color(0xFF66D36E),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  _permissionCard(
+                    stepNumber: 1,
+                    icon: Icons.location_on_rounded,
+                    title: 'Location Access',
+                    subtitle: 'Required to find restaurants \nand track deliveries',
+                    required: true,
+                    isGranted: _locationGranted,
+                    isLoading: _isLoadingLocation,
+                    onRequest: _requestLocationPermission,
+                  ),
+                  if (_locationGranted) ...[
+                    const SizedBox(height: 20),
+                    _permissionCard(
+                      stepNumber: 2,
+                      icon: Icons.notifications_on_rounded,
+                      title: 'Notifications',
+                      subtitle: 'Get updates on your \norders and offers',
+                      required: false,
+                      isGranted: _notificationGranted,
+                      isLoading: _isLoadingNotification,
+                      onRequest: _requestNotificationPermission,
+                      onSkip: () => setState(() {}), // Allow skipping
+                    ),
+                  ],
+                  const Spacer(),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _locationGranted ? _proceedToApp : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF66D36E),
+                        foregroundColor: Colors.black,
+                        disabledBackgroundColor: const Color(0xFF1B1B1B),
+                        disabledForegroundColor: const Color(0xFF6B7682),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            _locationGranted ? Icons.check_circle_rounded : Icons.location_on_rounded,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            _locationGranted ? 'Continue to Home' : 'Enable Location to Continue',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+                ],
               ),
-              const SizedBox(height: 40),
-            ],
+            ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBackground() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color(0xFF0A0A0A),
+            Color(0xFF141414),
+          ],
         ),
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -90,
+            top: -40,
+            child: Container(
+              width: 200,
+              height: 200,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF66D36E).withOpacity(0.12),
+              ),
+            ),
+          ),
+          Positioned(
+            left: -60,
+            bottom: 40,
+            child: Container(
+              width: 160,
+              height: 160,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.04),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -346,12 +426,26 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFF111416),
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF0F1113),
+                  Color(0xFF141618),
+                ],
+              ),
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color: isGranted ? const Color(0xFF66D36E) : const Color(0xFF1F262A),
+                color: isGranted ? const Color(0xFF66D36E) : const Color(0xFF1F1F1F),
                 width: isGranted ? 2 : 1,
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.45),
+                  blurRadius: 18,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
             child: Row(
               children: [
@@ -361,7 +455,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                   decoration: BoxDecoration(
                     color: isGranted
                         ? const Color(0xFF66D36E).withOpacity(0.15)
-                        : const Color(0xFF1F262A),
+                        : const Color(0xFF1F1F1F),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
@@ -410,6 +504,16 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                           letterSpacing: 0.2,
                         ),
                       ),
+                      const SizedBox(height: 6),
+                      Text(
+                        isGranted ? 'Permission granted' : 'Tap to allow',
+                        style: TextStyle(
+                          color: isGranted ? const Color(0xFF66D36E) : const Color(0xFF8FA3B0),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -432,20 +536,25 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                   )
                 else
                   Container(
-                    width: 40,
-                    height: 40,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                     decoration: BoxDecoration(
                       color: const Color(0xFF66D36E),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Center(
-                      child: Text(
-                        '$stepNumber',
-                        style: const TextStyle(
-                          color: Colors.black,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF66D36E).withOpacity(0.3),
+                          blurRadius: 10,
+                          offset: const Offset(0, 6),
                         ),
+                      ],
+                    ),
+                    child: Text(
+                      required ? 'Allow' : 'Enable',
+                      style: const TextStyle(
+                        color: Colors.black,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.2,
                       ),
                     ),
                   ),

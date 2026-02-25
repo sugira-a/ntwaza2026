@@ -124,7 +124,7 @@ class PickupOrderProvider extends ChangeNotifier {
   }
 
   // Create a new pickup order
-  Future<PickupOrder?> createPickupOrder({
+  Future<Map<String, dynamic>?> createPickupOrder({
     required String customerId,
     required String customerName,
     required String customerPhone,
@@ -169,7 +169,12 @@ class PickupOrderProvider extends ChangeNotifier {
         _pickupOrders.insert(0, newOrder);
         notifyListeners();
 
-        return newOrder;
+        return {
+          'order': newOrder,
+          'vendorCode': response['vendorCode'],
+          'customerCode': response['customerCode'],
+          'emailsSent': response['emailsSent'],
+        };
       } else {
         _setError('Failed to create pickup order');
         return null;
@@ -337,6 +342,84 @@ class PickupOrderProvider extends ChangeNotifier {
       }
     } catch (e) {
       _setError('Error fetching order: ${e.toString()}');
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Verify vendor pickup code (rider marks as picked up from vendor)
+  Future<bool> verifyVendorPickupCode(String orderId, String code) async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      final response = await _apiService.post(
+        '/api/pickup-orders/$orderId/verify-vendor-pickup',
+        {'code': code},
+      );
+
+      if (response['success'] != null && response['success'] as bool) {
+        final orderData = response['order'] as Map<String, dynamic>? ?? {};
+        final updatedOrder = PickupOrder.fromJson(orderData);
+        
+        final index = _pickupOrders.indexWhere((o) => o.id == orderId);
+        if (index != -1) {
+          _pickupOrders[index] = updatedOrder;
+          notifyListeners();
+        }
+        
+        if (_selectedOrder?.id == orderId) {
+          _selectedOrder = updatedOrder;
+          notifyListeners();
+        }
+        
+        return true;
+      } else {
+        _setError(response['error'] ?? 'Failed to verify vendor pickup code');
+        return false;
+      }
+    } catch (e) {
+      _setError('Error verifying vendor code: ${e.toString()}');
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Verify customer dropoff code (rider marks as delivered to customer)
+  Future<bool> verifyCustomerDropoffCode(String orderId, String code) async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      final response = await _apiService.post(
+        '/api/pickup-orders/$orderId/verify-customer-dropoff',
+        {'code': code},
+      );
+
+      if (response['success'] != null && response['success'] as bool) {
+        final orderData = response['order'] as Map<String, dynamic>? ?? {};
+        final updatedOrder = PickupOrder.fromJson(orderData);
+        
+        final index = _pickupOrders.indexWhere((o) => o.id == orderId);
+        if (index != -1) {
+          _pickupOrders[index] = updatedOrder;
+          notifyListeners();
+        }
+        
+        if (_selectedOrder?.id == orderId) {
+          _selectedOrder = updatedOrder;
+          notifyListeners();
+        }
+        
+        return true;
+      } else {
+        _setError(response['error'] ?? 'Failed to verify customer dropoff code');
+        return false;
+      }
+    } catch (e) {
+      _setError('Error verifying dropoff code: ${e.toString()}');
+      return false;
     } finally {
       _setLoading(false);
     }

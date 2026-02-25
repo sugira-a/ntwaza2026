@@ -265,6 +265,12 @@ class AppTheme {
           borderRadius: BorderRadius.circular(20),
         ),
       ),
+
+      // Scrollbar - hidden globally
+      scrollbarTheme: const ScrollbarThemeData(
+        thickness: WidgetStatePropertyAll(0),
+        thumbVisibility: WidgetStatePropertyAll(false),
+      ),
     );
   }
 
@@ -507,6 +513,12 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
+      ),
+
+      // Scrollbar - hidden globally
+      scrollbarTheme: const ScrollbarThemeData(
+        thickness: WidgetStatePropertyAll(0),
+        thumbVisibility: WidgetStatePropertyAll(false),
       ),
     );
   }

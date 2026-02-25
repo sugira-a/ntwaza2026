@@ -8,6 +8,9 @@ venv/
 venv*/
 env/
 ENV/
+*.egg-info/
+dist/
+build/
 
 # Flask
 instance/
@@ -16,9 +19,21 @@ instance/
 # Database
 *.db
 *.sqlite
+*.sqlite3
 
-# Environment
+# Environment & Secrets
 .env
+.env.local
+.env.*.local
+firebase-service-account.json
+google-services.json
+config.py
+
+# API Keys & Credentials
+**/api_keys/
+**/credentials/
+**/secrets/
+**/keys/
 
 # IDE
 .vscode/
@@ -26,13 +41,81 @@ instance/
 *.swp
 *.swo
 *.iml
+*.code-search
 
 # Logs
 logs/
 *.log
+flutter_*.log
 
 # Build artifacts
 build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# Debug & Test Scripts (one-off utilities)
+*_check_*.py
+*_fix_*.py
+**/test_*.py
+**/check_*.py
+**/debug_*.py
+**/fix_*.py
+**/find_*.py
+**/write_*.py
+**/*_test.py
+verify_routes.json
+debug-routes.json
+structure.txt
+COMPLETION_REPORT.txt
+FIX_SUMMARY.txt
+init_updates.txt
+run_migrations.txt
+test_output.txt
+
+# Backend specific
+ntwaza-backend/instance/
+ntwaza-backend/uploads/
+ntwaza-backend/logs/
+ntwaza-backend/venv*/
+ntwaza-backend/.env
+ntwaza-backend/__pycache__/
+ntwaza-backend/**/migrations_backup/
+
+# Dart/Flutter build
+.dart_tool/
+build/
+flutter_assets/
+.packages
+.plugin_symlinks/
+
+# Node (if applicable)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# Temporary files
+*.tmp
+*.temp
+**/temp/
+**/tmp/
+*.tmp
+
+# Backup and old files
+*_old.*
+*.old
+*.bak
+*.bak2
+*.backup
+*.backup*
+*_backup.*
+*_backup*.*
 
 # Flutter/Dart
 .dart_tool/
@@ -54,6 +137,7 @@ ios/Runner/GoogleService-Info.plist
 ios/Flutter/Secrets.xcconfig
 *.env.local
 .env.local
+lib/.env.dart
 
 # OS files
 .DS_Store

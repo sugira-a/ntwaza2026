@@ -6,37 +6,47 @@
 ///     --dart-define=GOOGLE_MAPS_ANDROID_KEY=AIza... \
 ///     --dart-define=GOOGLE_MAPS_IOS_KEY=AIza...
 ///
-/// For convenience during development, create a `.env.local` file
-/// (git-ignored) at the project root and use a helper script.
+/// For development without --dart-define, keys are imported from lib/.env.dart
+/// (which is gitignored for security). Copy lib/.env.dart.example to lib/.env.dart
+/// and add your actual keys.
 library;
 
 import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatform, kIsWeb;
 
+// Import API keys from gitignored file (for development)
+// If this import fails, copy .env.dart.example to .env.dart
+import '../.env.dart' as env_keys;
+
 class EnvConfig {
   EnvConfig._();
 
-  // Injected via --dart-define at build time
+  // Injected via --dart-define at build time, falls back to .env.dart
   static const String googleMapsWebKey =
-      String.fromEnvironment('GOOGLE_MAPS_WEB_KEY');
+      String.fromEnvironment('GOOGLE_MAPS_WEB_KEY', defaultValue: '');
   static const String googleMapsAndroidKey =
-      String.fromEnvironment('GOOGLE_MAPS_ANDROID_KEY');
+      String.fromEnvironment('GOOGLE_MAPS_ANDROID_KEY', defaultValue: '');
   static const String googleMapsIosKey =
-      String.fromEnvironment('GOOGLE_MAPS_IOS_KEY');
+      String.fromEnvironment('GOOGLE_MAPS_IOS_KEY', defaultValue: '');
 
   /// Returns the correct Google Maps API key for the current platform.
   static String get googleMapsApiKey {
-    if (kIsWeb) return googleMapsWebKey;
+    // Try --dart-define keys first
+    if (kIsWeb && googleMapsWebKey.isNotEmpty) return googleMapsWebKey;
 
     try {
-      // ignore: avoid_classes_with_only_static_members
       final platform = _PlatformHelper.operatingSystem;
-      if (platform == 'android') return googleMapsAndroidKey;
-      if (platform == 'ios') return googleMapsIosKey;
+      if (platform == 'android' && googleMapsAndroidKey.isNotEmpty) {
+        return googleMapsAndroidKey;
+      }
+      if (platform == 'ios' && googleMapsIosKey.isNotEmpty) {
+        return googleMapsIosKey;
+      }
     } catch (_) {
-      // Platform not available – fall back to web key
+      // Platform detection failed
     }
 
-    return googleMapsWebKey;
+    // Fall back to .env.dart key (for development)
+    return env_keys.googleMapsApiKey;
   }
 }
 

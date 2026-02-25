@@ -19,6 +19,8 @@ class VendorOrderProvider with ChangeNotifier {
   String _currentFilter = 'all';
   int _unreadNotificationCount = 0;
   
+  bool _isDisposed = false;
+
   VendorOrderProvider({required ApiService apiService}) : _apiService = apiService;
   
   List<Order> get orders => _filteredOrders.isEmpty && _currentFilter == 'all' ? _orders : _filteredOrders;
@@ -298,7 +300,15 @@ class VendorOrderProvider with ChangeNotifier {
   }
   
   @override
+  void notifyListeners() {
+    if (!_isDisposed) {
+      super.notifyListeners();
+    }
+  }
+
+  @override
   void dispose() {
+    _isDisposed = true;
     stopAutoRefresh();
     _orderUpdatesSub?.cancel();
     _orders.clear();
