@@ -21,6 +21,7 @@ import '../../screens/vendor/vendor_detail_screen.dart';
 import '../../screens/map/location_picker_screen.dart';
 import '../../screens/vendor/widgets/product_detail_modal.dart';
 import '../../services/api/api_service.dart';
+import '../loading/shimmer_loading.dart';
 
 class CustomerHomeContent extends StatefulWidget {
   const CustomerHomeContent({super.key});
@@ -2188,9 +2189,17 @@ Widget _buildNoVendorsOverlay(bool isDarkMode, Color cardColor, Color textColor,
         mainAxisAlignment: MainAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
         children: [
-          CircularProgressIndicator(color: Colors.black),
-          const SizedBox(height: 16),
-          Text('Loading vendors...', style: TextStyle(color: textColor, fontSize: 16)),
+          const NtwazaLoadingIndicator(
+            size: 48,
+            message: 'Loading vendors...',
+          ),
+          const SizedBox(height: 24),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              children: List.generate(2, (_) => const VendorCardSkeleton()),
+            ),
+          ),
         ],
       ),
     );
@@ -2348,7 +2357,23 @@ Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: backgroundColor,
       body: Center(
-        child: CircularProgressIndicator(color: Colors.black),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const NtwazaLoadingIndicator(
+              size: 56,
+              message: 'Finding restaurants near you...',
+            ),
+            const SizedBox(height: 32),
+            // Show skeleton cards
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                children: List.generate(3, (_) => const VendorCardSkeleton()),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

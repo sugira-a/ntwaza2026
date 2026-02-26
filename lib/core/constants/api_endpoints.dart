@@ -1,7 +1,7 @@
 // lib/core/constants/api_endpoints.dart
 class ApiEndpoints {
   // Base URL
-  static const String baseUrl = 'http://localhost:5000';
+  static const String baseUrl = 'https://ntwaza2026.fly.dev';
   
   // Auth endpoints
   static const String login = '$baseUrl/api/auth/login';

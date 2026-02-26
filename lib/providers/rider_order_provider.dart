@@ -8,7 +8,7 @@ import '../models/order.dart';
 class RiderOrderProvider with ChangeNotifier {
   final ApiService _apiService;
   Timer? _refreshTimer;
-  static const int _defaultAutoRefreshSeconds = 15;
+  static const int _defaultAutoRefreshSeconds = 30;  // Increased from 15 to 30 seconds
   StreamSubscription? _orderUpdatesSub;
   bool _isDisposed = false;
 

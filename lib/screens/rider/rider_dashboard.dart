@@ -27,7 +27,7 @@ class RiderDashboard extends StatefulWidget {
 class _RiderDashboardState extends State<RiderDashboard> {
   bool _isOnline = false;
   bool _dataInitialized = false;
-  static const int _pollSeconds = 15;
+  static const int _pollSeconds = 30;  // Increased from 15 to 30 for cost savings
   late RiderOrderProvider _riderOrderProvider;
 
   // Neutral palette (black + white + gray) + green accent

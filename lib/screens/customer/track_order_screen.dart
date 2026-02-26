@@ -31,8 +31,8 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
   void initState() {
     super.initState();
     _loadOrder();
-    // Refresh every 10 seconds
-    _refreshTimer = Timer.periodic(const Duration(seconds: 10), (_) => _loadOrder());
+    // Refresh every 30 seconds to reduce API costs
+    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (_) => _loadOrder());
   }
 
   @override

@@ -4,8 +4,10 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/address_provider.dart';
 import '../../services/location_service.dart';
+import '../../services/notification_service.dart';
 import '../../models/delivery_address.dart';
 
 class PermissionsScreen extends StatefulWidget {
@@ -20,6 +22,92 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
   bool _notificationGranted = false;
   bool _isLoadingLocation = false;
   bool _isLoadingNotification = false;
+  bool _isCheckingPermissions = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkExistingPermissions();
+  }
+
+  Future<void> _checkExistingPermissions() async {
+    // Check if location permission already granted
+    final locationPermission = await Geolocator.checkPermission();
+    final hasLocation = locationPermission == LocationPermission.whileInUse ||
+        locationPermission == LocationPermission.always;
+    
+    if (mounted) {
+      setState(() {
+        _locationGranted = hasLocation;
+        _isCheckingPermissions = false;
+      });
+      
+      // If location already granted, get location in background
+      if (hasLocation) {
+        _captureLocationInBackground();
+      }
+    }
+  }
+
+  Future<void> _captureLocationInBackground() async {
+    try {
+      final locationService = LocationService();
+      final position = await locationService.getCurrentLocation(forceRefresh: true);
+      
+      if (position != null && mounted) {
+        await _saveAddressFromPosition(position);
+      }
+    } catch (e) {
+      print('⚠️ Background location capture failed: $e');
+    }
+  }
+
+  Future<void> _saveAddressFromPosition(Position position) async {
+    try {
+      final placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+      
+      String addressText = 'Kigali, Rwanda';
+      if (placemarks.isNotEmpty) {
+        final placemark = placemarks.first;
+        addressText = '${placemark.locality ?? placemark.subAdministrativeArea ?? 'Kigali'}, Rwanda';
+      }
+      
+      final address = DeliveryAddress(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        fullAddress: addressText,
+        latitude: position.latitude,
+        longitude: position.longitude,
+        label: 'Current Location',
+        isDefault: true,
+        createdAt: DateTime.now(),
+      );
+      
+      if (mounted) {
+        final addressProvider = Provider.of<AddressProvider>(context, listen: false);
+        await addressProvider.addAddress(address);
+        print('✅ Location saved: $addressText');
+      }
+    } catch (e) {
+      print('⚠️ Error saving address: $e');
+      // Save default Kigali location as fallback
+      if (mounted) {
+        final addressProvider = Provider.of<AddressProvider>(context, listen: false);
+        final kigaliAddress = DeliveryAddress(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          fullAddress: 'Kigali, Rwanda',
+          latitude: -1.9441,
+          longitude: 30.0619,
+          label: 'Default Location',
+          isDefault: true,
+          createdAt: DateTime.now(),
+        );
+        await addressProvider.addAddress(kigaliAddress);
+      }
+    }
+  }
 
   Future<void> _requestLocationPermission() async {
     setState(() => _isLoadingLocation = true);
@@ -31,82 +119,12 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
       setState(() => _locationGranted = granted);
 
       if (granted) {
-        // Get current location using LocationService
+        // Get current location
         final locationService = LocationService();
         final position = await locationService.getCurrentLocation(forceRefresh: true);
         
         if (position != null && mounted) {
-          // Get address from coordinates using geocoding
-          try {
-            final placemarks = await placemarkFromCoordinates(
-              position.latitude,
-              position.longitude,
-            );
-            
-            if (placemarks.isNotEmpty && mounted) {
-              final placemark = placemarks.first;
-              
-              // Create address object (Kigali fallback location)
-              final address = DeliveryAddress(
-                id: DateTime.now().millisecondsSinceEpoch.toString(),
-                fullAddress: '${placemark.locality ?? 'Kigali'}, Rwanda',
-                latitude: position.latitude,
-                longitude: position.longitude,
-                label: 'Home',
-                isDefault: true,
-                createdAt: DateTime.now(),
-              );
-              
-              // Save to AddressProvider
-              if (mounted) {
-                try {
-                  final addressProvider = 
-                      Provider.of<AddressProvider>(context, listen: false);
-                  await addressProvider.addAddress(address);
-                  
-                  print('✅ Location saved successfully: ${address.fullAddress}');
-                } catch (e) {
-                  print('⚠️ Error saving address, using default Kigali location: $e');
-                  // If validation fails, save as default Kigali location
-                  if (mounted) {
-                    final addressProvider = 
-                        Provider.of<AddressProvider>(context, listen: false);
-                    final kigaliAddress = DeliveryAddress(
-                      id: DateTime.now().millisecondsSinceEpoch.toString(),
-                      fullAddress: 'Kigali, Rwanda',
-                      latitude: -1.9441,
-                      longitude: 30.0619,
-                      label: 'Home',
-                      isDefault: true,
-                      createdAt: DateTime.now(),
-                    );
-                    await addressProvider.addAddress(kigaliAddress);
-                  }
-                }
-              }
-            }
-          } catch (e) {
-            print('⚠️ Could not get address from geocoding: $e');
-            // Fallback: save default Kigali location if geocoding fails
-            if (mounted) {
-              try {
-                final addressProvider = 
-                    Provider.of<AddressProvider>(context, listen: false);
-                final kigaliAddress = DeliveryAddress(
-                  id: DateTime.now().millisecondsSinceEpoch.toString(),
-                  fullAddress: 'Kigali, Rwanda',
-                  latitude: -1.9441,
-                  longitude: 30.0619,
-                  label: 'Home',
-                  isDefault: true,
-                  createdAt: DateTime.now(),
-                );
-                await addressProvider.addAddress(kigaliAddress);
-              } catch (e) {
-                print('❌ Failed to save fallback location: $e');
-              }
-            }
-          }
+          await _saveAddressFromPosition(position);
         }
       }
     } catch (e) {
@@ -121,9 +139,13 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
   Future<void> _requestNotificationPermission() async {
     setState(() => _isLoadingNotification = true);
     try {
+      // Initialize notification service properly
+      final notificationService = NotificationService();
+      await notificationService.initialize();
+      
+      // Also request via flutter_local_notifications for compatibility
       final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
       
-      // Initialize the plugin first
       const AndroidInitializationSettings androidInit =
           AndroidInitializationSettings('@mipmap/ic_launcher');
       const DarwinInitializationSettings iosInit = DarwinInitializationSettings(
@@ -176,8 +198,11 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
       
       if (granted) {
         print('✅ Notification permission granted');
+        // Get FCM token
+        final fcmToken = await notificationService.getFCMToken();
+        print('🔑 FCM Token: $fcmToken');
       } else {
-        print('ℹ️ Notification permission skipped or unavailable on this platform');
+        print('ℹ️ Notification permission skipped');
       }
     } catch (e) {
       print('❌ Notification permission error: $e');
@@ -200,12 +225,57 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
       );
       return;
     }
+    
+    // Save that user has seen permissions
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('has_seen_permissions', true);
+    
     context.go('/');
   }
 
 
   @override
   Widget build(BuildContext context) {
+    // Show loading while checking existing permissions
+    if (_isCheckingPermissions) {
+      return Scaffold(
+        backgroundColor: const Color(0xFF0A0A0A),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF66D36E).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Center(
+                  child: SizedBox(
+                    width: 28,
+                    height: 28,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 3,
+                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF66D36E)),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Checking permissions...',
+                style: TextStyle(
+                  color: Color(0xFFA7AFB6),
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A0A),
       appBar: AppBar(

@@ -9,7 +9,7 @@ class VendorOrderProvider with ChangeNotifier {
   final ApiService _apiService;
   Timer? _autoRefreshTimer;
   static const String _vendorOrdersBase = '/api/orders/vendor';
-  static const int _defaultAutoRefreshSeconds = 15;
+  static const int _defaultAutoRefreshSeconds = 30;  // Increased from 15 to 30 seconds
   StreamSubscription? _orderUpdatesSub;
   
   List<Order> _orders = [];

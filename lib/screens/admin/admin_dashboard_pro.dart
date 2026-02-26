@@ -68,7 +68,7 @@ class AdminDashboardPro extends StatefulWidget {
 
 class _AdminDashboardProState extends State<AdminDashboardPro> {
   int _selectedIndex = 0;
-  static const int _pollSeconds = 10;
+  static const int _pollSeconds = 30;  // Increased from 10 for cost savings
 
   @override
   void initState() {

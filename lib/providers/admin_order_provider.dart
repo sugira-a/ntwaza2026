@@ -31,13 +31,13 @@ class AdminOrderProvider with ChangeNotifier {
   int get pages => _pages;
   String? get statusFilter => _statusFilter;
 
-  Future<void> initialize({int autoRefreshSeconds = 10}) async {
+  Future<void> initialize({int autoRefreshSeconds = 30}) async {
     await fetchOrders();
     startAutoRefresh(intervalSeconds: autoRefreshSeconds);
     _startRealtime();
   }
 
-  void startAutoRefresh({int intervalSeconds = 10}) {
+  void startAutoRefresh({int intervalSeconds = 30}) {
     _autoRefreshTimer?.cancel();
     _autoRefreshTimer = Timer.periodic(Duration(seconds: intervalSeconds), (_) {
       fetchOrders(silent: true);

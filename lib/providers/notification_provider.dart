@@ -30,7 +30,7 @@ class NotificationProvider with ChangeNotifier {
   String? get error => _error;
   bool get isPolling => _isPolling;
 
-  Future<void> initialize({int pollingInterval = 30}) async {
+  Future<void> initialize({int pollingInterval = 60}) async {  // Increased from 30 to 60 seconds
     print('🔔 Initializing NotificationProvider...');
     await _notificationService.initialize();
     _notificationService.onNotificationTapped = _handleNotificationTap;
@@ -106,7 +106,7 @@ class NotificationProvider with ChangeNotifier {
     }
   }
 
-  void startPolling({int intervalSeconds = 30}) {
+  void startPolling({int intervalSeconds = 60}) {  // Increased from 30 to 60 seconds
     if (_isPolling) {
       print('🔄 Polling already active');
       return;

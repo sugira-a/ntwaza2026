@@ -39,8 +39,8 @@ class _VendorMainScreenState extends State<VendorMainScreen> with SingleTickerPr
     }
 
     try {
-      await context.read<NotificationProvider>().initialize(pollingInterval: 10);
-      await context.read<VendorOrderProvider>().initialize(autoRefreshSeconds: 10);
+      await context.read<NotificationProvider>().initialize();  // Uses default 60s
+      await context.read<VendorOrderProvider>().initialize();  // Uses default 30s
     } catch (e) {
       if (e.toString().contains('401') && mounted) {
         await authProvider.logout();

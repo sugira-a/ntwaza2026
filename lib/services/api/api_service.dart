@@ -11,12 +11,8 @@ class ApiService {
   factory ApiService() => _instance;
   ApiService._internal();
 
-  // Base URL - Update this to match your backend
-  static String get baseUrl {
-    if (kIsWeb) return 'http://localhost:5000';
-    if (Platform.isAndroid) return 'http://10.0.2.2:5000';
-    return 'http://localhost:5000';
-  }
+  // Base URL - Production server
+  static const String baseUrl = 'https://ntwaza2026.fly.dev';
   
   // Store auth token
   String? _authToken;

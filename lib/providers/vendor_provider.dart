@@ -18,6 +18,10 @@ class VendorProvider with ChangeNotifier {
   String _currentCategory = 'All';
   String _searchQuery = '';
   
+  // Cache management - avoid refetching too often
+  DateTime? _lastFetchTime;
+  static const int _cacheMinutes = 5;  // Only refresh if data is older than 5 minutes
+  
   VendorProvider({
     required ApiService apiService,
     required LocationService locationService,
@@ -139,6 +143,15 @@ class VendorProvider with ChangeNotifier {
   
   // Vendor Fetching
   Future<void> fetchVendors({bool forceRefresh = false}) async {
+    // Skip if we have cached data and it's not too old
+    if (!forceRefresh && _vendors.isNotEmpty && _lastFetchTime != null) {
+      final age = DateTime.now().difference(_lastFetchTime!).inMinutes;
+      if (age < _cacheMinutes) {
+        print('📦 Using cached vendors (${age}m old, refresh in ${_cacheMinutes - age}m)');
+        return;
+      }
+    }
+    
     try {
       _isLoading = true;
       _error = null;
@@ -162,6 +175,7 @@ class VendorProvider with ChangeNotifier {
       
       _vendors = await _vendorService.getVendors(latitude: lat, longitude: lng);
       _filteredVendors = [];
+      _lastFetchTime = DateTime.now();  // Update cache timestamp
       
       print('✅ Loaded ${_vendors.length} vendors');
       

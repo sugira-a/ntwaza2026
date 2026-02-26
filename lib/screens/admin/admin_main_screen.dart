@@ -21,7 +21,7 @@ class AdminMainScreen extends StatefulWidget {
 
 class _AdminMainScreenState extends State<AdminMainScreen> {
   int _selectedIndex = 0;
-  static const int _pollSeconds = 10;
+  static const int _pollSeconds = 30;  // Increased from 10 for cost savings
 
   @override
   void initState() {
