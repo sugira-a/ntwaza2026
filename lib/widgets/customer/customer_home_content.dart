@@ -54,14 +54,22 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
     setState(() => _isInitializing = true);
 
     try {
+      final vendorProvider = context.read<VendorProvider>();
       final addressProvider = context.read<AddressProvider>();
+      
+      // First, try to load cached vendors (instant, no API call)
+      await vendorProvider.loadCachedVendors();
+      
+      // Load saved addresses
       await addressProvider.initialize();
       
       final defaultAddress = addressProvider.defaultAddress ?? addressProvider.savedAddresses.firstOrNull;
       
       if (defaultAddress != null) {
         setState(() => _currentAddress = defaultAddress);
-        await _loadVendorsForAddress(defaultAddress);
+        
+        // Smart load: only fetch if needed (location changed or cache expired)
+        await _loadVendorsForAddress(defaultAddress, forceRefresh: false);
       }
       
       setState(() => _isInitializing = false);
@@ -71,7 +79,7 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
     }
   }
 
-  Future<void> _loadVendorsForAddress(DeliveryAddress address) async {
+  Future<void> _loadVendorsForAddress(DeliveryAddress address, {bool forceRefresh = false}) async {
     try {
       final vendorProvider = context.read<VendorProvider>();
       
@@ -84,8 +92,18 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
         return;
       }
       
-      await vendorProvider.fetchVendors();
-      await _fetchRealSpecialOffers();
+      // Smart fetch: only calls API if cache expired or location changed significantly
+      final shouldFetch = forceRefresh || vendorProvider.shouldFetchVendors(
+        lat: address.latitude,
+        lng: address.longitude,
+      );
+      
+      if (shouldFetch) {
+        await vendorProvider.fetchVendors(forceRefresh: forceRefresh);
+        await _fetchRealSpecialOffers();
+      } else {
+        print('📦 Using cached vendors - no API call needed');
+      }
       
       // Mark address as used
       await context.read<AddressProvider>().markAddressAsUsed(address.id);
@@ -195,23 +213,68 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
   // ==================== DIALOGS & MENUS ====================
   
   void _showLoginPrompt(BuildContext context, String message) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Login Required'),
-        content: Text(message),
+        backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2E7D32).withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.login_rounded, color: Color(0xFF2E7D32), size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Login Required',
+                style: TextStyle(
+                  color: isDarkMode ? Colors.white : Colors.black87,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 18,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          message,
+          style: TextStyle(
+            color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
+            fontSize: 15,
+            height: 1.4,
+          ),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: TextStyle(
+                color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
           ElevatedButton(
             onPressed: () { 
               Navigator.pop(context); 
               context.go('/login'); 
             }, 
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.black,
+              backgroundColor: const Color(0xFF2E7D32),
               foregroundColor: Colors.white,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ), 
-            child: const Text('Login')
+            child: const Text('Login', style: TextStyle(fontWeight: FontWeight.w600))
           ),
         ],
       ),
@@ -1519,7 +1582,15 @@ void _showAddressManagementDialog(BuildContext context, bool isDarkMode, Color c
   Widget _buildProductCard(Product product, bool isDarkMode, Color cardColor, Color textColor, [Color? subtextColor]) {
     final price = product.price;
     final priceText = 'Rwf $price';
-    final imageUrl = product.imageUrl.isNotEmpty ? product.imageUrl : 'https://picsum.photos/seed/${product.id}/200/200';
+    // Fix image URL - ensure it has proper base URL
+    String imageUrl = product.imageUrl;
+    if (imageUrl.isEmpty) {
+      imageUrl = 'https://picsum.photos/seed/${product.id}/200/200';
+    } else if (!imageUrl.startsWith('http')) {
+      // Add base URL for relative paths
+      final baseUrl = ApiService.baseUrl;
+      imageUrl = imageUrl.startsWith('/') ? '$baseUrl$imageUrl' : '$baseUrl/$imageUrl';
+    }
     final vendorName = product.vendorName?.isNotEmpty == true ? product.vendorName! : null;
     final finalSubtextColor = subtextColor ?? Colors.grey[600]!;
     
@@ -1889,16 +1960,60 @@ Widget _buildLocationSelectionOverlay(bool isDarkMode, Color cardColor, Color te
   );
 }
 
-// Handle location permission and selection
+// Handle location permission and selection - improved auto-detect
 Future<void> _handleSetLocation() async {
+  // Show loading indicator
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) => WillPopScope(
+      onWillPop: () async => false,
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF1E1E1E) : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(color: Color(0xFF2E7D32)),
+              const SizedBox(height: 16),
+              Text(
+                'Detecting your location...',
+                style: TextStyle(
+                  color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+
   try {
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
     }
 
+    if (permission == LocationPermission.deniedForever) {
+      if (mounted) Navigator.pop(context); // Close loading
+      if (mounted) {
+        _showLocationPermissionDeniedDialog();
+      }
+      return;
+    }
+
     if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
-      final position = await Geolocator.getCurrentPosition();
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      ).timeout(const Duration(seconds: 15));
+
+      if (mounted) Navigator.pop(context); // Close loading
 
       if (_isLocationOutOfKigali(position.latitude, position.longitude)) {
         if (mounted) {
@@ -1907,9 +2022,21 @@ Future<void> _handleSetLocation() async {
         return;
       }
 
+      // Go to location picker with current position
       final result = await Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => const LocationPickerScreen()),
+        MaterialPageRoute(
+          builder: (context) => LocationPickerScreen(
+            initialAddress: DeliveryAddress(
+              id: 'temp_${DateTime.now().millisecondsSinceEpoch}',
+              label: 'Current Location',
+              fullAddress: 'Loading address...',
+              latitude: position.latitude,
+              longitude: position.longitude,
+              createdAt: DateTime.now(),
+            ),
+          ),
+        ),
       );
 
       if (result != null && result is DeliveryAddress) {
@@ -1923,14 +2050,82 @@ Future<void> _handleSetLocation() async {
         await _loadVendorsForAddress(result);
       }
     } else {
+      if (mounted) Navigator.pop(context); // Close loading
       await Geolocator.openAppSettings();
     }
   } catch (e) {
+    if (mounted) Navigator.pop(context); // Close loading
     print('Error getting location: $e');
     if (mounted) {
-      _showLocationError('Unable to get location. Please try again.');
+      _showLocationError('Unable to get location. Please try again or search manually.');
     }
   }
+}
+
+// Show permission denied dialog
+void _showLocationPermissionDeniedDialog() {
+  final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.red.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.location_off, color: Colors.red, size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Location Permission Required',
+              style: TextStyle(
+                color: isDarkMode ? Colors.white : Colors.black87,
+                fontWeight: FontWeight.w700,
+                fontSize: 16,
+              ),
+            ),
+          ),
+        ],
+      ),
+      content: Text(
+        'Please enable location access in your device settings to use this feature, or search for a location manually.',
+        style: TextStyle(
+          color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
+          fontSize: 14,
+          height: 1.4,
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(
+            'Cancel',
+            style: TextStyle(color: isDarkMode ? Colors.grey[400] : Colors.grey[600]),
+          ),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            Navigator.pop(context);
+            Geolocator.openAppSettings();
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF2E7D32),
+            foregroundColor: Colors.white,
+            elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+          child: const Text('Open Settings'),
+        ),
+      ],
+    ),
+  );
 }
 
 // Handle search location
@@ -2211,7 +2406,8 @@ Widget _buildNoVendorsOverlay(bool isDarkMode, Color cardColor, Color textColor,
   return RefreshIndicator(
     onRefresh: () async {
       if (_currentAddress != null) {
-        await _loadVendorsForAddress(_currentAddress!);
+        // Force refresh when user pulls to refresh
+        await _loadVendorsForAddress(_currentAddress!, forceRefresh: true);
       }
     },
     color: Colors.black,

@@ -78,11 +78,19 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
           widget.initialAddress!.latitude,
           widget.initialAddress!.longitude,
         );
-        _selectedAddress = widget.initialAddress!.fullAddress;
         _additionalInfoController.text = widget.initialAddress!.additionalInfo ?? '';
         _selectedLabel = widget.initialAddress!.label;
         _validateSelectedLocation();
         setState(() => _isLoadingLocation = false);
+        
+        // If address is a placeholder, fetch the real address
+        if (widget.initialAddress!.fullAddress == 'Loading address...' ||
+            widget.initialAddress!.fullAddress.isEmpty) {
+          _selectedAddress = 'Fetching address...';
+          _getAddressFromLatLng(_selectedLocation!, showError: false);
+        } else {
+          _selectedAddress = widget.initialAddress!.fullAddress;
+        }
       } else {
         // Try to get current location with timeout
         await _getCurrentLocationWithTimeout();
@@ -753,6 +761,25 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     }
   }
 
+  // Tap on map to select location directly
+  void _onMapTap(LatLng position) async {
+    setState(() {
+      _selectedLocation = position;
+      _isLoadingAddress = true;
+      _addressError = null;
+    });
+    
+    _validateSelectedLocation();
+    
+    // Move camera to tapped location
+    _mapController?.animateCamera(
+      CameraUpdate.newLatLng(position),
+    );
+    
+    // Get address for tapped location
+    await _getAddressFromLatLng(position, showError: true);
+  }
+
   Future<void> _getCurrentLocation() async {
     try {
       setState(() => _isLoadingLocation = true);
@@ -1060,6 +1087,7 @@ GoogleMap(
   ),
   onCameraMove: _onCameraMove,
   onCameraIdle: _onCameraIdle,
+  onTap: _onMapTap, // Added: Tap to select location
   myLocationEnabled: true,
   myLocationButtonEnabled: false,
   zoomControlsEnabled: false,

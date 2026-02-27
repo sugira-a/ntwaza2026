@@ -1,6 +1,7 @@
 // lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'dart:ui' as ui;
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -57,6 +58,14 @@ void main() async {
   };
 
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Enable edge-to-edge mode with transparent system bars
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    systemNavigationBarColor: Colors.transparent,
+    systemNavigationBarDividerColor: Colors.transparent,
+  ));
 
   // Initialize Firebase
   try {
@@ -120,6 +129,21 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, _) {
+        // Set system UI overlay style based on theme
+        final systemUiStyle = themeProvider.isDarkMode
+            ? SystemUiOverlayStyle.light.copyWith(
+                statusBarColor: Colors.transparent,
+                systemNavigationBarColor: Colors.black,
+                systemNavigationBarIconBrightness: Brightness.light,
+              )
+            : SystemUiOverlayStyle.dark.copyWith(
+                statusBarColor: Colors.transparent,
+                systemNavigationBarColor: Colors.white,
+                systemNavigationBarIconBrightness: Brightness.dark,
+              );
+        
+        SystemChrome.setSystemUIOverlayStyle(systemUiStyle);
+        
         return MaterialApp.router(
           title: 'Ntwaza',
           debugShowCheckedModeBanner: false,
