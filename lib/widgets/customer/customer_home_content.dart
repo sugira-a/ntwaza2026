@@ -1865,102 +1865,181 @@ void _showAddressManagementDialog(BuildContext context, bool isDarkMode, Color c
   // ==================== SCREENS ====================
 
 Widget _buildLocationSelectionOverlay(bool isDarkMode, Color cardColor, Color textColor, Color subtextColor) {
+  final addressProvider = context.read<AddressProvider>();
+  final savedAddresses = addressProvider.savedAddresses;
+  
   return Container(
-    color: Colors.black.withOpacity(0.4),
+    color: Colors.black.withOpacity(0.5),
     child: Center(
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 32),
-        padding: const EdgeInsets.all(24),
+        margin: const EdgeInsets.symmetric(horizontal: 24),
+        constraints: const BoxConstraints(maxHeight: 500),
         decoration: BoxDecoration(
           color: cardColor,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.15),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 24,
+              offset: const Offset(0, 12),
             ),
           ],
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Icon
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: const Color(0xFF2E7D32).withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.location_on_rounded, size: 28, color: Color(0xFF2E7D32)),
-            ),
-            const SizedBox(height: 16),
-            
-            // Title
-            Text(
-              'Choose Delivery Location',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: textColor),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'We only serve within Kigali. Please select a location in Kigali to continue.',
-              style: TextStyle(fontSize: 13, color: subtextColor, height: 1.4),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 20),
-            
-            // Use Current Location
-            SizedBox(
-              width: double.infinity,
-              height: 44,
-              child: ElevatedButton.icon(
-                onPressed: () => _handleSetLocation(),
-                icon: const Icon(Icons.my_location, size: 18),
-                label: const Text('Use Current Location', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2E7D32),
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Icon
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2E7D32).withOpacity(0.1),
+                  shape: BoxShape.circle,
                 ),
+                child: const Icon(Icons.location_on_rounded, size: 28, color: Color(0xFF2E7D32)),
               ),
-            ),
-            const SizedBox(height: 10),
-            
-            // Search Location
-            SizedBox(
-              width: double.infinity,
-              height: 44,
-              child: OutlinedButton.icon(
-                onPressed: () => _handleSearchLocation(),
-                icon: const Icon(Icons.search, size: 18),
-                label: const Text('Search Location in Kigali', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF2E7D32),
-                  side: const BorderSide(color: Color(0xFF2E7D32), width: 1.5),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
+              const SizedBox(height: 16),
+              
+              // Title
+              Text(
+                'Choose Delivery Location',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: textColor),
               ),
-            ),
-            const SizedBox(height: 14),
-            
-            // Service note
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.info_outline, size: 14, color: subtextColor),
-                const SizedBox(width: 6),
-                Flexible(
+              const SizedBox(height: 6),
+              Text(
+                'Select a saved address or use your current location.',
+                style: TextStyle(fontSize: 13, color: subtextColor, height: 1.4),
+                textAlign: TextAlign.center,
+              ),
+              
+              // Saved Addresses Section
+              if (savedAddresses.isNotEmpty) ...[
+                const SizedBox(height: 20),
+                Align(
+                  alignment: Alignment.centerLeft,
                   child: Text(
-                    'Service Area: Kigali only (within 25km radius)',
-                    style: TextStyle(fontSize: 11, color: subtextColor),
-                    textAlign: TextAlign.center,
+                    'Saved Addresses',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: subtextColor),
                   ),
                 ),
+                const SizedBox(height: 10),
+                ...savedAddresses.take(3).map((address) => _buildSavedAddressTile(address, isDarkMode, textColor, subtextColor)),
               ],
-            ),
-          ],
+              
+              const SizedBox(height: 20),
+              
+              // Use Current Location
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton.icon(
+                  onPressed: () => _handleSetLocation(),
+                  icon: const Icon(Icons.my_location, size: 18),
+                  label: const Text('Use Current Location', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2E7D32),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              
+              // Search Location
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: OutlinedButton.icon(
+                  onPressed: () => _handleSearchLocation(),
+                  icon: const Icon(Icons.search, size: 18),
+                  label: const Text('Search Location in Kigali', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF2E7D32),
+                    side: const BorderSide(color: Color(0xFF2E7D32), width: 1.5),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              
+              // Service note
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.info_outline, size: 14, color: subtextColor),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      'Service Area: Kigali only (within 25km radius)',
+                      style: TextStyle(fontSize: 11, color: subtextColor),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+// Saved address tile for location overlay
+Widget _buildSavedAddressTile(DeliveryAddress address, bool isDarkMode, Color textColor, Color subtextColor) {
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Material(
+      color: isDarkMode ? const Color(0xFF252525) : const Color(0xFFF5F5F5),
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: () async {
+          setState(() => _currentAddress = address);
+          await _loadVendorsForAddress(address);
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2E7D32).withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  address.label == 'Home' ? Icons.home_rounded : 
+                  address.label == 'Work' ? Icons.work_rounded : Icons.place_rounded,
+                  color: const Color(0xFF2E7D32),
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      address.label ?? 'Saved Location',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: textColor),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      address.fullAddress,
+                      style: TextStyle(fontSize: 12, color: subtextColor),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right, color: subtextColor, size: 20),
+            ],
+          ),
         ),
       ),
     ),
@@ -1973,32 +2052,70 @@ Future<void> _handleSetLocation() async {
   showDialog(
     context: context,
     barrierDismissible: false,
-    builder: (context) => WillPopScope(
-      onWillPop: () async => false,
-      child: Center(
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF1E1E1E) : Colors.white,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator(color: Color(0xFF2E7D32)),
-              const SizedBox(height: 16),
-              Text(
-                'Detecting your location...',
-                style: TextStyle(
-                  color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87,
-                  fontSize: 14,
-                ),
+    builder: (context) {
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      return WillPopScope(
+        onWillPop: () async => false,
+        child: Center(
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              padding: const EdgeInsets.all(28),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
               ),
-            ],
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2E7D32).withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const SizedBox(
+                      width: 32,
+                      height: 32,
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF2E7D32),
+                        strokeWidth: 3,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Detecting your location',
+                    style: TextStyle(
+                      color: isDark ? Colors.white : Colors.black87,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      decoration: TextDecoration.none,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Please wait...',
+                    style: TextStyle(
+                      color: isDark ? Colors.grey[400] : Colors.grey[600],
+                      fontSize: 13,
+                      decoration: TextDecoration.none,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
-      ),
-    ),
+      );
+    },
   );
 
   try {

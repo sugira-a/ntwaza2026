@@ -217,6 +217,10 @@ class ProfileScreen extends StatelessWidget {
   }
 
   PreferredSizeWidget _buildAppBar(BuildContext context, bool isDark, Color textColor) {
+    final subtextColor = isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280);
+    final cardColor = isDark ? const Color(0xFF141414) : Colors.white;
+    final authProvider = context.read<AuthProvider>();
+    
     return AppBar(
       backgroundColor: isDark ? const Color(0xFF0A0A0A) : const Color(0xFFF5F5F5),
       surfaceTintColor: Colors.transparent,
@@ -240,6 +244,117 @@ class ProfileScreen extends StatelessWidget {
           letterSpacing: -0.5,
         ),
       ),
+      actions: [
+        PopupMenuButton<String>(
+          icon: Icon(Icons.more_vert, color: textColor),
+          color: cardColor,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          offset: const Offset(0, 45),
+          onSelected: (value) {
+            switch (value) {
+              case 'edit':
+                _showEditProfileDialog(context, authProvider, isDark, cardColor, textColor, subtextColor);
+                break;
+              case 'notifications':
+                context.push('/notifications');
+                break;
+              case 'help':
+                context.push('/help-support');
+                break;
+              case 'about':
+                _showAboutDialog(context, isDark, cardColor, textColor, subtextColor);
+                break;
+            }
+          },
+          itemBuilder: (context) => [
+            PopupMenuItem(
+              value: 'edit',
+              child: Row(
+                children: [
+                  Icon(Icons.edit_outlined, size: 20, color: textColor),
+                  const SizedBox(width: 12),
+                  Text('Edit Profile', style: TextStyle(color: textColor)),
+                ],
+              ),
+            ),
+            PopupMenuItem(
+              value: 'notifications',
+              child: Row(
+                children: [
+                  Icon(Icons.notifications_outlined, size: 20, color: textColor),
+                  const SizedBox(width: 12),
+                  Text('Notifications', style: TextStyle(color: textColor)),
+                ],
+              ),
+            ),
+            PopupMenuItem(
+              value: 'help',
+              child: Row(
+                children: [
+                  Icon(Icons.help_outline, size: 20, color: textColor),
+                  const SizedBox(width: 12),
+                  Text('Help Center', style: TextStyle(color: textColor)),
+                ],
+              ),
+            ),
+            const PopupMenuDivider(),
+            PopupMenuItem(
+              value: 'about',
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, size: 20, color: textColor),
+                  const SizedBox(width: 12),
+                  Text('About', style: TextStyle(color: textColor)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  void _showAboutDialog(BuildContext context, bool isDark, Color cardColor, Color textColor, Color subtextColor) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: cardColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: accentGreen.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.restaurant_menu, color: accentGreen, size: 24),
+            ),
+            const SizedBox(width: 12),
+            Text('Ntwaza', style: TextStyle(color: textColor, fontWeight: FontWeight.w700)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Version 1.0.0', style: TextStyle(color: subtextColor, fontSize: 14)),
+            const SizedBox(height: 12),
+            Text(
+              'Ntwaza is your go-to food delivery app in Kigali. Order from your favorite restaurants and get fast delivery to your doorstep.',
+              style: TextStyle(color: textColor, fontSize: 13, height: 1.5),
+            ),
+            const SizedBox(height: 16),
+            Text('© 2026 Ntwaza. All rights reserved.', style: TextStyle(color: subtextColor, fontSize: 11)),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Close', style: TextStyle(color: accentGreen)),
+          ),
+        ],
+      ),
     );
   }
 
@@ -252,15 +367,15 @@ class ProfileScreen extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isDark 
-              ? [const Color(0xFF1A1A2E), const Color(0xFF16213E)]
-              : [const Color(0xFF667eea), const Color(0xFF764ba2)],
+              ? [const Color(0xFF1A1A1A), const Color(0xFF0A0A0A)]
+              : [const Color(0xFF2D2D2D), const Color(0xFF1A1A1A)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: (isDark ? Colors.black : const Color(0xFF667eea)).withOpacity(0.3),
+            color: Colors.black.withOpacity(0.25),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -272,15 +387,15 @@ class ProfileScreen extends StatelessWidget {
             width: 64,
             height: 64,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: const Color(0xFF2E7D32).withOpacity(0.2),
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
+              border: Border.all(color: const Color(0xFF2E7D32).withOpacity(0.5), width: 2),
             ),
             child: Center(
               child: Text(
                 initials,
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: Color(0xFF4CAF50),
                   fontSize: 24,
                   fontWeight: FontWeight.w800,
                 ),
@@ -307,7 +422,7 @@ class ProfileScreen extends StatelessWidget {
                 Text(
                   user.email,
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withOpacity(0.7),
                     fontSize: 13,
                   ),
                   maxLines: 1,
