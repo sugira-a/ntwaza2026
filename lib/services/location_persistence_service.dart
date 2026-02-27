@@ -309,7 +309,7 @@ class LocationPersistenceService {
         'latitude': position.latitude,
         'longitude': position.longitude,
         'accuracy': position.accuracy,
-        'timestamp': position.timestamp.toIso8601String(),
+        'timestamp': position.timestamp?.toIso8601String() ?? DateTime.now().toIso8601String(),
       };
     } catch (e) {
       print('❌ Error getting current location: $e');

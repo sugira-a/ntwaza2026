@@ -50,10 +50,52 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _loadUserData();
     _loadVendorDetails();
     _loadAvailablePromoCodes();
+    _autoFillDeliveryAddress();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final addressProvider = context.read<AddressProvider>();
       addressProvider.addListener(_onAddressChanged);
     });
+  }
+
+  /// Auto-fill delivery address with default or most recent address
+  void _autoFillDeliveryAddress() {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final addressProvider = context.read<AddressProvider>();
+      
+      // If no address is selected, auto-select one
+      if (addressProvider.selectedAddress == null) {
+        // First, try to use the default address
+        if (addressProvider.defaultAddress != null) {
+          addressProvider.selectAddress(addressProvider.defaultAddress!);
+          _updateVendorsForAddress(addressProvider.defaultAddress!);
+        } 
+        // Otherwise, use the most recent address
+        else if (addressProvider.recentAddresses.isNotEmpty) {
+          final recentAddress = addressProvider.recentAddresses.first;
+          addressProvider.selectAddress(recentAddress);
+          _updateVendorsForAddress(recentAddress);
+        }
+      } else {
+        // Ensure delivery fees are calculated for selected address
+        _updateVendorsForAddress(addressProvider.selectedAddress!);
+      }
+    });
+  }
+
+  /// Update vendors based on selected address
+  Future<void> _updateVendorsForAddress(DeliveryAddress address) async {
+    if (!mounted) return;
+    setState(() => _isRecalculatingFees = true);
+    try {
+      final vendorProvider = context.read<VendorProvider>();
+      vendorProvider.setDeliveryAddress(address);
+      await vendorProvider.fetchVendors();
+      await _loadVendorDetails();
+    } catch (e) {
+      print('Error updating vendors: $e');
+    } finally {
+      if (mounted) setState(() => _isRecalculatingFees = false);
+    }
   }
 
   @override
@@ -339,75 +381,157 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     itemBuilder: (context, index) {
                       final address = sortedAddresses[index];
                       final isSelected = addressProvider.selectedAddress?.id == address.id;
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        decoration: BoxDecoration(
-                          color: isDarkMode ? const Color(0xFF0A0A0A) : Colors.grey[100],
-                          borderRadius: BorderRadius.circular(10),
+                      return Dismissible(
+                        key: Key(address.id),
+                        direction: DismissDirection.endToStart,
+                        background: Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          alignment: Alignment.centerRight,
+                          padding: const EdgeInsets.only(right: 20),
+                          child: const Icon(Icons.delete_rounded, color: Colors.white, size: 24),
                         ),
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          leading: Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Icon(
-                              address.label == 'Home'
-                                  ? Icons.home_rounded
-                                  : address.label == 'Work'
-                                      ? Icons.work_rounded
-                                      : Icons.location_on_rounded,
-                              color: Colors.grey[600],
-                              size: 24,
-                            ),
-                          ),
-                          title: Text(
-                            address.label ?? address.shortAddress,
-                            style: TextStyle(
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                              fontSize: 15,
-                            ),
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(height: 4),
-                              Text(
-                                address.shortAddress,
-                                style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              if (address.lastUsedAt != null && index < 3) ...[
-                                const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    Icon(Icons.history, size: 12, color: Colors.grey[500]),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      'Recently used',
-                                      style: TextStyle(fontSize: 11, color: Colors.grey[500]),
-                                    ),
-                                  ],
+                        confirmDismiss: (direction) async {
+                          return await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text('Delete Address'),
+                              content: Text('Are you sure you want to delete "${address.label ?? address.shortAddress}"?'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx, false),
+                                  child: const Text('Cancel'),
+                                ),
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx, true),
+                                  style: TextButton.styleFrom(foregroundColor: Colors.red),
+                                  child: const Text('Delete'),
                                 ),
                               ],
-                            ],
+                            ),
+                          ) ?? false;
+                        },
+                        onDismissed: (direction) {
+                          addressProvider.deleteAddress(address.id);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Deleted ${address.label ?? address.shortAddress}'),
+                              backgroundColor: Colors.red[700],
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          decoration: BoxDecoration(
+                            color: isDarkMode ? const Color(0xFF0A0A0A) : Colors.grey[100],
+                            borderRadius: BorderRadius.circular(10),
                           ),
-                          trailing: isSelected
-                              ? const Icon(Icons.check_circle, color: Color(0xFF10B981), size: 24)
-                              : null,
-                          onTap: () async {
-                            Navigator.pop(context);
-                            if (mounted) setState(() => _isRecalculatingFees = true);
-                            addressProvider.selectAddress(address);
-                            final vendorProvider = context.read<VendorProvider>();
-                            vendorProvider.setDeliveryAddress(address);
-                            await vendorProvider.fetchVendors();
-                            await _loadVendorDetails();
-                            if (mounted) setState(() => _isRecalculatingFees = false);
-                          },
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            leading: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(
+                                address.label == 'Home'
+                                    ? Icons.home_rounded
+                                    : address.label == 'Work'
+                                        ? Icons.work_rounded
+                                        : Icons.location_on_rounded,
+                                color: Colors.grey[600],
+                                size: 24,
+                              ),
+                            ),
+                            title: Text(
+                              address.label ?? address.shortAddress,
+                              style: TextStyle(
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                                fontSize: 15,
+                              ),
+                            ),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 4),
+                                Text(
+                                  address.shortAddress,
+                                  style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                if (address.lastUsedAt != null && index < 3) ...[
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      Icon(Icons.history, size: 12, color: Colors.grey[500]),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'Recently used',
+                                        style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ],
+                            ),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (isSelected)
+                                  const Icon(Icons.check_circle, color: Color(0xFF10B981), size: 24)
+                                else
+                                  IconButton(
+                                    icon: Icon(Icons.delete_outline, color: Colors.red[400], size: 20),
+                                    onPressed: () async {
+                                      final confirm = await showDialog<bool>(
+                                        context: context,
+                                        builder: (ctx) => AlertDialog(
+                                          title: const Text('Delete Address'),
+                                          content: Text('Are you sure you want to delete "${address.label ?? address.shortAddress}"?'),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () => Navigator.pop(ctx, false),
+                                              child: const Text('Cancel'),
+                                            ),
+                                            TextButton(
+                                              onPressed: () => Navigator.pop(ctx, true),
+                                              style: TextButton.styleFrom(foregroundColor: Colors.red),
+                                              child: const Text('Delete'),
+                                            ),
+                                          ],
+                                        ),
+                                      ) ?? false;
+                                      if (confirm) {
+                                        addressProvider.deleteAddress(address.id);
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('Deleted ${address.label ?? address.shortAddress}'),
+                                            backgroundColor: Colors.red[700],
+                                            duration: const Duration(seconds: 2),
+                                          ),
+                                        );
+                                      }
+                                    },
+                                  ),
+                              ],
+                            ),
+                            onTap: () async {
+                              Navigator.pop(context);
+                              if (mounted) setState(() => _isRecalculatingFees = true);
+                              addressProvider.selectAddress(address);
+                              final vendorProvider = context.read<VendorProvider>();
+                              vendorProvider.setDeliveryAddress(address);
+                              await vendorProvider.fetchVendors();
+                              await _loadVendorDetails();
+                              if (mounted) setState(() => _isRecalculatingFees = false);
+                            },
+                          ),
                         ),
                       );
                     },

@@ -51,8 +51,6 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
   }
 
   Future<void> _initializeApp() async {
-    setState(() => _isInitializing = true);
-
     try {
       final vendorProvider = context.read<VendorProvider>();
       final addressProvider = context.read<AddressProvider>();
@@ -66,13 +64,22 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
       final defaultAddress = addressProvider.defaultAddress ?? addressProvider.savedAddresses.firstOrNull;
       
       if (defaultAddress != null) {
-        setState(() => _currentAddress = defaultAddress);
+        setState(() {
+          _currentAddress = defaultAddress;
+          _isInitializing = false;
+        });
         
-        // Smart load: only fetch if needed (location changed or cache expired)
-        await _loadVendorsForAddress(defaultAddress, forceRefresh: false);
+        // If we already have cached vendors, don't block - load in background
+        if (vendorProvider.vendors.isNotEmpty) {
+          // Load fresh data in background without blocking UI
+          _loadVendorsForAddress(defaultAddress, forceRefresh: false);
+        } else {
+          // No cached vendors, we need to wait for load
+          await _loadVendorsForAddress(defaultAddress, forceRefresh: false);
+        }
+      } else {
+        setState(() => _isInitializing = false);
       }
-      
-      setState(() => _isInitializing = false);
     } catch (e) {
       print('Error initializing app: $e');
       setState(() => _isInitializing = false);
@@ -2558,15 +2565,7 @@ Widget build(BuildContext context) {
           children: [
             const NtwazaLoadingIndicator(
               size: 56,
-              message: 'Finding restaurants near you...',
-            ),
-            const SizedBox(height: 32),
-            // Show skeleton cards
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                children: List.generate(3, (_) => const VendorCardSkeleton()),
-              ),
+              message: 'Loading...',
             ),
           ],
         ),

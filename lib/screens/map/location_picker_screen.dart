@@ -104,7 +104,17 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
 
   Future<void> _getCurrentLocationWithTimeout() async {
     try {
-      // Check permission first
+      // Check if location services are enabled first
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (mounted) {
+          _showLocationServicesDisabledDialog();
+        }
+        _setDefaultLocation();
+        return;
+      }
+
+      // Check permission
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
@@ -112,6 +122,11 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
 
       if (permission == LocationPermission.deniedForever) {
         _showPermissionDeniedDialog();
+        _setDefaultLocation();
+        return;
+      }
+
+      if (permission == LocationPermission.denied) {
         _setDefaultLocation();
         return;
       }
@@ -476,9 +491,35 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              Geolocator.openLocationSettings();
+              Geolocator.openAppSettings();
             },
             child: const Text('Open Settings'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showLocationServicesDisabledDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Location Services Disabled'),
+        content: const Text(
+          'Please enable location services (GPS) on your device to get your current location. '
+          'You can still manually select a delivery location on the map.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Geolocator.openLocationSettings();
+            },
+            child: const Text('Enable Location'),
           ),
         ],
       ),
@@ -784,6 +825,16 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     try {
       setState(() => _isLoadingLocation = true);
 
+      // Check if location services are enabled first
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (mounted) {
+          _showLocationServicesDisabledDialog();
+        }
+        setState(() => _isLoadingLocation = false);
+        return;
+      }
+
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
@@ -793,6 +844,11 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         if (mounted) {
           _showPermissionDeniedDialog();
         }
+        setState(() => _isLoadingLocation = false);
+        return;
+      }
+
+      if (permission == LocationPermission.denied) {
         setState(() => _isLoadingLocation = false);
         return;
       }
@@ -858,9 +914,10 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       final location = LatLng(position!.latitude, position.longitude);
       
       // Verify location freshness (timestamp should be recent, within last 15 seconds)
-      final locationAge = DateTime.now().difference(
-        DateTime.fromMillisecondsSinceEpoch(position.timestamp!.millisecondsSinceEpoch)
-      );
+      Duration locationAge = Duration.zero;
+      if (position.timestamp != null) {
+        locationAge = DateTime.now().difference(position.timestamp!);
+      }
       
       // Check for impossible location jumps (likely cache from previous session)
       final isLocationSuspicious = _selectedLocation != null && 
@@ -872,7 +929,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('⚠️ Location accuracy: ${position.accuracy.toStringAsFixed(0)}m, age: ${locationAge.inSeconds}s. Try again or move your device.'),
+              content: Text('⚠️ Location accuracy: ${position.accuracy.toStringAsFixed(0)}m${locationAge.inSeconds > 0 ? ', age: ${locationAge.inSeconds}s' : ''}. Try again or move your device.'),
               backgroundColor: Colors.orange,
               duration: const Duration(seconds: 4),
             ),
