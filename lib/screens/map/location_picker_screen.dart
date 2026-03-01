@@ -33,6 +33,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   String _selectedAddress = 'Move map to select location';
   bool _isLoadingAddress = false;
   bool _isLoadingLocation = true;
+  bool _isCentering = false;
   bool _isMapReady = false;
   String? _addressError;
   bool _isOutsideServiceArea = false;
@@ -836,6 +837,66 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     await _getAddressFromLatLng(position, showError: true);
   }
 
+  /// Recenter map to current location without full-screen loading overlay
+  Future<void> _recenterToMyLocation() async {
+    if (_isCentering) return;
+    try {
+      setState(() => _isCentering = true);
+
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (mounted) _showLocationServicesDisabledDialog();
+        setState(() => _isCentering = false);
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        setState(() => _isCentering = false);
+        return;
+      }
+
+      final pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 10),
+      );
+
+      if (!mounted) return;
+
+      final location = LatLng(pos.latitude, pos.longitude);
+
+      // Animate camera to new location
+      if (_mapController != null) {
+        await _mapController!.animateCamera(
+          CameraUpdate.newLatLngZoom(location, 16),
+        );
+      }
+
+      setState(() {
+        _selectedLocation = location;
+        _isCentering = false;
+      });
+
+      _validateSelectedLocation();
+      await _getAddressFromLatLng(location, showError: true);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isCentering = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Unable to get location. Try again.'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _getCurrentLocation() async {
     try {
       setState(() => _isLoadingLocation = true);
@@ -1316,8 +1377,8 @@ GoogleMap(
               mini: true,
               backgroundColor: Colors.white,
               elevation: 4,
-              onPressed: _getCurrentLocation,
-              child: _isLoadingLocation
+              onPressed: _recenterToMyLocation,
+              child: _isCentering
                   ? const SizedBox(
                       width: 20,
                       height: 20,
@@ -1590,8 +1651,8 @@ GoogleMap(
               mini: true,
               backgroundColor: Colors.white,
               elevation: 4,
-              onPressed: _getCurrentLocation,
-              child: _isLoadingLocation
+              onPressed: _recenterToMyLocation,
+              child: _isCentering
                   ? const SizedBox(
                       width: 20,
                       height: 20,

@@ -63,7 +63,10 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
       // Load saved addresses
       await addressProvider.initialize();
       
-      var defaultAddress = addressProvider.defaultAddress ?? addressProvider.savedAddresses.firstOrNull;
+      // Prefer the address selected during splash, then default, then first saved
+      var defaultAddress = addressProvider.selectedAddress 
+          ?? addressProvider.defaultAddress 
+          ?? addressProvider.savedAddresses.firstOrNull;
       
       // Auto-detect location if no saved address
       if (defaultAddress == null) {
@@ -771,87 +774,218 @@ void _showAddressManagementDialog(BuildContext context, bool isDarkMode, Color c
     context: context,
     backgroundColor: Colors.transparent,
     isScrollControlled: true,
-    builder: (context) => Container(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.7,
-      ),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Header
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              border: Border(bottom: BorderSide(color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!)),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.location_on, color: textColor),
-                const SizedBox(width: 12),
-                Text('Delivery Addresses', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: textColor)),
-                const Spacer(),
-                IconButton(
-                  icon: Icon(Icons.close, color: subtextColor),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ],
-            ),
+    builder: (sheetContext) => StatefulBuilder(
+      builder: (sheetContext, setSheetState) {
+        return Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.7,
           ),
-          
-          // Saved Addresses List
-          Flexible(
-            child: ListView(
-              shrinkWrap: true,
-              children: [
-                if (addressProvider.savedAddresses.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Center(
-                      child: Column(
-                        children: [
-                          Icon(Icons.location_off, size: 48, color: subtextColor),
-                          const SizedBox(height: 16),
-                          Text('No saved addresses', style: TextStyle(color: subtextColor)),
-                        ],
-                      ),
+          decoration: BoxDecoration(
+            color: cardColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  border: Border(bottom: BorderSide(color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.location_on, color: textColor),
+                    const SizedBox(width: 12),
+                    Text('Delivery Addresses', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: textColor)),
+                    const Spacer(),
+                    IconButton(
+                      icon: Icon(Icons.close, color: subtextColor),
+                      onPressed: () => Navigator.pop(sheetContext),
                     ),
-                  )
-                else
-                  ...addressProvider.savedAddresses.map((address) {
-                    final isSelected = _currentAddress?.id == address.id;
-                    return ListTile(
-                      leading: Icon(
-                        address.isDefault ? Icons.home : Icons.location_on,
-                        color: isSelected ? Colors.green : subtextColor,
-                      ),
-                      title: Text(
-                        address.label ?? address.shortAddress,
-                        style: TextStyle(
-                          color: textColor,
-                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                  ],
+                ),
+              ),
+              
+              // Saved Addresses List
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: [
+                    if (addressProvider.savedAddresses.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.all(32),
+                        child: Center(
+                          child: Column(
+                            children: [
+                              Icon(Icons.location_off, size: 48, color: subtextColor),
+                              const SizedBox(height: 16),
+                              Text('No saved addresses', style: TextStyle(color: subtextColor)),
+                            ],
+                          ),
                         ),
-                      ),
-                      subtitle: Text(
-                        address.fullAddress,
-                        style: TextStyle(color: subtextColor, fontSize: 12),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      trailing: isSelected 
-                        ? Icon(Icons.check_circle, color: Colors.green)
-                        : Icon(Icons.arrow_forward_ios, size: 16, color: subtextColor),
-                      onTap: () async {
-                        Navigator.pop(context);
-                        
-                        // CHECK KIGALI RESTRICTION
-                        if (_isLocationOutOfKigali(address.latitude, address.longitude)) {
+                      )
+                    else
+                      ...addressProvider.savedAddresses.map((address) {
+                        final isSelected = _currentAddress?.id == address.id;
+                        return Dismissible(
+                          key: Key(address.id),
+                          direction: DismissDirection.endToStart,
+                          background: Container(
+                            alignment: Alignment.centerRight,
+                            padding: const EdgeInsets.only(right: 20),
+                            color: Colors.red,
+                            child: const Icon(Icons.delete, color: Colors.white),
+                          ),
+                          confirmDismiss: (_) async {
+                            return await showDialog<bool>(
+                              context: sheetContext,
+                              builder: (ctx) => AlertDialog(
+                                title: const Text('Delete Address'),
+                                content: Text('Delete "${address.shortAddress}"?'),
+                                actions: [
+                                  TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(ctx, true),
+                                    child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                                  ),
+                                ],
+                              ),
+                            ) ?? false;
+                          },
+                          onDismissed: (_) async {
+                            await addressProvider.deleteAddress(address.id);
+                            if (_currentAddress?.id == address.id) {
+                              final newDefault = addressProvider.defaultAddress ?? addressProvider.savedAddresses.firstOrNull;
+                              setState(() => _currentAddress = newDefault);
+                              if (newDefault != null) _loadVendorsForAddress(newDefault);
+                            }
+                            setSheetState(() {});
+                          },
+                          child: ListTile(
+                            leading: Icon(
+                              address.isDefault ? Icons.home : Icons.location_on,
+                              color: isSelected ? Colors.green : subtextColor,
+                            ),
+                            title: Text(
+                              address.shortAddress,
+                              style: TextStyle(
+                                color: textColor,
+                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                              ),
+                            ),
+                            subtitle: Text(
+                              address.fullAddress,
+                              style: TextStyle(color: subtextColor, fontSize: 12),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (isSelected)
+                                  const Icon(Icons.check_circle, color: Colors.green, size: 20),
+                                const SizedBox(width: 4),
+                                PopupMenuButton<String>(
+                                  icon: Icon(Icons.more_vert, size: 20, color: subtextColor),
+                                  padding: EdgeInsets.zero,
+                                  onSelected: (value) async {
+                                    if (value == 'edit') {
+                                      Navigator.pop(sheetContext);
+                                      final result = await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => LocationPickerScreen(initialAddress: address),
+                                        ),
+                                      );
+                                      if (result != null && result is DeliveryAddress) {
+                                        if (!_isLocationOutOfKigali(result.latitude, result.longitude)) {
+                                          await addressProvider.updateAddress(result.copyWith(id: address.id));
+                                          setState(() => _currentAddress = result.copyWith(id: address.id));
+                                          await _loadVendorsForAddress(result);
+                                        }
+                                      }
+                                    } else if (value == 'delete') {
+                                      final confirm = await showDialog<bool>(
+                                        context: sheetContext,
+                                        builder: (ctx) => AlertDialog(
+                                          title: const Text('Delete Address'),
+                                          content: Text('Delete "${address.shortAddress}"?'),
+                                          actions: [
+                                            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                                            TextButton(
+                                              onPressed: () => Navigator.pop(ctx, true),
+                                              child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                      if (confirm == true) {
+                                        await addressProvider.deleteAddress(address.id);
+                                        if (_currentAddress?.id == address.id) {
+                                          final newDefault = addressProvider.defaultAddress ?? addressProvider.savedAddresses.firstOrNull;
+                                          setState(() => _currentAddress = newDefault);
+                                          if (newDefault != null) _loadVendorsForAddress(newDefault);
+                                        }
+                                        setSheetState(() {});
+                                      }
+                                    } else if (value == 'default') {
+                                      await addressProvider.setDefaultAddress(address.id);
+                                      setSheetState(() {});
+                                    }
+                                  },
+                                  itemBuilder: (_) => [
+                                    const PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit, size: 18), SizedBox(width: 8), Text('Edit')])),
+                                    if (!address.isDefault)
+                                      const PopupMenuItem(value: 'default', child: Row(children: [Icon(Icons.home, size: 18), SizedBox(width: 8), Text('Set as default')])),
+                                    const PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete, size: 18, color: Colors.red), SizedBox(width: 8), Text('Delete', style: TextStyle(color: Colors.red))])),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            onTap: () async {
+                              Navigator.pop(sheetContext);
+                              
+                              if (_isLocationOutOfKigali(address.latitude, address.longitude)) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('This address is outside Kigali. Please select a location within Kigali.'),
+                                    backgroundColor: Colors.red,
+                                    duration: Duration(seconds: 5),
+                                  ),
+                                );
+                                return;
+                              }
+                              
+                              setState(() => _currentAddress = address);
+                              await _loadVendorsForAddress(address);
+                            },
+                          ),
+                        );
+                      }),
+                  ],
+                ),
+              ),
+              
+              // Add New Address Button
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      Navigator.pop(sheetContext);
+                      final result = await Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const LocationPickerScreen()),
+                      );
+                      
+                      if (result != null && result is DeliveryAddress) {
+                        if (_isLocationOutOfKigali(result.latitude, result.longitude)) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text('❌ This address is outside Kigali. Please select a location within Kigali.'),
+                              content: Text('Sorry, we only serve within Kigali. Please select a location within Kigali.'),
                               backgroundColor: Colors.red,
                               duration: Duration(seconds: 5),
                             ),
@@ -859,58 +993,24 @@ void _showAddressManagementDialog(BuildContext context, bool isDarkMode, Color c
                           return;
                         }
                         
-                        setState(() => _currentAddress = address);
-                        await _loadVendorsForAddress(address);
-                      },
-                    );
-                  }),
-              ],
-            ),
-          ),
-          
-          // Add New Address Button
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton.icon(
-                onPressed: () async {
-                  Navigator.pop(context);
-                  final result = await Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const LocationPickerScreen()),
-                  );
-                  
-                  if (result != null && result is DeliveryAddress) {
-                    // CHECK KIGALI RESTRICTION
-                    if (_isLocationOutOfKigali(result.latitude, result.longitude)) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('❌ Sorry, we only serve within Kigali. Please select a location within Kigali.'),
-                          backgroundColor: Colors.red,
-                          duration: Duration(seconds: 5),
-                        ),
-                      );
-                      return;
-                    }
-                    
-                    setState(() => _currentAddress = result);
-                    await _loadVendorsForAddress(result);
-                  }
-                },
-                icon: const Icon(Icons.add_location_alt, size: 22),
-                label: const Text('Add New Address', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2E7D32),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        setState(() => _currentAddress = result);
+                        await _loadVendorsForAddress(result);
+                      }
+                    },
+                    icon: const Icon(Icons.add_location_alt, size: 22),
+                    label: const Text('Add New Address', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2E7D32),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     ),
   );
 }

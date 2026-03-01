@@ -196,6 +196,7 @@ class _SplashScreenState extends State<SplashScreen>
         final addressProvider =
             Provider.of<AddressProvider>(context, listen: false);
         await addressProvider.addAddress(address);
+        addressProvider.selectAddress(address);
       }
     } catch (_) {
       try {
@@ -211,6 +212,7 @@ class _SplashScreenState extends State<SplashScreen>
           createdAt: DateTime.now(),
         );
         await addressProvider.addAddress(kigali);
+        addressProvider.selectAddress(kigali);
       } catch (_) {}
     }
   }

@@ -66,8 +66,8 @@ void main() async {
     try {
       final mapsImplementation = GoogleMapsFlutterPlatform.instance;
       if (mapsImplementation is GoogleMapsFlutterAndroid) {
-        mapsImplementation.useAndroidViewSurface = true;
-        await GoogleMapsFlutterAndroid().initializeWithRenderer(
+        mapsImplementation.useAndroidViewSurface = false;
+        await mapsImplementation.initializeWithRenderer(
           AndroidMapRenderer.latest,
         );
         print('✅ Google Maps Android renderer initialized');
