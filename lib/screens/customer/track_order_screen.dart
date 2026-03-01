@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'dart:async';
 import '../../providers/pickup_order_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/theme_provider.dart';
 import '../../models/pickup_order.dart';
 import '../../widgets/order_rating_dialog.dart';
 
@@ -26,6 +27,22 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
   bool _isLoading = true;
   bool _ratingShown = false;
   PickupOrderStatus? _previousStatus;
+
+  // Dark mode map style
+  static const String _darkMapStyle = '''
+[
+  {"elementType": "geometry", "stylers": [{"color": "#212121"}]},
+  {"elementType": "labels.icon", "stylers": [{"visibility": "off"}]},
+  {"elementType": "labels.text.fill", "stylers": [{"color": "#757575"}]},
+  {"elementType": "labels.text.stroke", "stylers": [{"color": "#212121"}]},
+  {"featureType": "administrative", "elementType": "geometry", "stylers": [{"color": "#757575"}]},
+  {"featureType": "road", "elementType": "geometry.fill", "stylers": [{"color": "#2c2c2c"}]},
+  {"featureType": "road", "elementType": "labels.text.fill", "stylers": [{"color": "#8a8a8a"}]},
+  {"featureType": "road.arterial", "elementType": "geometry", "stylers": [{"color": "#373737"}]},
+  {"featureType": "road.highway", "elementType": "geometry", "stylers": [{"color": "#3c3c3c"}]},
+  {"featureType": "water", "elementType": "geometry", "stylers": [{"color": "#000000"}]}
+]
+''';
 
   @override
   void initState() {
@@ -182,7 +199,14 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
             target: LatLng(pickupLocation.latitude, pickupLocation.longitude),
             zoom: 13,
           ),
-          onMapCreated: (controller) => _mapController = controller,
+          onMapCreated: (controller) {
+            _mapController = controller;
+            // Apply dark map style if dark mode
+            final isDark = context.read<ThemeProvider>().isDarkMode;
+            if (isDark) {
+              controller.setMapStyle(_darkMapStyle);
+            }
+          },
           markers: {
             Marker(
               markerId: const MarkerId('pickup'),

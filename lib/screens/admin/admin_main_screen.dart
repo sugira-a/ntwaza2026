@@ -1,5 +1,6 @@
 // lib/screens/admin/admin_main_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
@@ -100,7 +101,14 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
       AdminProfileScreen(),
     ];
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          _showExitConfirmation(context);
+        }
+      },
+      child: Scaffold(
       backgroundColor: Colors.black,
       body: IndexedStack(
         index: _selectedIndex,
@@ -158,6 +166,53 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
           ),
         ),
       ),
+    ),
     );
+  }
+
+  Future<void> _showExitConfirmation(BuildContext context) async {
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E1E),
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2E7D32).withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.exit_to_app, color: Color(0xFF2E7D32), size: 22),
+            ),
+            const SizedBox(width: 12),
+            const Text('Exit App?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 18)),
+          ],
+        ),
+        content: Text('Are you sure you want to exit Ntwaza?', style: TextStyle(color: Colors.grey[300], fontSize: 14)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text('Cancel', style: TextStyle(color: Colors.grey[400])),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2E7D32),
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Exit'),
+          ),
+        ],
+      ),
+    );
+    if (result == true) {
+      SystemNavigator.pop();
+    }
   }
 }

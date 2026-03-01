@@ -361,18 +361,33 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      useSafeArea: false,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height,
+      useSafeArea: true,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.3,
+        maxChildSize: 0.85,
+        builder: (context, scrollController) => Container(
         decoration: BoxDecoration(
           color: isDarkMode ? Color(0xFF1A1A1A) : Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
         child: Column(
           children: [
+            // Drag handle
+            Center(
+              child: Container(
+                margin: const EdgeInsets.only(top: 12, bottom: 8),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
             // Header
             Padding(
-              padding: EdgeInsets.fromLTRB(24, 20, 24, 0),
+              padding: EdgeInsets.fromLTRB(24, 8, 24, 0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -403,6 +418,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
             // Categories List
             Expanded(
               child: ListView(
+                  controller: scrollController,
                   padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   children: [
                   // All Products
@@ -442,6 +458,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
           ],
         ),
       ),
+     ),
     );
   }
 

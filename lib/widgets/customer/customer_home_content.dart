@@ -407,16 +407,31 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
+      useSafeArea: true,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.65,
+        minChildSize: 0.4,
+        maxChildSize: 0.9,
+        builder: (context, scrollController) => Container(
         width: double.infinity,
-        height: MediaQuery.of(context).size.height,
         decoration: BoxDecoration(
           color: cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         ),
         child: Column(
           children: [
-            // Spacer for status bar
-            SizedBox(height: MediaQuery.of(context).padding.top + 8),
+            // Drag handle
+            Center(
+              child: Container(
+                margin: const EdgeInsets.only(top: 12, bottom: 8),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
             // Header
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -601,6 +616,7 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
           ],
         ),
       ),
+     ),
     );
   }
 

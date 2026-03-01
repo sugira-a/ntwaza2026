@@ -790,10 +790,21 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     );
   }
 
+  // Light map style for better visibility
+  static const String _lightMapStyle = '''
+[
+  {"featureType": "poi", "elementType": "labels.icon", "stylers": [{"visibility": "off"}]},
+  {"featureType": "transit", "elementType": "labels.icon", "stylers": [{"visibility": "off"}]}
+]
+''';
+
   void _onMapCreated(GoogleMapController controller) async {
     if (!mounted) return;
     
     _mapController = controller;
+    
+    // Apply map style based on current theme
+    _applyMapStyle();
     
     // Short delay to let tiles start rendering
     await Future.delayed(const Duration(milliseconds: 300));
@@ -820,6 +831,17 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
           }
         }
       });
+    }
+  }
+
+  /// Apply the correct map style based on current theme
+  void _applyMapStyle() {
+    if (_mapController == null) return;
+    try {
+      final isDarkMode = context.read<ThemeProvider>().isDarkMode;
+      _mapController!.setMapStyle(isDarkMode ? _darkMapStyle : _lightMapStyle);
+    } catch (e) {
+      // Silently fail - map will use default style
     }
   }
 
@@ -1208,6 +1230,11 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   Widget build(BuildContext context) {
     final themeProvider = context.watch<ThemeProvider>();
     final isDarkMode = themeProvider.isDarkMode;
+
+    // Re-apply map style when theme changes
+    if (_isMapReady && _mapController != null) {
+      _applyMapStyle();
+    }
 
     if (_isLoadingLocation) {
       return Scaffold(
