@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import '../models/user_model.dart';
 import '../services/api/api_service.dart';
 import '../services/realtime/realtime_service.dart';
+import '../services/notification_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   final ApiService _apiService = ApiService();
@@ -79,7 +80,14 @@ class AuthProvider extends ChangeNotifier {
 
     try {
       print('🔐 Attempting login for: $email');
-      final response = await _apiService.login(email, password);
+
+      // Get FCM token to send with login
+      String? fcmToken;
+      try {
+        fcmToken = await NotificationService().getFCMToken();
+      } catch (_) {}
+
+      final response = await _apiService.login(email, password, fcmToken: fcmToken);
 
       final userJson = response['user'];
       final token = response['access_token'] ?? '';

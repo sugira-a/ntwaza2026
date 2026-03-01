@@ -14,6 +14,7 @@ import '../../providers/vendor_provider.dart';
 import '../../providers/special_offer_provider.dart';
 import '../../providers/search_provider.dart';
 import '../../providers/address_provider.dart';
+import '../../providers/notification_provider.dart';
 import '../../models/vendor.dart';
 import '../../models/special_offer.dart';
 import '../../models/product.dart';
@@ -56,6 +57,14 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
     try {
       final vendorProvider = context.read<VendorProvider>();
       final addressProvider = context.read<AddressProvider>();
+      
+      // Initialize push notifications for customers too
+      try {
+        final notificationProvider = context.read<NotificationProvider>();
+        await notificationProvider.initialize(pollingInterval: 60);
+      } catch (e) {
+        print('⚠️ Customer notification init: $e');
+      }
       
       // First, try to load cached vendors (instant, no API call)
       await vendorProvider.loadCachedVendors();

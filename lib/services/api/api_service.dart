@@ -163,11 +163,16 @@ class ApiService {
     });
   }
 
-  Future<Map<String, dynamic>> login(String email, String password) async {
-    final response = await post('/api/auth/login', {
+  Future<Map<String, dynamic>> login(String email, String password, {String? fcmToken}) async {
+    final body = <String, dynamic>{
       'email': email,
       'password': password,
-    });
+    };
+    if (fcmToken != null) {
+      body['fcm_token'] = fcmToken;
+    }
+
+    final response = await post('/api/auth/login', body);
     
     // Auto-set token if present
     if (response['access_token'] != null) {
