@@ -26,7 +26,6 @@ import '../screens/admin/admin_main_screen.dart';
 import '../screens/rider/rider_main_screen.dart';
 import '../screens/map/location_picker_screen.dart';
 import '../screens/splash/splash_screen.dart';
-import '../screens/auth/permissions_screen.dart';
 import '../providers/vendor_provider.dart';
 import '../models/vendor.dart';
 import '../models/order.dart';
@@ -70,12 +69,6 @@ class AppRouter {
         path: '/splash',
         name: 'splash',
         builder: (context, state) => const SplashScreen(),
-      ),
-      // Permissions
-      GoRoute(
-        path: '/permissions',
-        name: 'permissions',
-        builder: (context, state) => const PermissionsScreen(),
       ),
       // Landing / Home
       GoRoute(

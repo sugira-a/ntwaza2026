@@ -1,9 +1,15 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../providers/address_provider.dart';
+import '../../services/location_service.dart';
+import '../../services/notification_service.dart';
+import '../../models/delivery_address.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({Key? key}) : super(key: key);
@@ -13,113 +19,323 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _fade;
+    with TickerProviderStateMixin {
+  late final AnimationController _fadeController;
+  late final AnimationController _scaleController;
+  late final Animation<double> _fadeAnim;
+  late final Animation<double> _scaleAnim;
+  late final Animation<double> _taglineFade;
+  String _statusText = '';
+  bool _isRequestingPermissions = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
+
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _scaleController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
     );
-    _fade = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
-    _controller.forward();
 
-    // Check permissions and navigate after 3 seconds
-    Timer(const Duration(seconds: 3), () async {
-      if (!mounted) return;
-      
-      // Check if permissions already granted
-      final locationPermission = await Geolocator.checkPermission();
-      final hasLocation = locationPermission == LocationPermission.whileInUse ||
-          locationPermission == LocationPermission.always;
-      
-      // Check if user has seen permissions before
-      final prefs = await SharedPreferences.getInstance();
-      final hasSeenPermissions = prefs.getBool('has_seen_permissions') ?? false;
-      
-      if (mounted) {
-        if (hasLocation && hasSeenPermissions) {
-          // Skip permissions screen if already granted
-          context.go('/');
-        } else {
-          context.go('/permissions');
-        }
-      }
+    _fadeAnim = CurvedAnimation(parent: _fadeController, curve: Curves.easeOut);
+    _scaleAnim = Tween<double>(begin: 0.85, end: 1.0).animate(
+      CurvedAnimation(parent: _scaleController, curve: Curves.elasticOut),
+    );
+    _taglineFade = CurvedAnimation(
+      parent: _fadeController,
+      curve: const Interval(0.4, 1.0, curve: Curves.easeIn),
+    );
+
+    _fadeController.forward();
+    _scaleController.forward();
+
+    // Start permission flow after splash animation plays
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) _runStartupFlow();
     });
+  }
+
+  Future<void> _runStartupFlow() async {
+    if (!mounted) return;
+
+    // Check if permissions already granted (returning user)
+    final prefs = await SharedPreferences.getInstance();
+    final hasSeenPermissions = prefs.getBool('has_seen_permissions') ?? false;
+    final locationPermission = await Geolocator.checkPermission();
+    final hasLocation = locationPermission == LocationPermission.whileInUse ||
+        locationPermission == LocationPermission.always;
+
+    if (hasLocation && hasSeenPermissions) {
+      // Returning user with permissions - go straight to home
+      if (mounted) context.go('/');
+      return;
+    }
+
+    // New user or missing permissions - request them
+    setState(() {
+      _isRequestingPermissions = true;
+      _statusText = 'Setting up...';
+    });
+
+    // 1. Request notification permission (native popup)
+    await _requestNotifications();
+    if (!mounted) return;
+
+    // 2. Request location permission (native popup)
+    setState(() => _statusText = 'Getting your location...');
+    final locationGranted = await _requestLocation();
+    if (!mounted) return;
+
+    if (!locationGranted) {
+      // Try once more
+      setState(() => _statusText = 'Location is needed for delivery');
+      await Future.delayed(const Duration(seconds: 1));
+      if (!mounted) return;
+
+      final retryGranted = await _requestLocation();
+      if (!mounted) return;
+
+      if (!retryGranted) {
+        setState(() => _statusText = '');
+        await Future.delayed(const Duration(milliseconds: 300));
+        if (mounted) {
+          await prefs.setBool('has_seen_permissions', true);
+          context.go('/');
+        }
+        return;
+      }
+    }
+
+    // 3. Get and save current location
+    setState(() => _statusText = 'Finding nearby vendors...');
+    await _captureCurrentLocation();
+    if (!mounted) return;
+
+    // 4. Mark permissions seen and go to home
+    await prefs.setBool('has_seen_permissions', true);
+    setState(() => _statusText = '');
+    await Future.delayed(const Duration(milliseconds: 200));
+    if (mounted) context.go('/');
+  }
+
+  Future<void> _requestNotifications() async {
+    try {
+      final notificationService = NotificationService();
+      await notificationService.initialize();
+
+      final plugin = FlutterLocalNotificationsPlugin();
+      final androidPlugin = plugin.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+      if (androidPlugin != null) {
+        await androidPlugin.requestNotificationsPermission();
+      }
+    } catch (_) {}
+  }
+
+  Future<bool> _requestLocation() async {
+    try {
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.whileInUse ||
+          permission == LocationPermission.always) {
+        return true;
+      }
+      // Shows native OS popup
+      permission = await Geolocator.requestPermission();
+      return permission == LocationPermission.whileInUse ||
+          permission == LocationPermission.always;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> _captureCurrentLocation() async {
+    try {
+      final locationService = LocationService();
+      final position =
+          await locationService.getCurrentLocation(forceRefresh: true);
+
+      if (position != null && mounted) {
+        String addressText = 'Kigali, Rwanda';
+        try {
+          final placemarks = await placemarkFromCoordinates(
+            position.latitude,
+            position.longitude,
+          );
+          if (placemarks.isNotEmpty) {
+            final p = placemarks.first;
+            final street = p.street ?? '';
+            final subLocality = p.subLocality ?? '';
+            final locality =
+                p.locality ?? p.subAdministrativeArea ?? 'Kigali';
+            if (street.isNotEmpty) {
+              addressText = subLocality.isNotEmpty
+                  ? '$street, $subLocality, $locality'
+                  : '$street, $locality';
+            } else if (subLocality.isNotEmpty) {
+              addressText = '$subLocality, $locality';
+            } else {
+              addressText = '$locality, Rwanda';
+            }
+          }
+        } catch (_) {}
+
+        final address = DeliveryAddress(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          fullAddress: addressText,
+          latitude: position.latitude,
+          longitude: position.longitude,
+          label: addressText,
+          isDefault: true,
+          createdAt: DateTime.now(),
+        );
+
+        final addressProvider =
+            Provider.of<AddressProvider>(context, listen: false);
+        await addressProvider.addAddress(address);
+      }
+    } catch (_) {
+      try {
+        final addressProvider =
+            Provider.of<AddressProvider>(context, listen: false);
+        final kigali = DeliveryAddress(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          fullAddress: 'Kigali, Rwanda',
+          latitude: -1.9441,
+          longitude: 30.0619,
+          label: 'Kigali, Rwanda',
+          isDefault: true,
+          createdAt: DateTime.now(),
+        );
+        await addressProvider.addAddress(kigali);
+      } catch (_) {}
+    }
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _fadeController.dispose();
+    _scaleController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF000000),
-      body: FadeTransition(
-        opacity: _fade,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // Splash image
-            Image.asset(
-              'assets/images/ntwaza_splash.png',
-              fit: BoxFit.cover,
-            ),
-            // Gradient overlay
-            Container(
+      backgroundColor: const Color(0xFF0A0A0A),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Decorative green circle top-right
+          Positioned(
+            right: -90,
+            top: -40,
+            child: Container(
+              width: 200,
+              height: 200,
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.black.withOpacity(0.3),
-                    Colors.black.withOpacity(0.7),
+                shape: BoxShape.circle,
+                color: const Color(0xFF66D36E).withOpacity(0.10),
+              ),
+            ),
+          ),
+          // Subtle white circle bottom-left
+          Positioned(
+            left: -60,
+            bottom: 40,
+            child: Container(
+              width: 160,
+              height: 160,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.03),
+              ),
+            ),
+          ),
+
+          // Centered branding
+          Center(
+            child: FadeTransition(
+              opacity: _fadeAnim,
+              child: ScaleTransition(
+                scale: _scaleAnim,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'NTWAZA',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 44,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 10,
+                        shadows: [
+                          Shadow(
+                            color: const Color(0xFF66D36E).withOpacity(0.45),
+                            blurRadius: 30,
+                          ),
+                          Shadow(
+                            color: const Color(0xFF66D36E).withOpacity(0.15),
+                            blurRadius: 80,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    FadeTransition(
+                      opacity: _taglineFade,
+                      child: const Text(
+                        'Fast.  Fresh.  On time.',
+                        style: TextStyle(
+                          color: Color(0xFFAAAAAA),
+                          fontSize: 14,
+                          letterSpacing: 3,
+                          fontWeight: FontWeight.w300,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
             ),
-            // Tagline at bottom
+          ),
+
+          // Bottom status indicator
+          if (_isRequestingPermissions)
             Positioned(
               bottom: 60,
               left: 0,
               right: 0,
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    'NTWAZA',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 8,
-                      shadows: [
-                        Shadow(
-                          color: const Color(0xFF66D36E).withOpacity(0.5),
-                          blurRadius: 20,
-                        ),
-                      ],
+                  if (_statusText.isNotEmpty) ...[
+                    const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor:
+                            AlwaysStoppedAnimation<Color>(Color(0xFF66D36E)),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Fast. Fresh. On time.',
-                    style: TextStyle(
-                      color: Color(0xFFCCCCCC),
-                      fontSize: 14,
-                      letterSpacing: 2,
+                    const SizedBox(height: 12),
+                    Text(
+                      _statusText,
+                      style: const TextStyle(
+                        color: Color(0xFF999999),
+                        fontSize: 12,
+                        letterSpacing: 0.5,
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
-          ],
-        ),
+        ],
       ),
     );
   }

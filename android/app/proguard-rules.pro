@@ -35,3 +35,28 @@
 -dontwarn org.conscrypt.**
 -dontwarn org.bouncycastle.**
 -dontwarn org.openjsse.**
+
+# ==============================================
+# AGGRESSIVE SIZE OPTIMIZATION
+# ==============================================
+
+# Remove logging in release builds
+-assumenosideeffects class android.util.Log {
+    public static *** d(...);
+    public static *** v(...);
+    public static *** i(...);
+    public static *** w(...);
+}
+
+# Optimize aggressively
+-optimizationpasses 5
+-allowaccessmodification
+-dontpreverify
+-repackageclasses ''
+
+# Remove unused code paths
+-dontwarn javax.annotation.**
+-dontwarn kotlin.Unit
+-dontwarn retrofit2.**
+-dontwarn okhttp3.**
+-dontwarn okio.**

@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
@@ -21,6 +22,7 @@ import '../../screens/vendor/vendor_detail_screen.dart';
 import '../../screens/map/location_picker_screen.dart';
 import '../../screens/vendor/widgets/product_detail_modal.dart';
 import '../../services/api/api_service.dart';
+import '../../services/location_service.dart';
 import '../loading/shimmer_loading.dart';
 
 class CustomerHomeContent extends StatefulWidget {
@@ -61,7 +63,12 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
       // Load saved addresses
       await addressProvider.initialize();
       
-      final defaultAddress = addressProvider.defaultAddress ?? addressProvider.savedAddresses.firstOrNull;
+      var defaultAddress = addressProvider.defaultAddress ?? addressProvider.savedAddresses.firstOrNull;
+      
+      // Auto-detect location if no saved address
+      if (defaultAddress == null) {
+        defaultAddress = await _autoDetectLocation(addressProvider);
+      }
       
       if (defaultAddress != null) {
         setState(() {
@@ -83,6 +90,59 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
     } catch (e) {
       print('Error initializing app: $e');
       setState(() => _isInitializing = false);
+    }
+  }
+
+  /// Auto-detect current location and create address
+  Future<DeliveryAddress?> _autoDetectLocation(AddressProvider addressProvider) async {
+    try {
+      final permission = await Geolocator.checkPermission();
+      if (permission != LocationPermission.whileInUse &&
+          permission != LocationPermission.always) {
+        return null;
+      }
+      
+      final locationService = LocationService();
+      final position = await locationService.getCurrentLocation(forceRefresh: false);
+      if (position == null) return null;
+
+      String addressText = 'Kigali, Rwanda';
+      try {
+        final placemarks = await placemarkFromCoordinates(
+          position.latitude, position.longitude,
+        );
+        if (placemarks.isNotEmpty) {
+          final p = placemarks.first;
+          final street = p.street ?? '';
+          final subLocality = p.subLocality ?? '';
+          final locality = p.locality ?? p.subAdministrativeArea ?? 'Kigali';
+          if (street.isNotEmpty) {
+            addressText = subLocality.isNotEmpty
+                ? '$street, $subLocality, $locality'
+                : '$street, $locality';
+          } else if (subLocality.isNotEmpty) {
+            addressText = '$subLocality, $locality';
+          } else {
+            addressText = '$locality, Rwanda';
+          }
+        }
+      } catch (_) {}
+
+      final address = DeliveryAddress(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        fullAddress: addressText,
+        latitude: position.latitude,
+        longitude: position.longitude,
+        label: addressText,
+        isDefault: true,
+        createdAt: DateTime.now(),
+      );
+
+      await addressProvider.addAddress(address);
+      return address;
+    } catch (e) {
+      print('Error auto-detecting location: $e');
+      return null;
     }
   }
 
@@ -635,7 +695,7 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
                             const SizedBox(width: 4),
                             Expanded(
                               child: Text(
-                                _currentAddress?.label ?? _currentAddress?.shortAddress ?? 'Choose location',
+                                _currentAddress?.shortAddress ?? _currentAddress?.fullAddress ?? 'Choose location',
                                 style: TextStyle(fontSize: 11, color: subtextColor, fontWeight: FontWeight.w600),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
