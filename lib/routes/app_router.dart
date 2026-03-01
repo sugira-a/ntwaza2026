@@ -12,6 +12,7 @@ import '../screens/vendor/vendor_main_screen.dart';
 import '../screens/vendor/vendor_detail_screen.dart';
 import '../screens/customer/profile_screen.dart';
 import '../screens/customer/help_support_screen.dart';
+import '../screens/customer/ai_assistant_screen.dart';
 import '../screens/customer/my_orders_screen.dart';
 import '../screens/customer/pickup_orders_screen.dart';
 import '../screens/customer/privacy_policy_screen.dart';
@@ -153,6 +154,13 @@ class AppRouter {
         path: '/help-support',
         name: 'help-support',
         builder: (context, state) => const HelpSupportScreen(),
+      ),
+
+      // AI Assistant
+      GoRoute(
+        path: '/ai-assistant',
+        name: 'ai-assistant',
+        builder: (context, state) => const AiAssistantScreen(),
       ),
       
         // Privacy Policy

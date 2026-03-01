@@ -476,6 +476,19 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
+                    _buildMenuItemWithIcon(
+                      icon: Icons.auto_awesome,
+                      iconColor: const Color(0xFF2E7D32),
+                      title: 'AI Assistant',
+                      onTap: () {
+                        Navigator.pop(context);
+                        context.push('/ai-assistant');
+                      },
+                      textColor: textColor,
+                      subtextColor: subtextColor,
+                      isDarkMode: isDarkMode,
+                    ),
+                    const SizedBox(height: 16),
                     if (authProvider.isAuthenticated) ...[
                       _buildMenuItemWithIcon(
                         icon: Icons.assignment_turned_in,
@@ -751,6 +764,18 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
                     child: Text('Login', style: TextStyle(color: textColor, fontWeight: FontWeight.w600))
                   ),
                 const SizedBox(width: 8),
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2E7D32).withOpacity(isDarkMode ? 0.2 : 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: IconButton(
+                    onPressed: () => context.push('/ai-assistant'),
+                    icon: const Icon(Icons.auto_awesome, color: Color(0xFF2E7D32), size: 22),
+                    tooltip: 'AI Assistant',
+                  ),
+                ),
+                const SizedBox(width: 6),
                 IconButton(
                   onPressed: () => _showSettingsMenu(context, isDarkMode, themeProvider, cardColor, textColor, subtextColor), 
                   icon: Icon(Icons.more_vert, color: textColor, size: 28), 
