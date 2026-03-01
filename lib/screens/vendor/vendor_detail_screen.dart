@@ -712,15 +712,8 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
       child: Container(
         margin: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         decoration: BoxDecoration(
-          color: cardColor,
+          color: Colors.transparent,
           borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: isDarkMode ? Colors.black12 : Colors.grey.withOpacity(0.08),
-              blurRadius: 4,
-              offset: Offset(0, 1),
-            ),
-          ],
         ),
         child: Row(
           children: [

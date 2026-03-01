@@ -76,8 +76,9 @@ class LocationService {
 
       print('📡 Getting current position...');
       _currentPosition = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-        timeLimit: Duration(seconds: 10), // 🔧 Add timeout
+        desiredAccuracy: LocationAccuracy.best,
+        forceAndroidLocationManager: false,
+        timeLimit: Duration(seconds: 12),
       );
       
       _lastLocationUpdate = DateTime.now();
@@ -196,8 +197,8 @@ class LocationService {
   /// 🔧 NEW: Start listening to location updates
   Stream<Position> getLocationStream() {
     const LocationSettings locationSettings = LocationSettings(
-      accuracy: LocationAccuracy.high,
-      distanceFilter: 100, // Update every 100 meters
+      accuracy: LocationAccuracy.best,
+      distanceFilter: 50, // Update every 50 meters
     );
 
     return Geolocator.getPositionStream(locationSettings: locationSettings).map((position) {

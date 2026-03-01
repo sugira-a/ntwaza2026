@@ -403,7 +403,9 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
         decoration: BoxDecoration(
           color: cardColor,
         ),
-        child: Column(
+        child: SafeArea(
+          bottom: false,
+          child: Column(
           children: [
             // Header
             Padding(
@@ -587,6 +589,7 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
               ),
             ),
           ],
+        ),
         ),
       ),
     );
@@ -2294,7 +2297,8 @@ Future<void> _handleSetLocation() async {
 
     if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
       final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        desiredAccuracy: LocationAccuracy.best,
+        forceAndroidLocationManager: false,
       ).timeout(const Duration(seconds: 15));
 
       if (mounted) Navigator.pop(context); // Close loading

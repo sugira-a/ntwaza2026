@@ -300,7 +300,8 @@ class LocationPersistenceService {
       
       // Get position
       Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        desiredAccuracy: LocationAccuracy.best,
+        forceAndroidLocationManager: false,
       );
       
       print('📍 Current location: (${position.latitude}, ${position.longitude})');

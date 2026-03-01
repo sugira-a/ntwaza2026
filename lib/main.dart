@@ -61,16 +61,17 @@ void main() async {
 
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Google Maps renderer for Android (fixes white/blank map)
+  // Initialize Google Maps renderer for Android
   if (!kIsWeb) {
     try {
       final mapsImplementation = GoogleMapsFlutterPlatform.instance;
       if (mapsImplementation is GoogleMapsFlutterAndroid) {
-        mapsImplementation.useAndroidViewSurface = false;
-        await mapsImplementation.initializeWithRenderer(
+        // Use Texture Layer Hybrid Composition for better rendering
+        mapsImplementation.useAndroidViewSurface = true;
+        final renderer = await mapsImplementation.initializeWithRenderer(
           AndroidMapRenderer.latest,
         );
-        print('✅ Google Maps Android renderer initialized');
+        print('✅ Google Maps Android renderer: $renderer');
       }
     } catch (e) {
       print('⚠️ Google Maps renderer init: $e');

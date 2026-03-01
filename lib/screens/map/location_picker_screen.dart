@@ -45,6 +45,32 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   List<Map<String, dynamic>> _searchSuggestions = [];
   bool _isSearching = false;
 
+  // Dark mode map style
+  static const String _darkMapStyle = '''
+[
+  {"elementType": "geometry", "stylers": [{"color": "#212121"}]},
+  {"elementType": "labels.icon", "stylers": [{"visibility": "off"}]},
+  {"elementType": "labels.text.fill", "stylers": [{"color": "#757575"}]},
+  {"elementType": "labels.text.stroke", "stylers": [{"color": "#212121"}]},
+  {"featureType": "administrative", "elementType": "geometry", "stylers": [{"color": "#757575"}]},
+  {"featureType": "administrative.country", "elementType": "labels.text.fill", "stylers": [{"color": "#9e9e9e"}]},
+  {"featureType": "administrative.land_parcel", "stylers": [{"visibility": "off"}]},
+  {"featureType": "administrative.locality", "elementType": "labels.text.fill", "stylers": [{"color": "#bdbdbd"}]},
+  {"featureType": "poi", "elementType": "labels.text.fill", "stylers": [{"color": "#757575"}]},
+  {"featureType": "poi.park", "elementType": "geometry", "stylers": [{"color": "#181818"}]},
+  {"featureType": "poi.park", "elementType": "labels.text.fill", "stylers": [{"color": "#616161"}]},
+  {"featureType": "road", "elementType": "geometry.fill", "stylers": [{"color": "#2c2c2c"}]},
+  {"featureType": "road", "elementType": "labels.text.fill", "stylers": [{"color": "#8a8a8a"}]},
+  {"featureType": "road.arterial", "elementType": "geometry", "stylers": [{"color": "#373737"}]},
+  {"featureType": "road.highway", "elementType": "geometry", "stylers": [{"color": "#3c3c3c"}]},
+  {"featureType": "road.highway.controlled_access", "elementType": "geometry", "stylers": [{"color": "#4e4e4e"}]},
+  {"featureType": "road.local", "elementType": "labels.text.fill", "stylers": [{"color": "#616161"}]},
+  {"featureType": "transit", "elementType": "labels.text.fill", "stylers": [{"color": "#757575"}]},
+  {"featureType": "water", "elementType": "geometry", "stylers": [{"color": "#000000"}]},
+  {"featureType": "water", "elementType": "labels.text.fill", "stylers": [{"color": "#3d3d3d"}]}
+]
+''';
+
   // Default to Kigali center if location fails
   static const LatLng _kigaliCenter = LatLng(
     LocationValidator.kigaliCenterLat, 
@@ -139,11 +165,11 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       while (retries < maxRetries) {
         try {
           position = await Geolocator.getCurrentPosition(
-            desiredAccuracy: LocationAccuracy.high,
+            desiredAccuracy: LocationAccuracy.best,
             forceAndroidLocationManager: false,
-            timeLimit: const Duration(seconds: 15),
+            timeLimit: const Duration(seconds: 12),
           ).timeout(
-            const Duration(seconds: 20),
+            const Duration(seconds: 15),
             onTimeout: () {
               throw TimeoutException('Location request timeout');
             },
@@ -768,27 +794,35 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     if (!mounted) return;
     
     _mapController = controller;
+
+    // Apply dark map style if in dark mode
+    final themeProvider = context.read<ThemeProvider>();
+    if (themeProvider.isDarkMode) {
+      try {
+        await controller.setMapStyle(_darkMapStyle);
+      } catch (e) {
+        print('⚠️ Failed to set dark map style: $e');
+      }
+    }
     
-    // Add delay to ensure map is fully ready
-    await Future.delayed(const Duration(milliseconds: 500));
+    // Short delay to let tiles start rendering
+    await Future.delayed(const Duration(milliseconds: 300));
     
     if (!mounted) return;
     
     setState(() => _isMapReady = true);
     
     if (_selectedLocation != null && mounted) {
-      // Ensure camera animation happens after map is ready
-      Future.delayed(const Duration(milliseconds: 500), () {
+      Future.delayed(const Duration(milliseconds: 300), () {
         if (mounted && _mapController != null) {
           try {
             _mapController!.animateCamera(
-              CameraUpdate.newLatLngZoom(_selectedLocation!, 13),
+              CameraUpdate.newLatLngZoom(_selectedLocation!, 15),
             );
           } catch (e) {
-            // If animation fails, try setting position directly
             try {
               _mapController?.moveCamera(
-                CameraUpdate.newLatLngZoom(_selectedLocation!, 13),
+                CameraUpdate.newLatLngZoom(_selectedLocation!, 15),
               );
             } catch (e2) {
               // Silently fail - map will use initial position
@@ -861,7 +895,8 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       }
 
       final pos = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        desiredAccuracy: LocationAccuracy.best,
+        forceAndroidLocationManager: false,
         timeLimit: const Duration(seconds: 10),
       );
 
@@ -937,13 +972,13 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       final maxRetries = kIsWeb ? 2 : 3;
       final minAccuracyMeters = kIsWeb ? 500.0 : 50.0;
       final desiredAccuracy = kIsWeb ? LocationAccuracy.medium : LocationAccuracy.best;
-      final timeoutDuration = kIsWeb ? 10 : 20;
+      final timeoutDuration = kIsWeb ? 10 : 15;
 
       while (retries < maxRetries) {
         try {
           position = await Geolocator.getCurrentPosition(
             desiredAccuracy: desiredAccuracy,
-            forceAndroidLocationManager: !kIsWeb,
+            forceAndroidLocationManager: false,
             timeLimit: Duration(seconds: timeoutDuration),
           ).timeout(
             Duration(seconds: timeoutDuration + 5),
@@ -1186,23 +1221,58 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
 
     if (_isLoadingLocation) {
       return Scaffold(
-        backgroundColor: isDarkMode ? const Color(0xFF121212) : Colors.white,
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const CircularProgressIndicator(color: Color(0xFF2E7D32)),
-              const SizedBox(height: 16),
-              Text(
-                'Getting your location...',
-                style: TextStyle(color: isDarkMode ? Colors.white : Colors.black),
-              ),
-              const SizedBox(height: 8),
-              TextButton(
-                onPressed: _setDefaultLocation,
-                child: const Text('Skip and select manually', style: TextStyle(color: Color(0xFF2E7D32))),
-              ),
-            ],
+        backgroundColor: isDarkMode ? const Color(0xFF0A0A0A) : Colors.white,
+        body: SafeArea(
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Brand text
+                Text(
+                  'NTWAZA',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 6,
+                    color: const Color(0xFF2E7D32),
+                  ),
+                ),
+                const SizedBox(height: 32),
+                SizedBox(
+                  width: 36,
+                  height: 36,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 3,
+                    color: const Color(0xFF2E7D32),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Finding your location',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                    letterSpacing: 0.3,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                TextButton(
+                  onPressed: _setDefaultLocation,
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  ),
+                  child: Text(
+                    'Select manually',
+                    style: TextStyle(
+                      color: const Color(0xFF2E7D32),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -1246,68 +1316,26 @@ GoogleMap(
           // Map Loading Overlay
           if (!_isMapReady)
             Container(
-              color: isDarkMode ? const Color(0xFF121212) : Colors.grey[100],
+              color: isDarkMode ? const Color(0xFF0A0A0A) : Colors.white,
               child: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const CircularProgressIndicator(
-                      color: Color(0xFF2E7D32),
-                      strokeWidth: 3,
+                    SizedBox(
+                      width: 32,
+                      height: 32,
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF2E7D32),
+                        strokeWidth: 3,
+                      ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
                     Text(
-                      'Loading Map...',
+                      'Loading map...',
                       style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: isDarkMode ? Colors.white : Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 48),
-                      child: Text(
-                        'Please wait while we load the map',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: isDarkMode ? Colors.grey[400] : Colors.black54,
-                          height: 1.4,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: Colors.amber.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: Colors.amber.withOpacity(0.3),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.info_outline, 
-                            color: Colors.amber[700], 
-                            size: 18,
-                          ),
-                          const SizedBox(width: 8),
-                          Flexible(
-                            child: Text(
-                              'If map doesn\'t load, check your internet connection',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.amber[800],
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                       ),
                     ),
                   ],
