@@ -413,13 +413,13 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
         decoration: BoxDecoration(
           color: cardColor,
         ),
-        child: SafeArea(
-          bottom: false,
-          child: Column(
+        child: Column(
           children: [
+            // Spacer for status bar
+            SizedBox(height: MediaQuery.of(context).padding.top + 8),
             // Header
             Padding(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -599,7 +599,6 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
               ),
             ),
           ],
-        ),
         ),
       ),
     );
@@ -2678,22 +2677,13 @@ Widget _buildNoVendorsOverlay(bool isDarkMode, Color cardColor, Color textColor,
 
   if (vendorProvider.isLoading) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const NtwazaLoadingIndicator(
-            size: 48,
-            message: 'Loading vendors...',
-          ),
-          const SizedBox(height: 24),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Column(
-              children: List.generate(2, (_) => const VendorCardSkeleton()),
-            ),
-          ),
-        ],
+      child: SizedBox(
+        width: 24,
+        height: 24,
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          color: subtextColor,
+        ),
       ),
     );
   }

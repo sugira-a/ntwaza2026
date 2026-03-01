@@ -794,16 +794,6 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     if (!mounted) return;
     
     _mapController = controller;
-
-    // Apply dark map style if in dark mode
-    final themeProvider = context.read<ThemeProvider>();
-    if (themeProvider.isDarkMode) {
-      try {
-        await controller.setMapStyle(_darkMapStyle);
-      } catch (e) {
-        print('⚠️ Failed to set dark map style: $e');
-      }
-    }
     
     // Short delay to let tiles start rendering
     await Future.delayed(const Duration(milliseconds: 300));
