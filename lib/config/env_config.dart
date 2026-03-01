@@ -45,7 +45,15 @@ class EnvConfig {
       // Platform detection failed
     }
 
-    // Fall back to .env.dart key (for development)
+    // Fall back to .env.dart platform-specific keys
+    try {
+      final platform = _PlatformHelper.operatingSystem;
+      if (platform == 'android') return env_keys.googleMapsAndroidKey;
+      if (platform == 'ios') return env_keys.googleMapsIosKey;
+      if (kIsWeb) return env_keys.googleMapsWebKey;
+    } catch (_) {}
+
+    // Last resort: default key from .env.dart
     return env_keys.googleMapsApiKey;
   }
 }

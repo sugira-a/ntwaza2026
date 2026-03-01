@@ -408,12 +408,9 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       useSafeArea: true,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.65,
-        minChildSize: 0.4,
-        maxChildSize: 0.9,
-        builder: (context, scrollController) => Container(
+      builder: (context) => Container(
         width: double.infinity,
+        height: MediaQuery.of(context).size.height - MediaQuery.of(context).padding.top - kToolbarHeight,
         decoration: BoxDecoration(
           color: cardColor,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -587,36 +584,38 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
             ),
             
             // Brand footer
-            Padding(
-              padding: const EdgeInsets.only(top: 40, bottom: 40),
-              child: Column(
-                children: [
-                  Text(
-                    'NTWAZA',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w900,
-                      color: const Color(0xFF2E7D32),
-                      letterSpacing: 2,
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 16, bottom: 24),
+                child: Column(
+                  children: [
+                    Text(
+                      'NTWAZA',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
+                        color: const Color(0xFF2E7D32),
+                        letterSpacing: 2,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Your Order We Deliver',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: subtextColor,
-                      fontWeight: FontWeight.w400,
-                      letterSpacing: 0.5,
+                    const SizedBox(height: 8),
+                    Text(
+                      'Your Order We Deliver',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: subtextColor,
+                        fontWeight: FontWeight.w400,
+                        letterSpacing: 0.5,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ],
         ),
       ),
-     ),
     );
   }
 
@@ -766,7 +765,7 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
               controller: _searchController,
               style: TextStyle(color: textColor),
               decoration: InputDecoration(
-                hintText: 'Search vendors, restaurants, markets...',
+                hintText: 'Search places, streets, restaurants...',
                 hintStyle: TextStyle(color: subtextColor),
                 prefixIcon: Icon(Icons.search, color: subtextColor),
                 suffixIcon: _searchController.text.isNotEmpty 

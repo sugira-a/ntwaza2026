@@ -806,15 +806,19 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     // Apply map style based on current theme
     _applyMapStyle();
     
-    // Short delay to let tiles start rendering
-    await Future.delayed(const Duration(milliseconds: 300));
+    // Give map time to render tiles
+    await Future.delayed(const Duration(milliseconds: 500));
     
     if (!mounted) return;
     
     setState(() => _isMapReady = true);
     
+    // Log map info for debugging blank map issues
+    print('✅ Google Map created successfully');
+    print('📍 Initial location: $_selectedLocation');
+    
     if (_selectedLocation != null && mounted) {
-      Future.delayed(const Duration(milliseconds: 300), () {
+      Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted && _mapController != null) {
           try {
             _mapController!.animateCamera(
