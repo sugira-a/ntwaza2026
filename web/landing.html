@@ -229,30 +229,37 @@
             <p class="section-subtitle centered">
               General enquiries or partnerships. We respond quickly.
             </p>
-            <form class="contact-form" action="#" method="post">
+            <form class="contact-form" id="contactForm">
               <div class="form-row">
-                <input type="text" name="name" placeholder="Full name" required />
+                <input type="text" name="name" id="contactName" placeholder="Full name" required />
                 <input
                   type="email"
                   name="email"
+                  id="contactEmail"
                   placeholder="Email address"
                   required
                 />
               </div>
               <div class="form-row">
-                <input type="tel" name="phone" placeholder="Phone number (+250...)" />
+                <input type="tel" name="phone" id="contactPhone" placeholder="Phone number (+250...)" />
                 <input
                   type="text"
                   name="company"
+                  id="contactCompany"
                   placeholder="Business or organization"
                 />
               </div>
               <textarea
                 name="message"
+                id="contactMessage"
                 placeholder="Tell us what you need"
                 required
               ></textarea>
-              <button class="primary-btn" type="submit">Send message</button>
+              <div id="formStatus" class="form-status"></div>
+              <button class="primary-btn" type="submit" id="submitBtn">
+                <span id="submitText">Send message</span>
+                <span id="submitLoader" style="display: none;">Sending...</span>
+              </button>
             </form>
           </div>
         </section>
@@ -358,6 +365,72 @@
 
       // Trigger on click/tap
       heroSection.addEventListener("click", triggerLightning);
+
+      // Contact Form Submission
+      const contactForm = document.getElementById('contactForm');
+      const submitBtn = document.getElementById('submitBtn');
+      const submitText = document.getElementById('submitText');
+      const submitLoader = document.getElementById('submitLoader');
+      const formStatus = document.getElementById('formStatus');
+
+      contactForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        // Get form data
+        const formData = {
+          name: document.getElementById('contactName').value.trim(),
+          email: document.getElementById('contactEmail').value.trim(),
+          phone: document.getElementById('contactPhone').value.trim(),
+          company: document.getElementById('contactCompany').value.trim(),
+          message: document.getElementById('contactMessage').value.trim()
+        };
+
+        // Show loading state
+        submitBtn.disabled = true;
+        submitText.style.display = 'none';
+        submitLoader.style.display = 'inline';
+        formStatus.textContent = '';
+        formStatus.className = 'form-status';
+
+        try {
+          // Send to backend API
+          const response = await fetch('/api/contact', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+          });
+
+          const result = await response.json();
+
+          if (result.success) {
+            // Success!
+            formStatus.textContent = '✓ ' + result.message;
+            formStatus.className = 'form-status success';
+            
+            // Reset form
+            contactForm.reset();
+            
+            // Scroll to status message
+            formStatus.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          } else {
+            // Error from server
+            formStatus.textContent = '✗ ' + (result.error || 'Failed to send message');
+            formStatus.className = 'form-status error';
+          }
+        } catch (error) {
+          // Network or other error
+          console.error('Contact form error:', error);
+          formStatus.textContent = '✗ Failed to send message. Please try again or email us at hello@ntwaza.com';
+          formStatus.className = 'form-status error';
+        } finally {
+          // Reset button state
+          submitBtn.disabled = false;
+          submitText.style.display = 'inline';
+          submitLoader.style.display = 'none';
+        }
+      });
 
     </script>
   </body>

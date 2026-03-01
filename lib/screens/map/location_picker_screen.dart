@@ -96,7 +96,6 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         await _getCurrentLocationWithTimeout();
       }
     } catch (e) {
-      print('❌ Error initializing location: $e');
       // Fall back to Kigali center
       _setDefaultLocation();
     }
@@ -131,16 +130,38 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         return;
       }
 
-      // Get location with timeout
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      ).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          print('⏱️ Location timeout - using Kigali center');
-          throw TimeoutException('Location request timeout');
-        },
-      );
+      // Get location with improved timeout and retry logic
+      Position? position;
+      int retries = 0;
+      const maxRetries = 3;
+      
+      while (retries < maxRetries) {
+        try {
+          position = await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.high,
+            forceAndroidLocationManager: false,
+            timeLimit: const Duration(seconds: 15),
+          ).timeout(
+            const Duration(seconds: 20),
+            onTimeout: () {
+              throw TimeoutException('Location request timeout');
+            },
+          );
+          break; // Success, exit retry loop
+        } catch (e) {
+          retries++;
+          if (retries >= maxRetries) {
+            throw e;
+          }
+          // Wait before retry
+          await Future.delayed(Duration(seconds: retries));
+        }
+      }
+
+      if (position == null) {
+        _setDefaultLocation();
+        return;
+      }
 
       _selectedLocation = LatLng(position.latitude, position.longitude);
       _validateSelectedLocation();
@@ -157,8 +178,20 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       // Try to get address, but don't block if it fails
       _getAddressFromLatLng(_selectedLocation!, showError: false);
     } catch (e) {
-      print('❌ Location error: $e');
       _setDefaultLocation();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Could not get your location. Using Kigali center instead.'),
+            backgroundColor: Colors.orange,
+            action: SnackBarAction(
+              label: 'Retry',
+              textColor: Colors.white,
+              onPressed: _getCurrentLocation,
+            ),
+          ),
+        );
+      }
     }
   }
 
@@ -286,10 +319,6 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     setState(() {
       _isOutsideServiceArea = !validation.isValid;
     });
-    
-    if (!validation.isValid) {
-      print('⚠️ Location outside service area: ${validation.message}');
-    }
   }
 
   Future<void> _onSearchChanged(String query) {
@@ -318,8 +347,6 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
 
   Future<void> _searchLocationByName(String query) async {
     try {
-      print('🔍 Searching for: $query');
-      
       // Use backend endpoint to avoid CORS issues on web
       final String searchUrl = '${ApiService.baseUrl}/api/geocode/places-search';
 
@@ -332,15 +359,11 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         onTimeout: () => http.Response('{"success":false,"error":"timeout"}', 408),
       );
 
-      print('📡 Search response: ${response.statusCode}');
-
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        print('📦 Search response: ${data['success']}');
 
         if (data['success'] == true && data['results'] != null) {
           final List<dynamic> results = data['results'] as List;
-          print('✅ Found ${results.length} results');
 
           final suggestions = results.map((result) {
             return {
@@ -355,8 +378,6 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
             };
           }).toList();
 
-          print('📍 Showing ${suggestions.length} suggestions');
-
           if (mounted) {
             setState(() {
               _searchSuggestions = suggestions;
@@ -364,7 +385,6 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
             });
           }
         } else {
-          print('⚠️ No results in response');
           if (mounted) {
             setState(() {
               _searchSuggestions = [];
@@ -373,13 +393,11 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
           }
         }
       } else {
-        print('❌ HTTP Error: ${response.statusCode}');
         if (mounted) {
           setState(() => _isSearching = false);
         }
       }
     } catch (e) {
-      print('❌ Search error: $e');
       if (mounted) {
         setState(() => _isSearching = false);
       }
@@ -536,8 +554,6 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       // Use backend endpoint to avoid CORS issues on web
       final url = Uri.parse('${ApiService.baseUrl}/api/geocode/reverse');
 
-      print('🔍 Fetching address for: ${position.latitude}, ${position.longitude}');
-
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
@@ -552,17 +568,11 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         },
       );
 
-      print('📡 Geocoding response: ${response.statusCode}');
-
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         
-        print('📦 Geocoding success: ${data['success']}');
-        
         if (data['success'] == true && data['address'] != null) {
           String displayAddress = data['address'] as String;
-          
-          print('✅ Address found: $displayAddress');
           
           setState(() {
             _selectedAddress = displayAddress;
@@ -570,7 +580,6 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
             _addressError = null;
           });
         } else {
-          print('⚠️ No address found for this location');
           _setCoordinatesAsAddress(position);
           if (showError && mounted) {
             setState(() {
@@ -579,7 +588,6 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
           }
         }
       } else if (response.statusCode == 404) {
-        print('⚠️ No address found (404)');
         _setCoordinatesAsAddress(position);
         if (showError && mounted) {
           setState(() {
@@ -587,7 +595,6 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
           });
         }
       } else {
-        print('❌ HTTP Error: ${response.statusCode} - ${response.body}');
         _setCoordinatesAsAddress(position);
         if (showError && mounted) {
           setState(() {
@@ -596,7 +603,6 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         }
       }
     } catch (e) {
-      print('❌ Geocoding error: $e');
       if (showError && mounted) {
         setState(() {
           _addressError = kIsWeb 
@@ -757,26 +763,35 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     );
   }
 
-  void _onMapCreated(GoogleMapController controller) {
-    print('🗺️ Google Map Created Successfully!');
-    print('📍 Initial Location: $_selectedLocation');
-    
+  void _onMapCreated(GoogleMapController controller) async {
     if (!mounted) return;
     
     _mapController = controller;
+    
+    // Add delay to ensure map is fully ready
+    await Future.delayed(const Duration(milliseconds: 500));
+    
+    if (!mounted) return;
+    
     setState(() => _isMapReady = true);
     
     if (_selectedLocation != null && mounted) {
-      // Delay animation to ensure map is fully initialized
-      Future.delayed(const Duration(milliseconds: 300), () {
+      // Ensure camera animation happens after map is ready
+      Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted && _mapController != null) {
           try {
-            print('📹 Animating camera to: $_selectedLocation');
             _mapController!.animateCamera(
               CameraUpdate.newLatLngZoom(_selectedLocation!, 13),
             );
           } catch (e) {
-            print('❌ Camera animation error: $e');
+            // If animation fails, try setting position directly
+            try {
+              _mapController?.moveCamera(
+                CameraUpdate.newLatLngZoom(_selectedLocation!, 13),
+              );
+            } catch (e2) {
+              // Silently fail - map will use initial position
+            }
           }
         }
       });
@@ -853,24 +868,21 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         return;
       }
 
-      // Get position with platform-appropriate accuracy settings
+      // Get position with improved accuracy settings
       Position? position;
       int retries = 0;
       
-      // Web: 100-500m accuracy (browser limitation)
-      // Mobile: 5-30m accuracy achievable with GPS
-      final maxRetries = kIsWeb ? 2 : 3; // More retries on mobile for better accuracy
-      final minAccuracyMeters = kIsWeb ? 500.0 : 30.0; // Stricter accuracy requirement on mobile
-      final desiredAccuracy = kIsWeb ? LocationAccuracy.medium : LocationAccuracy.bestForNavigation;
-      final timeoutDuration = kIsWeb ? 10 : 15; // More time for mobile to get GPS fix
-
-      print('📍 Getting location (Platform: ${kIsWeb ? "Web" : "Mobile"}, Target accuracy: ${minAccuracyMeters}m)');
+      // Platform-appropriate settings
+      final maxRetries = kIsWeb ? 2 : 3;
+      final minAccuracyMeters = kIsWeb ? 500.0 : 50.0;
+      final desiredAccuracy = kIsWeb ? LocationAccuracy.medium : LocationAccuracy.best;
+      final timeoutDuration = kIsWeb ? 10 : 20;
 
       while (retries < maxRetries) {
         try {
           position = await Geolocator.getCurrentPosition(
             desiredAccuracy: desiredAccuracy,
-            forceAndroidLocationManager: !kIsWeb, // Only for mobile - forces GPS usage
+            forceAndroidLocationManager: !kIsWeb,
             timeLimit: Duration(seconds: timeoutDuration),
           ).timeout(
             Duration(seconds: timeoutDuration + 5),
@@ -880,58 +892,47 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
           );
 
           final accuracy = position.accuracy;
-          print('📍 Got location: ${position.latitude}, ${position.longitude} (accuracy: ${accuracy.toStringAsFixed(1)}m)');
 
-          // On web, accept any accuracy we get; on mobile, retry if poor
+          // On web, accept any accuracy; on mobile, retry if poor
           if (!kIsWeb && accuracy > minAccuracyMeters && retries < maxRetries - 1) {
-            // Accuracy is poor, retry (mobile only)
-            print('⚠️ Accuracy ${accuracy.toStringAsFixed(1)}m > ${minAccuracyMeters}m, retrying (${retries + 1}/$maxRetries)...');
             retries++;
-            await Future.delayed(const Duration(milliseconds: 1000)); // Longer delay for GPS to stabilize
+            await Future.delayed(Duration(seconds: retries));
             continue;
-          }
-
-          // Log final accuracy
-          if (accuracy <= minAccuracyMeters) {
-            print('✓ Excellent accuracy: ${accuracy.toStringAsFixed(1)}m');
-          } else {
-            print('✓ Acceptable accuracy: ${accuracy.toStringAsFixed(1)}m (best available)');
           }
 
           break; // Got acceptable accuracy or last retry
         } on TimeoutException {
           retries++;
-          print('⏱️ Location timeout (attempt ${retries}/$maxRetries)');
           if (retries >= maxRetries) {
             throw TimeoutException('Location request timeout after $maxRetries retries');
           }
-          await Future.delayed(const Duration(seconds: 1));
+          await Future.delayed(Duration(seconds: retries));
         }
       }
 
-      if (!mounted) return;
+      if (!mounted || position == null) return;
 
-      final location = LatLng(position!.latitude, position.longitude);
+      final location = LatLng(position.latitude, position.longitude);
       
-      // Verify location freshness (timestamp should be recent, within last 15 seconds)
+      // Verify location freshness
       Duration locationAge = Duration.zero;
       if (position.timestamp != null) {
         locationAge = DateTime.now().difference(position.timestamp!);
       }
       
-      // Check for impossible location jumps (likely cache from previous session)
+      // Check for impossible location jumps
       final isLocationSuspicious = _selectedLocation != null && 
         _calculateDistance(_selectedLocation!.latitude, _selectedLocation!.longitude, 
-                          location.latitude, location.longitude) > 5000; // More than 5km jump
+                          location.latitude, location.longitude) > 5000;
       
-      // On web, accuracy warnings are less useful since browser geolocation is inherently less accurate
+      // Show accuracy warning on mobile only
       if (!kIsWeb && (locationAge.inSeconds > 15 || position.accuracy > 100)) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('⚠️ Location accuracy: ${position.accuracy.toStringAsFixed(0)}m${locationAge.inSeconds > 0 ? ', age: ${locationAge.inSeconds}s' : ''}. Try again or move your device.'),
+              content: Text('⚠️ Location accuracy: ${position.accuracy.toStringAsFixed(0)}m. Drag map to adjust if needed.'),
               backgroundColor: Colors.orange,
-              duration: const Duration(seconds: 4),
+              duration: const Duration(seconds: 3),
             ),
           );
         }
@@ -939,23 +940,37 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       
       if (isLocationSuspicious) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('⚠️ Large location jump detected - might be stale data. Getting fresh location...'),
-              backgroundColor: Colors.deepOrange,
-              duration: Duration(seconds: 3),
+          final shouldUse = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Large Location Change'),
+              content: const Text('Your location seems to have moved significantly. Use this new location?'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Use Location'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2E7D32),
+                  ),
+                ),
+              ],
             ),
           );
+          
+          if (shouldUse != true) {
+            setState(() => _isLoadingLocation = false);
+            return;
+          }
         }
-        // Force another location refresh
-        await Future.delayed(const Duration(seconds: 1));
-        return _getCurrentLocation();
       }
 
-      // Check if controller is still valid before using it
+      // Check if controller is still valid
       if (_mapController != null && mounted) {
         try {
-          // Delay to ensure controller is ready
           await Future.delayed(const Duration(milliseconds: 200));
           if (mounted && _mapController != null) {
             await _mapController!.animateCamera(
@@ -976,7 +991,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       
       _validateSelectedLocation();
       
-      // Show warning if outside service area when using my location
+      // Show warning if outside service area
       if (_isOutsideServiceArea && mounted) {
         _showOutsideServiceAreaDialog();
       }
@@ -985,17 +1000,19 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         await _getAddressFromLatLng(location);
       }
     } catch (e) {
-      print('❌ Current location error: $e');
       if (mounted) {
         setState(() => _isLoadingLocation = false);
-      }
-      
-      if (mounted) {
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Unable to get current location: ${e.toString()}'),
+            content: const Text('Unable to get your location. Please try again or select manually on the map.'),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: 'Retry',
+              textColor: Colors.white,
+              onPressed: _getCurrentLocation,
+            ),
           ),
         );
       }
@@ -1168,33 +1185,68 @@ GoogleMap(
           // Map Loading Overlay
           if (!_isMapReady)
             Container(
-              color: Colors.grey[300],
+              color: isDarkMode ? const Color(0xFF121212) : Colors.grey[100],
               child: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const CircularProgressIndicator(
                       color: Color(0xFF2E7D32),
+                      strokeWidth: 3,
                     ),
-                    const SizedBox(height: 16),
-                    const Text(
+                    const SizedBox(height: 24),
+                    Text(
                       'Loading Map...',
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 18,
                         fontWeight: FontWeight.w600,
-                        color: Colors.black87,
+                        color: isDarkMode ? Colors.white : Colors.black87,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 32),
+                    const SizedBox(height: 12),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 48),
                       child: Text(
-                        'If the map doesn\'t load, please fully restart the app',
+                        'Please wait while we load the map',
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.black54,
+                          fontSize: 14,
+                          color: isDarkMode ? Colors.grey[400] : Colors.black54,
+                          height: 1.4,
                         ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: Colors.amber.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.info_outline, 
+                            color: Colors.amber[700], 
+                            size: 18,
+                          ),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              'If map doesn\'t load, check your internet connection',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.amber[800],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],

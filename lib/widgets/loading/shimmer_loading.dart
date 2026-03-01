@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../providers/theme_provider.dart';
 
 /// A shimmer effect widget for loading states
 class ShimmerLoading extends StatefulWidget {
@@ -43,8 +45,13 @@ class _ShimmerLoadingState extends State<ShimmerLoading>
 
   @override
   Widget build(BuildContext context) {
-    final baseColor = widget.baseColor ?? const Color(0xFF1F1F1F);
-    final highlightColor = widget.highlightColor ?? const Color(0xFF2A2A2A);
+    final themeProvider = context.watch<ThemeProvider>();
+    final isDarkMode = themeProvider.isDarkMode;
+    
+    final baseColor = widget.baseColor ?? 
+        (isDarkMode ? const Color(0xFF1F1F1F) : Colors.grey[200]!);
+    final highlightColor = widget.highlightColor ?? 
+        (isDarkMode ? const Color(0xFF2A2A2A) : Colors.grey[100]!);
 
     return AnimatedBuilder(
       animation: _animation,
@@ -89,11 +96,14 @@ class SkeletonBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = context.watch<ThemeProvider>();
+    final isDarkMode = themeProvider.isDarkMode;
+    
     return Container(
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: const Color(0xFF1F1F1F),
+        color: isDarkMode ? const Color(0xFF1F1F1F) : Colors.grey[300]!,
         borderRadius: BorderRadius.circular(borderRadius),
       ),
     );
@@ -235,14 +245,19 @@ class VendorCardSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = context.watch<ThemeProvider>();
+    final isDarkMode = themeProvider.isDarkMode;
+    
     return ShimmerLoading(
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: const Color(0xFF141414),
+          color: isDarkMode ? const Color(0xFF141414) : Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFF1F1F1F)),
+          border: Border.all(
+            color: isDarkMode ? const Color(0xFF1F1F1F) : Colors.grey[300]!,
+          ),
         ),
         child: Row(
           children: [
@@ -281,15 +296,20 @@ class LoadingOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = context.watch<ThemeProvider>();
+    final isDarkMode = themeProvider.isDarkMode;
+    
     return Container(
       color: Colors.black.withOpacity(0.7),
       child: Center(
         child: Container(
           padding: const EdgeInsets.all(32),
           decoration: BoxDecoration(
-            color: const Color(0xFF141414),
+            color: isDarkMode ? const Color(0xFF141414) : Colors.white,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFF1F1F1F)),
+            border: Border.all(
+              color: isDarkMode ? const Color(0xFF1F1F1F) : Colors.grey[300]!,
+            ),
             boxShadow: [
               BoxShadow(
                 color: const Color(0xFF66D36E).withOpacity(0.1),
