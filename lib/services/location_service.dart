@@ -1,6 +1,5 @@
 // lib/services/location_service.dart
 import 'package:geolocator/geolocator.dart';
-import 'dart:math' show cos, sqrt, asin, pi, sin;
 
 class LocationService {
   static final LocationService _instance = LocationService._internal();
@@ -75,11 +74,29 @@ class LocationService {
       }
 
       print('📡 Getting current position...');
-      _currentPosition = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.best,
-        forceAndroidLocationManager: false,
-        timeLimit: Duration(seconds: 12),
-      );
+      
+      // Get multiple readings and use the most accurate one
+      Position? bestPosition;
+      for (int attempt = 0; attempt < 2; attempt++) {
+        try {
+          final pos = await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.best,
+            forceAndroidLocationManager: false,
+            timeLimit: Duration(seconds: 12),
+          );
+          if (bestPosition == null || pos.accuracy < bestPosition.accuracy) {
+            bestPosition = pos;
+          }
+          // If accuracy is good enough, stop trying
+          if (pos.accuracy <= 20) break;
+          // Short delay before retry
+          if (attempt < 1) await Future.delayed(Duration(seconds: 1));
+        } catch (e) {
+          if (attempt == 0 && bestPosition == null) rethrow;
+        }
+      }
+      
+      _currentPosition = bestPosition;
       
       _lastLocationUpdate = DateTime.now();
       
@@ -117,30 +134,15 @@ class LocationService {
     };
   }
 
-  /// Calculate distance between two points in kilometers using Haversine formula
+  /// Calculate distance between two points in kilometers using Vincenty formula (via Geolocator)
   double calculateDistance({
     required double startLat,
     required double startLng,
     required double endLat,
     required double endLng,
   }) {
-    const double earthRadius = 6371; // Earth's radius in kilometers
-
-    final dLat = _toRadians(endLat - startLat);
-    final dLng = _toRadians(endLng - startLng);
-
-    final a = (sin(dLat / 2) * sin(dLat / 2)) +
-        cos(_toRadians(startLat)) *
-            cos(_toRadians(endLat)) *
-            sin(dLng / 2) *
-            sin(dLng / 2);
-
-    final c = 2 * asin(sqrt(a));
-    return earthRadius * c;
-  }
-
-  double _toRadians(double degrees) {
-    return degrees * pi / 180;
+    // Geolocator.distanceBetween uses Vincenty formula - more accurate than Haversine
+    return Geolocator.distanceBetween(startLat, startLng, endLat, endLng) / 1000.0;
   }
 
   /// Format distance for display

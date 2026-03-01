@@ -73,6 +73,26 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
   }
 
   void _addToCart() {
+    // Block ordering if vendor is closed
+    if (!widget.vendor.isOpen) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.access_time_filled, color: Colors.white, size: 18),
+              SizedBox(width: 10),
+              Expanded(child: Text('This vendor is currently closed', style: TextStyle(fontWeight: FontWeight.w500))),
+            ],
+          ),
+          backgroundColor: Colors.red.shade700,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
     final cart = context.read<CartProvider>();
     
     // Validate required modifiers
@@ -756,6 +776,28 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
               ],
             ),
             SizedBox(height: 12),
+            if (!widget.vendor.isOpen)
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade900.withOpacity(isDarkMode ? 0.3 : 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.red.withOpacity(0.2)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.access_time_filled, size: 16, color: Colors.red.shade400),
+                    SizedBox(width: 8),
+                    Text(
+                      'Vendor is closed — ordering unavailable',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.red.shade400),
+                    ),
+                  ],
+                ),
+              )
+            else
             SizedBox(
               width: double.infinity,
               height: 48,
@@ -770,7 +812,7 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
                   elevation: 0,
                 ),
                 child: Text(
-                  'Add to cart',
+                  widget.product.isAvailable ? 'Add to cart' : 'Unavailable',
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,

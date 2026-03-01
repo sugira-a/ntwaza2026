@@ -1812,17 +1812,7 @@ void _showAddressManagementDialog(BuildContext context, bool isDarkMode, Color c
     final isVendorClosed = !vendor.isOpen;
     
     return GestureDetector(
-      onTap: isVendorClosed 
-        ? () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('This shop is currently closed. Try again when they open.'),
-                backgroundColor: Colors.orange,
-                duration: const Duration(seconds: 3),
-              ),
-            );
-          }
-        : () async {
+      onTap: () async {
             Vendor? vendorForNav;
             try {
               vendorForNav = vendorProvider.vendors.firstWhere(
@@ -1840,6 +1830,7 @@ void _showAddressManagementDialog(BuildContext context, bool isDarkMode, Color c
                 longitude: 0,
                 prepTimeMinutes: 0,
                 deliveryFee: 0,
+                isOpen: vendor.isOpen,
               );
             }
             await showModalBottomSheet(

@@ -87,23 +87,26 @@ class GoogleMapsService {
     return 'Mobile';
   }
   
-  /// Fallback: Haversine calculation
+  /// Fallback: Vincenty distance calculation with road factor
   static Map<String, dynamic> _calculateHaversineFallback(
     Position userLocation,
     double destLat,
     double destLng,
   ) {
-    final distanceKm = _haversineDistance(
+    // Use Vincenty formula via Geolocator (more accurate than Haversine)
+    final distanceMeters = Geolocator.distanceBetween(
       userLocation.latitude,
       userLocation.longitude,
       destLat,
       destLng,
     );
+    final distanceKm = distanceMeters / 1000.0;
     
-    final estimatedRoadDistance = distanceKm * 1.3;
+    // Apply road factor for Kigali (hilly terrain, winding roads)
+    final estimatedRoadDistance = distanceKm * 1.4;
     final estimatedMinutes = (estimatedRoadDistance * 2.5).round();
     
-    _logger.w('⚠️ Using fallback distance: ${estimatedRoadDistance.toStringAsFixed(1)}km');
+    _logger.w('⚠️ Using fallback distance: ${estimatedRoadDistance.toStringAsFixed(1)}km (straight-line: ${distanceKm.toStringAsFixed(1)}km)');
     
     return {
       'distanceKm': estimatedRoadDistance,
@@ -111,23 +114,9 @@ class GoogleMapsService {
       'durationMinutes': estimatedMinutes,
       'durationText': '~$estimatedMinutes mins',
       'isAccurate': false,
-      'source': 'haversine_estimated',
+      'source': 'vincenty_estimated',
       'warning': 'Road distance estimated. GPS may be inaccurate.',
     };
-  }
-  
-  /// Haversine formula
-  static double _haversineDistance(double lat1, double lon1, double lat2, double lon2) {
-    const R = 6371;
-    final dLat = _toRadians(lat2 - lat1);
-    final dLon = _toRadians(lon2 - lon1);
-    
-    final a = sin(dLat / 2) * sin(dLat / 2) +
-        cos(_toRadians(lat1)) * cos(_toRadians(lat2)) *
-        sin(dLon / 2) * sin(dLon / 2);
-    
-    final c = 2 * atan2(sqrt(a), sqrt(1 - a));
-    return R * c;
   }
   
   static double _toRadians(double degrees) => degrees * (pi / 180);

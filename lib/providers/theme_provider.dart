@@ -58,29 +58,31 @@ class ThemeProvider extends ChangeNotifier {
   ThemeData get lightTheme {
     return ThemeData(
       brightness: Brightness.light,
-      primaryColor: _brandGreen,  // Light green primary
-      scaffoldBackgroundColor: const Color(0xFF000000),  // True black background
+      primaryColor: _brandGreen,
+      scaffoldBackgroundColor: const Color(0xFFF5F5F5),  // Light grey background
       colorScheme: const ColorScheme.light(
-        primary: _brandGreen,  // Light green
-        secondary: _brandGreenDark,  // Darker green
-        surface: Color(0xFF000000),
-        surfaceVariant: Color(0xFF000000),
-        onSurfaceVariant: Color(0xFFA3A3A3),
-        outline: Color(0xFF1A1A1A),
+        primary: _brandGreen,
+        secondary: _brandGreenDark,
+        surface: Color(0xFFFFFFFF),          // White surface
+        surfaceContainerHighest: Color(0xFFF0F0F0),
+        onSurface: Color(0xFF1A1A1A),        // Dark text on light surface
+        onSurfaceVariant: Color(0xFF616161),  // Medium grey secondary text
+        outline: Color(0xFFE0E0E0),           // Light grey outlines
         surfaceTint: _brandGreen,
         tertiary: _brandGreenDark,
       ),
       appBarTheme: const AppBarTheme(
-        backgroundColor: Color(0xFF000000),
-        foregroundColor: Colors.white,
+        backgroundColor: Color(0xFFFFFFFF),   // White app bar
+        foregroundColor: Color(0xFF1A1A1A),   // Dark text in app bar
         elevation: 0,
-      ),
-      cardColor: Colors.transparent,
-      cardTheme: const CardThemeData(
-        color: Colors.transparent,
-        shadowColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
-        elevation: 0,
+      ),
+      cardColor: Colors.white,
+      cardTheme: CardThemeData(
+        color: Colors.white,
+        shadowColor: Colors.black.withOpacity(0.08),
+        surfaceTintColor: Colors.transparent,
+        elevation: 1,
         margin: EdgeInsets.zero,
       ),
       useMaterial3: true,
@@ -120,8 +122,8 @@ class ThemeProvider extends ChangeNotifier {
   }
 
   // Helper getters for common colors
-  Color get backgroundColor => const Color(0xFF000000);
-  Color get cardColor => Colors.transparent;
-  Color get textColor => _isDarkMode ? Colors.white : Colors.black;
+  Color get backgroundColor => _isDarkMode ? const Color(0xFF000000) : const Color(0xFFF5F5F5);
+  Color get cardColor => _isDarkMode ? Colors.transparent : Colors.white;
+  Color get textColor => _isDarkMode ? Colors.white : const Color(0xFF1A1A1A);
   Color get subtextColor => _isDarkMode ? Colors.grey[400]! : Colors.grey[600]!;
 }

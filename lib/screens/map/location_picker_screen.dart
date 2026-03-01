@@ -11,7 +11,6 @@ import '../../providers/theme_provider.dart';
 import '../../utils/location_validator.dart';
 import '../../services/api/api_service.dart';
 import 'dart:async';
-import 'dart:math';
 import 'package:flutter/gestures.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -437,20 +436,9 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     return;
   }
 
-  // Calculate distance between two coordinates using Haversine formula
+  // Calculate distance between two coordinates in meters using Vincenty formula
   double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
-    const double earthRadiusMeters = 6371000; // Earth radius in meters
-    final double dLat = _toRadian(lat2 - lat1);
-    final double dLon = _toRadian(lon2 - lon1);
-    final double a = (sin(dLat / 2) * sin(dLat / 2)) +
-        cos(_toRadian(lat1)) * cos(_toRadian(lat2)) * 
-        (sin(dLon / 2) * sin(dLon / 2));
-    final double c = 2 * asin(sqrt(a));
-    return earthRadiusMeters * c;
-  }
-
-  double _toRadian(double degree) {
-    return degree * 3.141592653589793 / 180;
+    return Geolocator.distanceBetween(lat1, lon1, lat2, lon2);
   }
 
   IconData _getIconForPlaceType(String? placeType) {

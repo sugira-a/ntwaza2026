@@ -1,5 +1,4 @@
 // lib/screens/vendor/vendor_detail_screen.dart
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -38,30 +37,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
 
       context.read<ReviewProvider>().fetchVendorReviews(widget.vendor.id);
       
-      // Show notification if vendor is closed
-      if (!widget.vendor.isOpen) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.info_outline, color: Colors.white),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'This vendor is currently closed',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: Colors.red.shade700,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            duration: Duration(seconds: 4),
-            margin: EdgeInsets.all(16),
-          ),
-        );
-      }
+      // No separate snackbar needed - inline banner handles closed state
     });
   }
 
@@ -1019,6 +995,57 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
                 ),
               ),
               
+              // Closed vendor banner - shown inline above products
+              if (!widget.vendor.isOpen)
+                SliverToBoxAdapter(
+                  child: Container(
+                    margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade900.withOpacity(isDarkMode ? 0.35 : 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.red.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.access_time_filled, size: 18, color: Colors.red.shade400),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Currently Closed',
+                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.red.shade300),
+                              ),
+                              SizedBox(height: 2),
+                              Text(
+                                'You can browse, but ordering is unavailable right now.',
+                                style: TextStyle(fontSize: 11, color: subtextColor, height: 1.3),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: _showWorkingHoursDialog,
+                          child: Container(
+                            padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: isDarkMode ? Colors.grey[800] : Colors.grey[100],
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              'Hours',
+                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: textColor),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
               if (!_showInfo) ...[
                 SliverToBoxAdapter(
                   child: Padding(
@@ -1097,16 +1124,23 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
                     if (provider.products.isEmpty)
                       SliverToBoxAdapter(
                         child: Padding(
-                          padding: const EdgeInsets.all(32.0),
+                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
                           child: Center(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.shopping_bag_outlined, size: 64, color: subtextColor.withOpacity(0.5)),
+                                Container(
+                                  padding: EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: (isDarkMode ? Colors.grey[900] : Colors.grey[100]),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(Icons.inventory_2_outlined, size: 36, color: subtextColor.withOpacity(0.5)),
+                                ),
                                 SizedBox(height: 16),
-                                Text('No Products Available', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: textColor)),
-                                SizedBox(height: 8),
-                                Text('Check back later for updates', style: TextStyle(fontSize: 14, color: subtextColor)),
+                                Text('No products yet', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: textColor)),
+                                SizedBox(height: 6),
+                                Text('This vendor hasn\'t added any products.', style: TextStyle(fontSize: 13, color: subtextColor)),
                               ],
                             ),
                           ),
@@ -1152,9 +1186,17 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
                   if (provider.products.isEmpty)
                     SliverToBoxAdapter(
                       child: Padding(
-                        padding: const EdgeInsets.all(32.0),
+                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
                         child: Center(
-                          child: Text('No results for "${provider.searchQuery}"', style: TextStyle(color: subtextColor, fontSize: 16)),
+                          child: Column(
+                            children: [
+                              Icon(Icons.search_off_rounded, size: 36, color: subtextColor.withOpacity(0.4)),
+                              SizedBox(height: 12),
+                              Text('No results found', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: textColor)),
+                              SizedBox(height: 4),
+                              Text('Try a different search term.', style: TextStyle(fontSize: 13, color: subtextColor)),
+                            ],
+                          ),
                         ),
                       ),
                     )
@@ -1231,117 +1273,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
             ],
           ),
           
-          // Blur overlay when vendor is closed
-          if (!widget.vendor.isOpen)
-            Positioned.fill(
-              child: ClipRRect(
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
-                  child: Container(
-                    color: Colors.black.withOpacity(0.3),
-                    child: Center(
-                      child: Container(
-                        margin: EdgeInsets.symmetric(horizontal: 24),
-                        constraints: BoxConstraints(maxWidth: 320),
-                        padding: EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: (isDarkMode ? Colors.grey[900] : Colors.white)?.withOpacity(0.95),
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.3),
-                              blurRadius: 20,
-                              spreadRadius: 5,
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              padding: EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.red.withOpacity(0.1),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                Icons.access_time_filled,
-                                size: 32,
-                                color: Colors.red,
-                              ),
-                            ),
-                            SizedBox(height: 16),
-                            Text(
-                              'Currently Closed',
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: textColor,
-                              ),
-                            ),
-                            SizedBox(height: 8),
-                            Text(
-                              'This vendor is not accepting orders right now.',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: subtextColor,
-                                height: 1.4,
-                              ),
-                            ),
-                            SizedBox(height: 12),
-                            Container(
-                              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: isDarkMode ? Colors.grey[800] : Colors.grey[100],
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.schedule, size: 16, color: Colors.green),
-                                  SizedBox(width: 6),
-                                  Flexible(
-                                    child: GestureDetector(
-                                      onTap: _showWorkingHoursDialog,
-                                      child: Text(
-                                        _getNextOpeningTime(),
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          color: textColor,
-                                        ),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            SizedBox(height: 16),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: () => Navigator.pop(context),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.red,
-                                  foregroundColor: Colors.white,
-                                  padding: EdgeInsets.symmetric(vertical: 12),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                ),
-                                child: Text('Go Back', style: TextStyle(fontWeight: FontWeight.w600)),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
+
           ],
         );
         },
