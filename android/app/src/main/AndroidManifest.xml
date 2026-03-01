@@ -21,7 +21,7 @@
         
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="${GOOGLE_MAPS_ANDROID_KEY}"/>
+            android:value="AIzaSyCp462I4jqd5li6x4bhgnS7Gu87pV2XBsk"/>
         
         <!-- ✅ ADD THIS FOR FIREBASE -->
         <meta-data

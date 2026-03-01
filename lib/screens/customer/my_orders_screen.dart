@@ -410,32 +410,10 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with SingleTickerProvid
 
   Widget _buildLoadingState(Color textPrimary, Color textSecondary) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const SizedBox(
-            width: 36,
-            height: 36,
-            child: CircularProgressIndicator(strokeWidth: 3),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Loading your orders',
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              color: textPrimary,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'This usually takes just a moment',
-            style: TextStyle(
-              fontSize: 12,
-              color: textSecondary,
-            ),
-          ),
-        ],
+      child: SizedBox(
+        width: 24,
+        height: 24,
+        child: CircularProgressIndicator(strokeWidth: 2, color: textSecondary),
       ),
     );
   }

@@ -123,7 +123,7 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
         ),
       ),
       body: _isLoading
-          ? Center(child: CircularProgressIndicator(color: colorScheme.primary))
+          ? Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: colorScheme.onSurface.withOpacity(0.4))))
           : _order == null
               ? _buildErrorState()
               : _buildTrackingView(),

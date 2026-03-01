@@ -7,8 +7,6 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:google_maps_flutter_android/google_maps_flutter_android.dart';
-import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platform_interface.dart';
 
 // Providers
 import 'providers/product_detail_provider.dart';
@@ -61,27 +59,14 @@ void main() async {
 
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Google Maps renderer for Android
-  if (!kIsWeb) {
-    try {
-      final mapsImplementation = GoogleMapsFlutterPlatform.instance;
-      if (mapsImplementation is GoogleMapsFlutterAndroid) {
-        // Use Texture Layer Hybrid Composition for better rendering
-        mapsImplementation.useAndroidViewSurface = true;
-        final renderer = await mapsImplementation.initializeWithRenderer(
-          AndroidMapRenderer.latest,
-        );
-        print('✅ Google Maps Android renderer: $renderer');
-      }
-    } catch (e) {
-      print('⚠️ Google Maps renderer init: $e');
-    }
-  }
+  // Google Maps uses default renderer — custom renderer removed to fix white/blank map
 
   // Enable edge-to-edge mode with transparent system bars
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.dark, // dark icons for light background
+    statusBarBrightness: Brightness.light,
     systemNavigationBarColor: Colors.transparent,
     systemNavigationBarDividerColor: Colors.transparent,
   ));

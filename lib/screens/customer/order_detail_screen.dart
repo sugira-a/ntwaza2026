@@ -115,7 +115,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: isDark ? Colors.grey : Colors.grey[400])))
           : _order == null
               ? _buildErrorState()
               : ListView(

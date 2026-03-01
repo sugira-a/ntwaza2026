@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:go_router/go_router.dart';
@@ -2850,14 +2851,13 @@ Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: backgroundColor,
       body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const NtwazaLoadingIndicator(
-              size: 56,
-              message: 'Loading...',
-            ),
-          ],
+        child: SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: subtextColor,
+          ),
         ),
       ),
     );
@@ -2879,7 +2879,11 @@ Widget build(BuildContext context) {
         : _buildNormalVendorList(context, vendorProvider, specialOfferProvider, isDarkMode, cardColor, textColor, subtextColor);
   }
 
-  return Scaffold(
+  return AnnotatedRegion<SystemUiOverlayStyle>(
+    value: isDarkMode 
+      ? SystemUiOverlayStyle.light.copyWith(statusBarColor: Colors.transparent)
+      : SystemUiOverlayStyle.dark.copyWith(statusBarColor: Colors.transparent),
+    child: Scaffold(
     backgroundColor: backgroundColor,
     body: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -2889,7 +2893,7 @@ Widget build(BuildContext context) {
       ],
     ),
     bottomNavigationBar: _buildBottomNav(isDarkMode, cardColor, textColor, subtextColor),
-  );
+  ));
 }}
 
 

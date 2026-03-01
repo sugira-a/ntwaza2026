@@ -1224,54 +1224,13 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         backgroundColor: isDarkMode ? const Color(0xFF0A0A0A) : Colors.white,
         body: SafeArea(
           child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Brand text
-                Text(
-                  'NTWAZA',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 6,
-                    color: const Color(0xFF2E7D32),
-                  ),
-                ),
-                const SizedBox(height: 32),
-                SizedBox(
-                  width: 36,
-                  height: 36,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 3,
-                    color: const Color(0xFF2E7D32),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  'Finding your location',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                    letterSpacing: 0.3,
-                  ),
-                ),
-                const SizedBox(height: 32),
-                TextButton(
-                  onPressed: _setDefaultLocation,
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  ),
-                  child: Text(
-                    'Select manually',
-                    style: TextStyle(
-                      color: const Color(0xFF2E7D32),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
+            child: SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: isDarkMode ? Colors.grey[500] : Colors.grey[400],
+              ),
             ),
           ),
         ),
@@ -1318,27 +1277,14 @@ GoogleMap(
             Container(
               color: isDarkMode ? const Color(0xFF0A0A0A) : Colors.white,
               child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    SizedBox(
-                      width: 32,
-                      height: 32,
-                      child: CircularProgressIndicator(
-                        color: Color(0xFF2E7D32),
-                        strokeWidth: 3,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Loading map...',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                      ),
-                    ),
-                  ],
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: isDarkMode ? Colors.grey[500] : Colors.grey[400],
+                  ),
+                ),
                 ),
               ),
             ),

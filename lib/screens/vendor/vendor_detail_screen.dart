@@ -828,11 +828,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
       backgroundColor: backgroundColor,
       body: Consumer<ProductDetailProvider>(
         builder: (context, provider, _) {
-          if (provider.isLoading) {
-            return Center(child: CircularProgressIndicator(color: isDarkMode ? Colors.white : Colors.black));
-          }
-          
-          if (provider.error != null) {
+          if (provider.error != null && !provider.isLoading) {
             return Center(
               child: Padding(
                 padding: EdgeInsets.all(24),
@@ -1064,7 +1060,21 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
                   ),
                 ),
                 
-                if (provider.searchQuery.isEmpty) ...[
+                // Show inline loading while products load (vendor header already visible)
+                if (provider.isLoading)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 48),
+                      child: Center(
+                        child: SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: subtextColor),
+                        ),
+                      ),
+                    ),
+                  )
+                else if (provider.searchQuery.isEmpty) ...[
                   if (provider.selectedCategoryId == null) ...[
                     // Show ALL categories, always expanded
                     if (provider.products.isEmpty)
