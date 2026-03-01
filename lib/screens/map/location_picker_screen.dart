@@ -1285,7 +1285,6 @@ GoogleMap(
                     color: isDarkMode ? Colors.grey[500] : Colors.grey[400],
                   ),
                 ),
-                ),
               ),
             ),
 
