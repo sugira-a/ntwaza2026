@@ -26,6 +26,7 @@ import '../../screens/vendor/widgets/product_detail_modal.dart';
 import '../../services/api/api_service.dart';
 import '../../services/location_service.dart';
 import '../loading/shimmer_loading.dart';
+import 'draggable_ai_assistant.dart';
 
 class CustomerHomeContent extends StatefulWidget {
   const CustomerHomeContent({super.key});
@@ -763,18 +764,6 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
                     ),
                     child: Text('Login', style: TextStyle(color: textColor, fontWeight: FontWeight.w600))
                   ),
-                const SizedBox(width: 8),
-                Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2E7D32).withOpacity(isDarkMode ? 0.2 : 0.12),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: IconButton(
-                    onPressed: () => context.push('/ai-assistant'),
-                    icon: const Icon(Icons.auto_awesome, color: Color(0xFF2E7D32), size: 22),
-                    tooltip: 'AI Assistant',
-                  ),
-                ),
                 const SizedBox(width: 6),
                 IconButton(
                   onPressed: () => _showSettingsMenu(context, isDarkMode, themeProvider, cardColor, textColor, subtextColor), 
@@ -2906,11 +2895,17 @@ Widget build(BuildContext context) {
       : SystemUiOverlayStyle.dark.copyWith(statusBarColor: Colors.transparent),
     child: Scaffold(
     backgroundColor: backgroundColor,
-    body: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    body: Stack(
       children: [
-        _buildSearchHeader(context, isDarkMode, cardColor, textColor, subtextColor, vendorProvider, authProvider, themeProvider),
-        Expanded(child: mainContent),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildSearchHeader(context, isDarkMode, cardColor, textColor, subtextColor, vendorProvider, authProvider, themeProvider),
+            Expanded(child: mainContent),
+          ],
+        ),
+        // Draggable AI Assistant
+        const DraggableAiAssistant(),
       ],
     ),
     bottomNavigationBar: _buildBottomNav(isDarkMode, cardColor, textColor, subtextColor),
