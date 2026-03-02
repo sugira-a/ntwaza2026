@@ -168,8 +168,11 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
       setState(() => _messages.add(_ChatMessage(text: reply, isUser: false)));
     } catch (e) {
       if (!mounted) return;
+      final errMsg = e.toString().contains('Failed to fetch') || e.toString().contains('Connection')
+          ? 'Connection failed. Check your internet and try again.'
+          : 'Could not reach AI. Tap to retry.';
       setState(() => _messages.add(_ChatMessage(
-        text: 'Something went wrong. Tap to retry.',
+        text: errMsg,
         isUser: false,
         isError: true,
       )));
@@ -416,7 +419,10 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
       setState(() {
         _isSending = false;
         _isSmartCartLoading = false;
-        _messages.add(_ChatMessage(text: 'Smart Cart failed. Please try again.', isUser: false, isError: true));
+        final errMsg = e.toString().contains('Failed to fetch') || e.toString().contains('Connection')
+            ? 'Connection failed. Check your internet.'
+            : 'Smart Cart unavailable. Tap to retry.';
+        _messages.add(_ChatMessage(text: errMsg, isUser: false, isError: true));
       });
     }
     _scrollToBottom();
