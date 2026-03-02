@@ -707,8 +707,8 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
   return Container(
     clipBehavior: Clip.hardEdge,
     decoration: BoxDecoration(
-      color: cardColor, 
-      boxShadow: [BoxShadow(color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.08), blurRadius: 8, offset: const Offset(0, 2))]
+      color: isDarkMode ? cardColor : const Color(0xFFF8F8F8), 
+      boxShadow: [BoxShadow(color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.06), blurRadius: 6, offset: const Offset(0, 1))]
     ),
     child: SafeArea(
       bottom: false,
@@ -717,7 +717,7 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), 
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6), 
             child: Row(
               children: [
                 Expanded(
@@ -774,31 +774,46 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8), 
-            child: TextField(
-              controller: _searchController,
-              style: TextStyle(color: textColor),
-              decoration: InputDecoration(
-                hintText: 'Search places, streets, restaurants...',
-                hintStyle: TextStyle(color: subtextColor),
-                prefixIcon: Icon(Icons.search, color: subtextColor),
-                suffixIcon: _searchController.text.isNotEmpty 
-                  ? IconButton(
-                      icon: Icon(Icons.clear, color: subtextColor), 
-                      onPressed: () { 
-                        _searchController.clear(); 
-                        context.read<SearchProvider>().clearSearch();
-                        context.read<VendorProvider>().clearSearch(); 
-                      }
-                    ) 
-                  : null,
-                filled: true, 
-                fillColor: isDarkMode ? Colors.grey[900] : Colors.grey[100],
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                isDense: true,
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 6), 
+            child: Container(
+              height: 40,
+              child: TextField(
+                controller: _searchController,
+                style: TextStyle(color: textColor, fontSize: 13),
+                decoration: InputDecoration(
+                  hintText: 'Search here',
+                  hintStyle: TextStyle(color: subtextColor, fontSize: 13),
+                  prefixIcon: Icon(Icons.search, color: subtextColor, size: 20),
+                  prefixIconConstraints: const BoxConstraints(minWidth: 40),
+                  suffixIcon: _searchController.text.isNotEmpty 
+                    ? IconButton(
+                        icon: Icon(Icons.clear, color: subtextColor, size: 18), 
+                        onPressed: () { 
+                          _searchController.clear(); 
+                          context.read<SearchProvider>().clearSearch();
+                          context.read<VendorProvider>().clearSearch(); 
+                        }
+                      ) 
+                    : null,
+                  filled: true, 
+                  fillColor: isDarkMode ? Colors.grey[900] : Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10), 
+                    borderSide: BorderSide(color: isDarkMode ? Colors.grey[800]! : const Color(0xFFE0E0E0), width: 0.5),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10), 
+                    borderSide: BorderSide(color: isDarkMode ? Colors.grey[800]! : const Color(0xFFE0E0E0), width: 0.5),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10), 
+                    borderSide: BorderSide(color: isDarkMode ? Colors.grey[600]! : const Color(0xFFBDBDBD), width: 1),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  isDense: true,
+                ),
+                onChanged: _onSearchChanged,
               ),
-              onChanged: _onSearchChanged,
             )
           ),
         ],
@@ -1585,23 +1600,31 @@ void _showAddressManagementDialog(BuildContext context, bool isDarkMode, Color c
 
   // ==================== VENDOR CARDS ====================
 
+  /// Get today's hours text for a vendor
+  String _getTodayHours(Vendor vendor) {
+    if (vendor.workingHours == null || vendor.workingHours!.isEmpty) return '';
+    final days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    final todayKey = days[DateTime.now().weekday - 1];
+    final dayData = vendor.workingHours![todayKey];
+    if (dayData == null || dayData is! Map) return '';
+    final isOpen = dayData['open'] == true;
+    final openTime = dayData['open_time'] ?? '';
+    final closeTime = dayData['close_time'] ?? '';
+    if (openTime.toString().isNotEmpty && closeTime.toString().isNotEmpty) {
+      return isOpen ? '$openTime – $closeTime' : '';
+    }
+    return isOpen ? 'Open' : '';
+  }
+
   Widget _buildVendorCard(Vendor vendor, int index, bool isDarkMode, Color cardColor, Color textColor, Color subtextColor) {
     final isHovered = _hoveredCardIndex == index;
-    // Use logoUrl first, then bannerUrl as fallback, then placeholder
     final imageUrl = vendor.logoUrl.isNotEmpty 
         ? vendor.logoUrl 
         : (vendor.bannerUrl != null && vendor.bannerUrl!.isNotEmpty 
             ? vendor.bannerUrl! 
-            : 'https://picsum.photos/seed/vendor$index/400/300');
+            : '');
     
-    print('📦 Vendor Card: ${vendor.name}');
-    print('   Raw logoUrl: "${vendor.logoUrl}"');
-    print('   Raw bannerUrl: "${vendor.bannerUrl}"');
-    print('   Final imageUrl: "$imageUrl"');
-    
-    final businessName = vendor.name;
     final businessType = vendor.category.toLowerCase();
-
     IconData businessIcon = Icons.store;
     String typeLabel = 'Store';
     if (businessType.contains('restaurant')) {
@@ -1618,103 +1641,161 @@ void _showAddressManagementDialog(BuildContext context, bool isDarkMode, Color c
     final distanceText = vendor.formattedDistance;
     final deliveryFeeText = vendor.formattedDeliveryFee;
     final deliveryTime = vendor.formattedDeliveryTime;
+    final todayHours = _getTodayHours(vendor);
+
+    final statusColor = vendor.isOpen 
+        ? (isDarkMode ? const Color(0xFF81C784) : const Color(0xFF4CAF50))
+        : (isDarkMode ? const Color(0xFFB0B0B0) : const Color(0xFF9E9E9E));
+    final borderCol = isDarkMode ? const Color(0xFF2A2A2A) : Colors.grey.shade200;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _hoveredCardIndex = index),
       onExit: (_) => setState(() => _hoveredCardIndex = null),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        transform: Matrix4.translationValues(0, isHovered ? -8 : 0, 0),
-        child: Card(
-          elevation: isHovered ? 8 : 4,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          color: cardColor,
+        transform: Matrix4.translationValues(0, isHovered ? -4 : 0, 0),
+        child: Container(
+          decoration: BoxDecoration(
+            color: isDarkMode ? const Color(0xFF1A1A1A) : Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: borderCol, width: 0.5),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(isDarkMode ? 0.2 : 0.06),
+                blurRadius: isHovered ? 12 : 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
           child: InkWell(
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => VendorDetailScreen(vendor: vendor))),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Image section
                 Expanded(
                   flex: 3, 
                   child: Stack(
                     children: [
                       ClipRRect(
-                        borderRadius: const BorderRadius.only(topLeft: Radius.circular(16), topRight: Radius.circular(16)),
-                        child: _buildVendorImage(
-                          imageUrl,
-                          isDarkMode: isDarkMode,
-                          businessIcon: businessIcon,
-                          width: double.infinity,
-                          height: double.infinity,
+                        borderRadius: const BorderRadius.only(topLeft: Radius.circular(14), topRight: Radius.circular(14)),
+                        child: ColorFiltered(
+                          colorFilter: vendor.isOpen 
+                              ? const ColorFilter.mode(Colors.transparent, BlendMode.multiply)
+                              : ColorFilter.mode(Colors.black.withOpacity(0.3), BlendMode.darken),
+                          child: _buildVendorImage(
+                            imageUrl.isNotEmpty ? imageUrl : 'https://picsum.photos/seed/vendor$index/400/300',
+                            isDarkMode: isDarkMode,
+                            businessIcon: businessIcon,
+                            width: double.infinity,
+                            height: double.infinity,
+                          ),
                         ),
                       ),
+                      // Type label
                       Positioned(
-                        top: 12, left: 12, 
+                        top: 10, left: 10, 
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(color: Colors.black.withOpacity(0.7), borderRadius: BorderRadius.circular(20)),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.55),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
                           child: Row(mainAxisSize: MainAxisSize.min, children: [
-                            Icon(businessIcon, size: 14, color: Colors.white),
+                            Icon(businessIcon, size: 12, color: Colors.white70),
                             const SizedBox(width: 4),
-                            Text(typeLabel, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+                            Text(typeLabel, style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.w500, letterSpacing: 0.3)),
                           ]),
                         )
                       ),
+                      // Status dot
                       Positioned(
-                        top: 12, right: 12, 
+                        top: 10, right: 10, 
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(color: vendor.isOpen ? Colors.green.withOpacity(0.9) : Colors.red.withOpacity(0.9), borderRadius: BorderRadius.circular(20)),
-                          child: Text(vendor.isOpen ? 'OPEN' : 'CLOSED', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.55),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Row(mainAxisSize: MainAxisSize.min, children: [
+                            Container(
+                              width: 6, height: 6,
+                              decoration: BoxDecoration(
+                                color: statusColor,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              vendor.isOpen ? 'Open' : 'Closed',
+                              style: TextStyle(color: Colors.white.withOpacity(0.85), fontSize: 10, fontWeight: FontWeight.w500),
+                            ),
+                          ]),
                         )
                       ),
                     ],
                   )
                 ),
+                // Info section
                 Padding(
-                  padding: const EdgeInsets.all(12), 
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 10), 
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(businessName, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: textColor), maxLines: 1),
-                      const SizedBox(height: 8),
+                      Text(vendor.name, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: textColor, letterSpacing: -0.2), maxLines: 1, overflow: TextOverflow.ellipsis),
+                      const SizedBox(height: 6),
+                      // Rating + delivery time
                       Row(children: [
-                        Icon(Icons.star, size: 14, color: Colors.amber),
-                        const SizedBox(width: 4),
+                        Icon(Icons.star_rounded, size: 14, color: isDarkMode ? const Color(0xFFFFD54F) : const Color(0xFFFFA000)),
+                        const SizedBox(width: 3),
                         (vendor.totalRatings == 0)
-                          ? Text('New', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: textColor))
-                          : Text(vendor.formattedRating, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: textColor)),
+                          ? Text('New', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: isDarkMode ? const Color(0xFFFFD54F) : const Color(0xFFFF8F00)))
+                          : Text(vendor.formattedRating, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: textColor)),
                         if (vendor.totalRatings > 0) ...[
-                          const SizedBox(width: 4), 
-                          Text('(${vendor.totalRatings})', style: TextStyle(fontSize: 11, color: subtextColor))
+                          Text(' (${vendor.totalRatings})', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: subtextColor))
                         ],
                         const Spacer(),
-                        Icon(Icons.access_time, size: 14, color: vendor.isOpen ? Colors.green : Colors.grey),
-                        const SizedBox(width: 4),
-                        Text(deliveryTime, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: vendor.isOpen ? Colors.green : Colors.grey)),
-                      ]),
-                      const SizedBox(height: 8),
-                      Row(children: [
-                        Icon(Icons.location_on, size: 12, color: Colors.blue),
+                        Icon(Icons.schedule_outlined, size: 13, color: isDarkMode ? const Color(0xFF42A5F5) : const Color(0xFF1565C0)),
                         const SizedBox(width: 3),
-                        Flexible(child: Text(distanceText, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.blue), overflow: TextOverflow.ellipsis)),
+                        Text(deliveryTime, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: isDarkMode ? const Color(0xFF42A5F5) : const Color(0xFF1565C0))),
+                      ]),
+                      const SizedBox(height: 5),
+                      // Distance + delivery fee
+                      Row(children: [
+                        Icon(Icons.near_me_outlined, size: 12, color: isDarkMode ? const Color(0xFF66BB6A) : const Color(0xFF2E7D32)),
+                        const SizedBox(width: 3),
+                        Flexible(child: Text(distanceText, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: isDarkMode ? const Color(0xFF66BB6A) : const Color(0xFF2E7D32)), overflow: TextOverflow.ellipsis)),
                         if (distanceText != 'D/U') ...[
-                          const SizedBox(width: 16),
-                          Text('DF:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: isDarkMode ? Colors.white : Colors.black)),
-                          const SizedBox(width: 2),
-                          Text(deliveryFeeText, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.green)),
+                          Text('  ·  ', style: TextStyle(color: subtextColor.withOpacity(0.5), fontSize: 11)),
+                          Text('DF: $deliveryFeeText', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: isDarkMode ? const Color(0xFF42A5F5) : const Color(0xFF1565C0))),
                         ],
                         if (!vendor.isDeliverable) ...[
-                          const SizedBox(width: 4),
+                          const SizedBox(width: 6),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                            decoration: BoxDecoration(color: Colors.red.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
-                            child: Text('Too far', style: TextStyle(fontSize: 9, color: Colors.red, fontWeight: FontWeight.w600)),
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: subtextColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text('Too far', style: TextStyle(fontSize: 9, color: subtextColor, fontWeight: FontWeight.w500)),
                           ),
                         ],
                       ]),
+                      // Today's working hours
+                      if (todayHours.isNotEmpty) ...[
+                        const SizedBox(height: 5),
+                        Row(children: [
+                          Icon(Icons.access_time_outlined, size: 11, color: vendor.isOpen 
+                              ? (isDarkMode ? const Color(0xFF66BB6A) : const Color(0xFF2E7D32))
+                              : (isDarkMode ? const Color(0xFFEF5350) : const Color(0xFFC62828))),
+                          const SizedBox(width: 3),
+                          Expanded(child: Text(todayHours, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: vendor.isOpen 
+                              ? (isDarkMode ? const Color(0xFF66BB6A) : const Color(0xFF2E7D32))
+                              : (isDarkMode ? const Color(0xFFEF5350) : const Color(0xFFC62828))), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                        ]),
+                      ],
                     ],
                   )
                 ),
@@ -1735,15 +1816,20 @@ void _showAddressManagementDialog(BuildContext context, bool isDarkMode, Color c
             : 'https://picsum.photos/seed/vendor${vendor.id}/200/200');
     final deliveryTime = vendor.formattedDeliveryTime;
     final distanceText = vendor.formattedDistance;
+    final borderCol = isDarkMode ? const Color(0xFF2A2A2A) : Colors.grey.shade200;
+    final statusColor = vendor.isOpen
+        ? (isDarkMode ? const Color(0xFF81C784) : const Color(0xFF4CAF50))
+        : (isDarkMode ? const Color(0xFFB0B0B0) : const Color(0xFF9E9E9E));
     
     return GestureDetector(
       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => VendorDetailScreen(vendor: vendor))),
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: cardColor, 
+          color: isDarkMode ? const Color(0xFF1A1A1A) : Colors.white, 
           borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: borderCol, width: 0.5),
         ),
         child: Row(children: [
           ClipRRect(
@@ -1752,36 +1838,42 @@ void _showAddressManagementDialog(BuildContext context, bool isDarkMode, Color c
               imageUrl,
               isDarkMode: isDarkMode,
               businessIcon: Icons.store,
-              width: 60,
-              height: 60,
+              width: 56,
+              height: 56,
               showText: false,
             )
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-              Text(vendor.name, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: textColor), maxLines: 1),
+              Text(vendor.name, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: textColor, letterSpacing: -0.2), maxLines: 1),
               const SizedBox(height: 4),
               Row(children: [
-                Icon(Icons.star, size: 12, color: Colors.amber),
-                const SizedBox(width: 4),
+                Icon(Icons.star_rounded, size: 12, color: isDarkMode ? const Color(0xFFFFD54F) : Colors.amber.shade700),
+                const SizedBox(width: 3),
                 (vendor.totalRatings == 0)
-                  ? Text('New', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: subtextColor))
-                  : Text(vendor.formattedRating, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: subtextColor)),
-                const SizedBox(width: 8),
-                Icon(Icons.access_time, size: 12, color: vendor.isOpen ? Colors.green : Colors.grey),
-                const SizedBox(width: 4),
-                Text(deliveryTime, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: vendor.isOpen ? Colors.green : Colors.grey)),
+                  ? Text('New', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: subtextColor))
+                  : Text(vendor.formattedRating, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: subtextColor)),
+                Text('  ·  ', style: TextStyle(color: subtextColor.withOpacity(0.5), fontSize: 11)),
+                Icon(Icons.schedule_outlined, size: 12, color: subtextColor),
+                const SizedBox(width: 3),
+                Text(deliveryTime, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: subtextColor)),
               ]),
-              const SizedBox(height: 4),
+              const SizedBox(height: 3),
               Row(children: [
-                Icon(Icons.location_on, size: 12, color: Colors.blue),
-                const SizedBox(width: 4),
-                Text(distanceText, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.blue)),
+                Icon(Icons.near_me_outlined, size: 11, color: subtextColor),
+                const SizedBox(width: 3),
+                Text(distanceText, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: subtextColor)),
               ]),
             ])
           ),
-          Icon(Icons.arrow_forward_ios, size: 16, color: subtextColor),
+          const SizedBox(width: 8),
+          Container(
+            width: 7, height: 7,
+            decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 6),
+          Icon(Icons.chevron_right, size: 18, color: subtextColor.withOpacity(0.5)),
         ]),
       ),
     );
@@ -2483,202 +2575,92 @@ void _showLocationError(String message) {
     ),
   );
 }
-// NEW: No vendors overlay (keeps app chrome visible)
+// Minimal no-vendors overlay — clean & professional
 Widget _buildNoVendorsOverlay(bool isDarkMode, Color cardColor, Color textColor, Color subtextColor) {
-  // Determine message based on selected category
-  String title;
-  String message;
+  String label;
   IconData icon;
-  
-  if (_selectedCategory == 'All' || _selectedCategory.isEmpty) {
-    title = 'No Vendors Nearby';
-    message = 'We currently don\'t have any vendors in this area. Try changing your location within Kigali.';
-    icon = Icons.store_mall_directory_outlined;
-  } else if (_selectedCategory == 'Others') {
-    title = 'Coming Soon';
-    message = 'We\'re working on bringing more service categories to you. Check back soon for more options!';
-    icon = Icons.new_releases;
-  } else {
-    // Category-specific messages
-    title = 'No ${_selectedCategory} Available';
-    message = 'We don\'t have any ${_selectedCategory.toLowerCase()} available at the moment. Please check back later or try another category.';
-    icon = _selectedCategory == 'Restaurants' 
-        ? Icons.restaurant
-        : _selectedCategory == 'Supermarkets'
-            ? Icons.shopping_cart
-            : Icons.store;
-  }
-  
-  return Stack(
-    children: [
-      Opacity(
-        opacity: 0.2,
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 100, color: subtextColor),
-              const SizedBox(height: 16),
-              Text(_selectedCategory == 'All' ? 'Browse Vendors' : _selectedCategory, 
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: textColor)),
-            ],
-          ),
-        ),
-      ),
-      
-      Center(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Container(
-              constraints: const BoxConstraints(maxWidth: 380),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-              decoration: BoxDecoration(
-                color: cardColor,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 20, spreadRadius: 4),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.15),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(icon, size: 40, color: Colors.orange[700]),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(title, style: TextStyle(color: textColor, fontSize: 18, fontWeight: FontWeight.w700), textAlign: TextAlign.center),
-                  const SizedBox(height: 8),
-                  Text(
-                    message,
-                    style: TextStyle(color: subtextColor, fontSize: 13, height: 1.4),
-                    textAlign: TextAlign.center,
-                  ),
-                  // Only show location info and change button for 'All' category
-                  if (_selectedCategory == 'All' || _selectedCategory.isEmpty) ...[
-                    if (_currentAddress != null) ...[
-                      const SizedBox(height: 16),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: isDarkMode ? Colors.grey[900] : Colors.grey[100],
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.location_on, color: Colors.orange[700], size: 18),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('Current Location', style: TextStyle(fontSize: 10, color: subtextColor, fontWeight: FontWeight.w600)),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    _currentAddress?.label ?? _currentAddress?.shortAddress ?? 'Unknown',
-                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textColor),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 44,
-                      child: ElevatedButton.icon(
-                        onPressed: () async {
-                          final result = await Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => const LocationPickerScreen()),
-                          );
 
-                          if (result != null && result is DeliveryAddress) {
-                            // CHECK KIGALI RESTRICTION
-                            if (_isLocationOutOfKigali(result.latitude, result.longitude)) {
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('❌ Sorry, we only serve within Kigali. Please select a location within Kigali.'),
-                                    backgroundColor: Colors.red,
-                                    duration: Duration(seconds: 5),
-                                  ),
-                                );
-                              }
-                              return;
-                            }
-                            
-                            setState(() => _currentAddress = result);
-                            await _loadVendorsForAddress(result);
-                          }
-                        },
-                        icon: const Icon(Icons.location_on_outlined, size: 18),
-                        label: const Text('Change Location', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF2E7D32),
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          elevation: 0,
+  if (_selectedCategory == 'All' || _selectedCategory.isEmpty) {
+    label = 'No vendors in this area';
+    icon = Icons.storefront_outlined;
+  } else if (_selectedCategory == 'Others') {
+    label = 'Coming soon';
+    icon = Icons.schedule_outlined;
+  } else {
+    label = 'No ${_selectedCategory.toLowerCase()} available';
+    icon = Icons.storefront_outlined;
+  }
+
+  return Center(
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 36, color: isDarkMode ? Colors.grey[600] : Colors.grey[400]),
+          const SizedBox(height: 12),
+          Text(
+            label,
+            style: TextStyle(
+              color: isDarkMode ? Colors.grey[400] : Colors.grey[700],
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
+          ),
+
+          // Location action for 'All'
+          if (_selectedCategory == 'All' || _selectedCategory.isEmpty) ...[
+            const SizedBox(height: 16),
+            GestureDetector(
+              onTap: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LocationPickerScreen()),
+                );
+                if (result != null && result is DeliveryAddress) {
+                  if (_isLocationOutOfKigali(result.latitude, result.longitude)) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('We only serve within Kigali'),
+                          backgroundColor: Colors.red,
+                          duration: Duration(seconds: 4),
                         ),
-                      ),
-                    ),
-                  ] else if (_selectedCategory == 'Others') ...[
-                    // For Others category, show button to explore other categories
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          _handleCategoryTap('All');
-                        },
-                        icon: const Icon(Icons.explore_outlined, size: 20),
-                        label: const Text('Explore Other Categories', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange[700],
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          elevation: 0,
-                        ),
-                      ),
-                    ),
-                  ] else ...[
-                    // For other categories, show a button to view all categories
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 52,
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          _handleCategoryTap('All');
-                        },
-                        icon: const Icon(Icons.grid_view, size: 22),
-                        label: const Text('View All Categories', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.orange[700],
-                          side: BorderSide(color: Colors.orange[700]!, width: 2),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
+                      );
+                    }
+                    return;
+                  }
+                  setState(() => _currentAddress = result);
+                  await _loadVendorsForAddress(result);
+                }
+              },
+              child: Text(
+                'Change location',
+                style: TextStyle(
+                  color: const Color(0xFF2E7D32),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
-          ),
-        ),
+          ] else ...[
+            const SizedBox(height: 12),
+            GestureDetector(
+              onTap: () => _handleCategoryTap('All'),
+              child: Text(
+                'View all',
+                style: TextStyle(
+                  color: const Color(0xFF2E7D32),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ],
       ),
-    ],
+    ),
   );
 }
  Widget _buildNormalVendorList(BuildContext context, VendorProvider vendorProvider, SpecialOfferProvider specialOfferProvider, 

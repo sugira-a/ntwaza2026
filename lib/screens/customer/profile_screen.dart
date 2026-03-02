@@ -34,19 +34,13 @@ class ProfileScreen extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.person_off_outlined, size: 64, color: subtextColor),
+              Icon(Icons.person_outline_rounded, size: 40, color: subtextColor),
+              const SizedBox(height: 10),
+              Text('Login to view profile', style: TextStyle(color: subtextColor, fontSize: 14)),
               const SizedBox(height: 16),
-              Text('Please login to view profile', style: TextStyle(color: subtextColor, fontSize: 16)),
-              const SizedBox(height: 24),
-              ElevatedButton(
+              TextButton(
                 onPressed: () => context.go('/login'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: accentGreen,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-                child: const Text('Login', style: TextStyle(fontWeight: FontWeight.w700)),
+                child: const Text('Login', style: TextStyle(color: accentGreen, fontWeight: FontWeight.w600, fontSize: 14)),
               ),
             ],
           ),
@@ -65,11 +59,11 @@ class ProfileScreen extends StatelessWidget {
             // Profile Card
             _buildProfileCard(user, isDark, cardColor, textColor, subtextColor),
             
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
 
             // Account Section
             _buildSectionTitle('Account', textColor),
-            const SizedBox(height: 12),
+            const SizedBox(height: 6),
             _buildSettingTile(
               icon: Icons.person_outline_rounded,
               title: 'Edit Profile',
@@ -81,10 +75,9 @@ class ProfileScreen extends StatelessWidget {
               iconColor: accentGreen,
               isDark: isDark,
             ),
-            const SizedBox(height: 10),
             _buildSettingTile(
               icon: Icons.location_on_outlined,
-              title: 'My Addresses',
+              title: 'Addresses',
               subtitle: 'Manage delivery addresses',
               onTap: () => context.push('/location-picker'),
               cardColor: cardColor,
@@ -93,10 +86,9 @@ class ProfileScreen extends StatelessWidget {
               iconColor: Colors.blue,
               isDark: isDark,
             ),
-            const SizedBox(height: 10),
             _buildSettingTile(
               icon: Icons.receipt_long_outlined,
-              title: 'Order History',
+              title: 'Orders',
               subtitle: 'View past orders',
               onTap: () => context.push('/my-orders'),
               cardColor: cardColor,
@@ -106,14 +98,14 @@ class ProfileScreen extends StatelessWidget {
               isDark: isDark,
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
 
             // Settings Section
             _buildSectionTitle('Settings', textColor),
-            const SizedBox(height: 12),
+            const SizedBox(height: 6),
             _buildSettingTile(
               icon: isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
-              title: 'Dark Mode',
+              title: 'Appearance',
               subtitle: isDark ? 'Switch to light theme' : 'Switch to dark theme',
               trailing: Switch(
                 value: isDark,
@@ -127,10 +119,9 @@ class ProfileScreen extends StatelessWidget {
               iconColor: isDark ? Colors.amber : Colors.indigo,
               isDark: isDark,
             ),
-            const SizedBox(height: 10),
             _buildSettingTile(
               icon: Icons.lock_outline_rounded,
-              title: 'Change Password',
+              title: 'Password',
               subtitle: 'Update your password',
               onTap: () => _showChangePasswordDialog(context, authProvider, cardColor, textColor, subtextColor, isDark),
               cardColor: cardColor,
@@ -140,14 +131,14 @@ class ProfileScreen extends StatelessWidget {
               isDark: isDark,
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
 
             // Support Section
             _buildSectionTitle('Support', textColor),
-            const SizedBox(height: 12),
+            const SizedBox(height: 6),
             _buildSettingTile(
               icon: Icons.help_outline_rounded,
-              title: 'Help & Support',
+              title: 'Help',
               subtitle: 'FAQs and customer service',
               onTap: () => context.push('/help-support'),
               cardColor: cardColor,
@@ -156,10 +147,9 @@ class ProfileScreen extends StatelessWidget {
               iconColor: Colors.teal,
               isDark: isDark,
             ),
-            const SizedBox(height: 10),
             _buildSettingTile(
               icon: Icons.privacy_tip_outlined,
-              title: 'Privacy Policy',
+              title: 'Privacy',
               subtitle: 'How we handle your data',
               onTap: () => context.push('/privacy-policy'),
               cardColor: cardColor,
@@ -168,10 +158,9 @@ class ProfileScreen extends StatelessWidget {
               iconColor: Colors.grey,
               isDark: isDark,
             ),
-            const SizedBox(height: 10),
             _buildSettingTile(
               icon: Icons.description_outlined,
-              title: 'Terms of Service',
+              title: 'Terms',
               subtitle: 'Read our terms',
               onTap: () => context.push('/terms-of-service'),
               cardColor: cardColor,
@@ -181,32 +170,35 @@ class ProfileScreen extends StatelessWidget {
               isDark: isDark,
             ),
 
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
 
-            // Logout Button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () => _showLogoutDialog(context, authProvider, cardColor, textColor, subtextColor),
-                icon: const Icon(Icons.logout_rounded, size: 20),
-                label: const Text('Logout', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red[600],
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  elevation: 0,
+            // Logout
+            Material(
+              color: cardColor,
+              borderRadius: BorderRadius.circular(10),
+              child: InkWell(
+                onTap: () => _showLogoutDialog(context, authProvider, cardColor, textColor, subtextColor),
+                borderRadius: BorderRadius.circular(10),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  child: Row(
+                    children: [
+                      Icon(Icons.logout_rounded, color: Colors.red[400], size: 20),
+                      const SizedBox(width: 14),
+                      Text('Logout', style: TextStyle(color: Colors.red[400], fontSize: 14, fontWeight: FontWeight.w500)),
+                    ],
+                  ),
                 ),
               ),
             ),
 
-            const SizedBox(height: 32),
+            const SizedBox(height: 28),
 
             // App Version
             Center(
               child: Text(
-                'Ntwaza v1.0.0',
-                style: TextStyle(color: subtextColor, fontSize: 12),
+                'v1.0.0',
+                style: TextStyle(color: subtextColor.withOpacity(0.5), fontSize: 11),
               ),
             ),
             const SizedBox(height: 8),
@@ -365,65 +357,52 @@ class ProfileScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: isDark 
-              ? [const Color(0xFF1A1A1A), const Color(0xFF0A0A0A)]
-              : [const Color(0xFF2D2D2D), const Color(0xFF1A1A1A)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.25),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        color: cardColor,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: isDark ? const Color(0xFF222222) : const Color(0xFFE8E8E8), width: 0.5),
       ),
       child: Row(
         children: [
           Container(
-            width: 64,
-            height: 64,
+            width: 52,
+            height: 52,
             decoration: BoxDecoration(
-              color: const Color(0xFF2E7D32).withOpacity(0.2),
+              color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF0F0F0),
               shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFF2E7D32).withOpacity(0.5), width: 2),
             ),
             child: Center(
               child: Text(
                 initials,
-                style: const TextStyle(
-                  color: Color(0xFF4CAF50),
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
+                style: TextStyle(
+                  color: textColor,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   displayName,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 16,
                     fontWeight: FontWeight.w700,
-                    letterSpacing: -0.3,
+                    letterSpacing: -0.2,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 3),
                 Text(
                   user.email,
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.7),
-                    fontSize: 13,
+                    color: subtextColor,
+                    fontSize: 12.5,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -433,7 +412,7 @@ class ProfileScreen extends StatelessWidget {
                   Text(
                     user.phone!,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.7),
+                      color: subtextColor,
                       fontSize: 12,
                     ),
                   ),
@@ -447,13 +426,16 @@ class ProfileScreen extends StatelessWidget {
   }
 
   Widget _buildSectionTitle(String title, Color textColor) {
-    return Text(
-      title,
-      style: TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.w800,
-        color: textColor,
-        letterSpacing: -0.3,
+    return Padding(
+      padding: const EdgeInsets.only(left: 2),
+      child: Text(
+        title.toUpperCase(),
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: textColor.withOpacity(0.45),
+          letterSpacing: 0.8,
+        ),
       ),
     );
   }
@@ -472,44 +454,24 @@ class ProfileScreen extends StatelessWidget {
   }) {
     return Material(
       color: cardColor,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(10),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           child: Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: iconColor.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, color: iconColor, size: 22),
-              ),
+              Icon(icon, color: isDark ? Colors.white70 : const Color(0xFF333333), size: 20),
               const SizedBox(width: 14),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        color: textColor,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        color: subtextColor,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
               if (trailing != null)
@@ -517,8 +479,8 @@ class ProfileScreen extends StatelessWidget {
               else
                 Icon(
                   Icons.chevron_right_rounded,
-                  color: subtextColor,
-                  size: 22,
+                  color: subtextColor.withOpacity(0.4),
+                  size: 20,
                 ),
             ],
           ),

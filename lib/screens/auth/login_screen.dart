@@ -2,8 +2,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/address_provider.dart';
 import '../../providers/theme_provider.dart';
+import '../../models/delivery_address.dart';
+import '../../services/location_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -36,6 +41,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (mounted) {
         if (success) {
+          // Auto-detect location for customer users
+          if (!authProvider.isAdmin && !authProvider.isVendor && !authProvider.isRider) {
+            await _autoDetectLocationOnLogin();
+          }
+          
           if (authProvider.isAdmin) {
             context.go('/admin');
           } else if (authProvider.isVendor) {
@@ -63,6 +73,56 @@ class _LoginScreenState extends State<LoginScreen> {
           );
         }
       }
+    }
+  }
+
+  /// Auto-detect user location on login so home screen shows real address
+  Future<void> _autoDetectLocationOnLogin() async {
+    try {
+      final locationService = LocationService();
+      final hasPermission = await locationService.checkAndRequestPermission();
+      if (!hasPermission) return;
+
+      final position = await locationService.getCurrentLocation(forceRefresh: true);
+      if (position == null || !mounted) return;
+
+      String addressText = 'Current Location';
+      try {
+        final placemarks = await placemarkFromCoordinates(
+          position.latitude, position.longitude,
+        );
+        if (placemarks.isNotEmpty) {
+          final p = placemarks.first;
+          final street = p.street ?? '';
+          final subLocality = p.subLocality ?? '';
+          final locality = p.locality ?? p.subAdministrativeArea ?? 'Kigali';
+          if (street.isNotEmpty) {
+            addressText = subLocality.isNotEmpty
+                ? '$street, $subLocality, $locality'
+                : '$street, $locality';
+          } else if (subLocality.isNotEmpty) {
+            addressText = '$subLocality, $locality';
+          } else {
+            addressText = '$locality, Rwanda';
+          }
+        }
+      } catch (_) {}
+
+      final address = DeliveryAddress(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        fullAddress: addressText,
+        latitude: position.latitude,
+        longitude: position.longitude,
+        label: addressText,
+        isDefault: true,
+        createdAt: DateTime.now(),
+      );
+
+      final addressProvider = context.read<AddressProvider>();
+      await addressProvider.addAddress(address);
+      addressProvider.selectAddress(address);
+    } catch (e) {
+      print('Auto-detect location on login: $e');
     }
   }
 

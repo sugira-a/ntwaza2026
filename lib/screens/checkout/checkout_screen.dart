@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/auth_provider.dart';
@@ -9,6 +10,7 @@ import '../../providers/vendor_provider.dart';
 import '../../providers/address_provider.dart';
 import '../../providers/special_offer_provider.dart';
 import '../../services/api/api_service.dart';
+import '../../services/payment_service.dart';
 import '../../models/vendor.dart';
 import '../../models/delivery_address.dart';
 import '../../models/special_offer.dart';
@@ -616,6 +618,56 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           throw Exception(response['error'] ?? 'Failed to create order');
         }
       }
+      // Handle payment based on method
+      if (_paymentMethod != 'cash' && orderIds.isNotEmpty) {
+        // Initiate K-Pay payment for the first order (or primary order)
+        final paymentService = PaymentService();
+        final paymentResult = await paymentService.initiatePayment(
+          orderId: orderIds.first,
+          paymentMethod: _paymentMethod,
+          phoneNumber: _phoneController.text.trim(),
+        );
+
+        if (paymentResult['success'] == true) {
+          final checkoutUrl = paymentResult['checkout_url'] as String?;
+          if (checkoutUrl != null && checkoutUrl.isNotEmpty) {
+            // Clear cart items
+            final cart = context.read<CartProvider>();
+            for (var item in selectedItems) {
+              cart.removeCartItem(item);
+            }
+            
+            // Launch K-Pay checkout in browser
+            final uri = Uri.parse(checkoutUrl);
+            if (await canLaunchUrl(uri)) {
+              await launchUrl(uri, mode: LaunchMode.externalApplication);
+            }
+
+            if (mounted) {
+              setState(() => _isProcessing = false);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('🔄 Complete your payment in the browser. You will be notified when done.'),
+                  backgroundColor: Color(0xFF1565C0),
+                  duration: Duration(seconds: 5),
+                ),
+              );
+              // Navigate to order tracking / home
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) context.go('/');
+              });
+            }
+            return;
+          }
+        } else {
+          // Payment initiation failed — order is created but unpaid
+          if (mounted) {
+            _showError(paymentResult['error'] ?? 'Failed to initiate payment. You can retry from your orders.');
+          }
+        }
+      }
+
+      // Cash on delivery or fallback — clear cart and go home
       final cart = context.read<CartProvider>();
       for (var item in selectedItems) {
         cart.removeCartItem(item);
@@ -1124,7 +1176,32 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       const SizedBox(height: 8),
                       _buildPaymentOptionModern('cash', 'Cash on Delivery', Icons.money_rounded, textColor, subtextColor, isDarkMode),
                       const SizedBox(height: 8),
-                      _buildPaymentOptionModern('mobile', 'Mobile Money', Icons.phone_android_rounded, textColor, subtextColor, isDarkMode),
+                      _buildPaymentOptionModern('momo', 'Mobile Money (MTN/Airtel)', Icons.phone_android_rounded, textColor, subtextColor, isDarkMode),
+                      const SizedBox(height: 8),
+                      _buildPaymentOptionModern('card', 'Credit/Debit Card', Icons.credit_card_rounded, textColor, subtextColor, isDarkMode),
+                      // Show phone number input for mobile money
+                      if (_paymentMethod == 'momo') ...[                        
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: _phoneController,
+                          keyboardType: TextInputType.phone,
+                          style: TextStyle(color: textColor, fontSize: 14),
+                          decoration: InputDecoration(
+                            hintText: '250783300000',
+                            hintStyle: TextStyle(color: subtextColor.withOpacity(0.5)),
+                            labelText: 'Phone Number (for MoMo)',
+                            labelStyle: TextStyle(color: subtextColor, fontSize: 12),
+                            prefixIcon: Icon(Icons.phone, color: subtextColor, size: 18),
+                            filled: true,
+                            fillColor: isDarkMode ? const Color(0xFF0A0A0A) : const Color(0xFFF5F5F5),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide.none,
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -1231,10 +1308,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                   )
                                 : Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
-                                    children: const [
-                                      Icon(Icons.check_circle_rounded, size: 22),
-                                      SizedBox(width: 10),
-                                      Text('Place Order', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                                    children: [
+                                      Icon(_paymentMethod == 'cash' ? Icons.check_circle_rounded : Icons.payment_rounded, size: 22),
+                                      const SizedBox(width: 10),
+                                      Text(
+                                        _paymentMethod == 'cash' ? 'Place Order' : 'Pay & Place Order',
+                                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                                      ),
                                     ],
                                   ),
                       ),

@@ -128,8 +128,9 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
                     final dayKey = dayKeys[index];
                     final dayData = widget.vendor.workingHours![dayKey];
                     final isOpen = dayData != null && dayData is Map && dayData['open'] == true;
-                    final openTime = isOpen ? (dayData['open_time'] ?? 'N/A') : 'Closed';
-                    final closeTime = isOpen ? (dayData['close_time'] ?? 'N/A') : '';
+                    final openTime = (dayData != null && dayData is Map) ? (dayData['open_time'] ?? '') : '';
+                    final closeTime = (dayData != null && dayData is Map) ? (dayData['close_time'] ?? '') : '';
+                    final hasHours = openTime.toString().isNotEmpty && closeTime.toString().isNotEmpty;
 
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 12),
@@ -154,11 +155,11 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
                                   ),
                                 ),
                                 SizedBox(height: 4),
-                                if (isOpen)
+                                if (hasHours)
                                   Text(
                                     '$openTime - $closeTime',
                                     style: TextStyle(
-                                      color: Colors.green.shade400,
+                                      color: isOpen ? Colors.green.shade400 : subtextColor,
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -167,7 +168,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
                                   Text(
                                     'Closed',
                                     style: TextStyle(
-                                      color: Colors.red.shade400,
+                                      color: isDarkMode ? const Color(0xFFEF9A9A) : Colors.red.shade400,
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -179,13 +180,13 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
                               decoration: BoxDecoration(
                                 color: isOpen 
                                   ? (isDarkMode ? Colors.green.shade900 : Colors.green.shade50)
-                                  : (isDarkMode ? Colors.red.shade900 : Colors.red.shade50),
+                                  : (isDarkMode ? const Color(0xFF5C2A2A) : Colors.red.shade50),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
                                 isOpen ? 'Open' : 'Closed',
                                 style: TextStyle(
-                                  color: isOpen ? Colors.green.shade300 : Colors.red.shade300,
+                                  color: isOpen ? Colors.green.shade300 : (isDarkMode ? const Color(0xFFEF9A9A) : Colors.red.shade300),
                                   fontSize: 11,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -339,65 +340,71 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
       isScrollControlled: true,
       useSafeArea: true,
       builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.6,
-        minChildSize: 0.3,
+        initialChildSize: 0.4,
+        minChildSize: 0.25,
         maxChildSize: 0.85,
+        expand: false,
+        snap: true,
+        snapSizes: const [0.4, 0.6, 0.85],
         builder: (context, scrollController) => Container(
         decoration: BoxDecoration(
           color: isDarkMode ? Color(0xFF1A1A1A) : Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
         ),
-        child: Column(
-          children: [
-            // Drag handle
-            Center(
-              child: Container(
-                margin: const EdgeInsets.only(top: 12, bottom: 8),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            // Header
-            Padding(
-              padding: EdgeInsets.fromLTRB(24, 8, 24, 0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: CustomScrollView(
+          controller: scrollController,
+          slivers: [
+            // Drag handle + Header (pinned)
+            SliverToBoxAdapter(
+              child: Column(
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Categories', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: textColor)),
-                      SizedBox(height: 4),
-                      Text('${provider.categories.length + 1} categories', style: TextStyle(fontSize: 13, color: textColor.withOpacity(0.6))),
-                    ],
-                  ),
-                  Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+                  Center(
+                    child: Container(
+                      margin: const EdgeInsets.only(top: 10, bottom: 6),
+                      width: 36,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: isDarkMode ? Colors.grey[700] : Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
-                    child: IconButton(
-                      icon: Icon(Icons.close, color: textColor),
-                      onPressed: () => Navigator.pop(context),
-                      padding: EdgeInsets.zero,
-                      constraints: BoxConstraints(minWidth: 40, minHeight: 40),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(20, 4, 16, 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Categories', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: textColor)),
+                            SizedBox(height: 2),
+                            Text('${provider.categories.length + 1} categories', style: TextStyle(fontSize: 11, color: textColor.withOpacity(0.5))),
+                          ],
+                        ),
+                        Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: isDarkMode ? Colors.grey[800] : Colors.grey[200],
+                          ),
+                          child: IconButton(
+                            icon: Icon(Icons.close, size: 18, color: textColor),
+                            onPressed: () => Navigator.pop(context),
+                            padding: EdgeInsets.zero,
+                            constraints: BoxConstraints(minWidth: 34, minHeight: 34),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
-            
             // Categories List
-            Expanded(
-              child: ListView(
-                  controller: scrollController,
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  children: [
-                  // All Products
+            SliverPadding(
+              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
                   _buildCategoryItem(
                     context,
                     'All Products',
@@ -410,9 +417,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
                       Navigator.pop(context);
                     },
                   ),
-                  SizedBox(height: 8),
-                  
-                  // Individual Categories
+                  SizedBox(height: 4),
                   ...provider.categories.map((category) => 
                     _buildCategoryItem(
                       context,
@@ -427,8 +432,8 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
                       },
                     ),
                   ),
-                  SizedBox(height: 16),
-                ],
+                  SizedBox(height: 12),
+                ]),
               ),
             ),
           ],
@@ -453,40 +458,35 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
             color: isSelected ? (isDarkMode ? Colors.grey[800] : Colors.grey[100]) : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-            border: isSelected ? Border.all(color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!, width: 1.5) : null,
+            borderRadius: BorderRadius.circular(10),
+            border: isSelected ? Border.all(color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!, width: 1) : null,
           ),
           child: Row(
             children: [
               Container(
-                padding: EdgeInsets.all(8),
+                padding: EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: isSelected ? Colors.blue.withOpacity(0.2) : Colors.grey.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  color: isSelected ? Colors.blue.withOpacity(0.15) : Colors.grey.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(7),
                 ),
-                child: Icon(icon, size: 20, color: isSelected ? Colors.blue : textColor.withOpacity(0.6)),
+                child: Icon(icon, size: 16, color: isSelected ? Colors.blue : textColor.withOpacity(0.5)),
               ),
-              SizedBox(width: 16),
+              SizedBox(width: 12),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                        color: textColor,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  name,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                    color: textColor,
+                  ),
                 ),
               ),
               if (isSelected)
-                Icon(Icons.check_circle, size: 22, color: Colors.blue),
+                Icon(Icons.check_circle, size: 18, color: Colors.blue),
             ],
           ),
         ),
@@ -1002,13 +1002,13 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
                     margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                     decoration: BoxDecoration(
-                      color: Colors.red.shade900.withOpacity(isDarkMode ? 0.35 : 0.1),
+                      color: isDarkMode ? const Color(0xFF5C2A2A).withOpacity(0.35) : Colors.red.shade900.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Colors.red.withOpacity(0.3)),
+                      border: Border.all(color: isDarkMode ? const Color(0xFFEF9A9A).withOpacity(0.3) : Colors.red.withOpacity(0.3)),
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.access_time_filled, size: 18, color: Colors.red.shade400),
+                        Icon(Icons.access_time_filled, size: 18, color: isDarkMode ? const Color(0xFFEF9A9A) : Colors.red.shade400),
                         SizedBox(width: 10),
                         Expanded(
                           child: Column(
@@ -1016,7 +1016,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
                             children: [
                               Text(
                                 'Currently Closed',
-                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.red.shade300),
+                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: isDarkMode ? const Color(0xFFEF9A9A) : Colors.red.shade300),
                               ),
                               SizedBox(height: 2),
                               Text(
@@ -1376,7 +1376,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
             dayName,
             isOpen ? '$openTime - $closeTime' : 'Closed',
             textColor,
-            isOpen ? subtextColor : Colors.red,
+            isOpen ? subtextColor : (isDarkMode ? const Color(0xFFEF9A9A) : Colors.red),
           ),
         );
       }
