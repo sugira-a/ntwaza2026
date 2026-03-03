@@ -1,12 +1,17 @@
 ﻿import 'dart:math';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../providers/theme_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/vendor_provider.dart';
+import '../../providers/product_provider.dart';
+import '../../models/product.dart';
 import '../../services/ai_assistant_service.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -39,9 +44,14 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
   // Brand colors
   static const _brand = Color(0xFF1B5E20);
   static const _brandLight = Color(0xFF4CAF50);
-  static const _brandGold = Color(0xFFF9A825);
 
   final _fmt = NumberFormat('#,###', 'en');
+
+  // Recent searches cache (expires after 24 hours)
+  static const _recentSearchesKey = 'ai_recent_searches';
+  static const _maxRecentSearches = 8;
+  static const _cacheHours = 24;
+  List<String> _recentSearches = [];
 
   // ─── Lifecycle ───
 
@@ -57,6 +67,11 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
       duration: const Duration(milliseconds: 400),
       value: 1.0,
     );
+    // Pre-load all products so AI cart integration works
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ProductProvider>().fetchAllProducts();
+    });
+    _loadRecentSearches();
   }
 
   @override
@@ -79,12 +94,96 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
     return 'Hi there';
   }
 
-  String get _timeEmoji {
-    final h = DateTime.now().hour;
-    if (h >= 5 && h < 12) return '\u2615'; // coffee
-    if (h >= 12 && h < 17) return '\u2600\uFE0F'; // sun
-    if (h >= 17 && h < 21) return '\uD83C\uDF05'; // sunset
-    return '\uD83C\uDF19'; // moon
+  // ─── Recent searches cache ───
+
+  Future<void> _loadRecentSearches() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_recentSearchesKey);
+    if (raw == null) return;
+    try {
+      final data = jsonDecode(raw) as Map<String, dynamic>;
+      final savedAt = DateTime.tryParse(data['ts'] ?? '');
+      if (savedAt == null || DateTime.now().difference(savedAt).inHours >= _cacheHours) {
+        await prefs.remove(_recentSearchesKey);
+        return;
+      }
+      final items = (data['items'] as List?)?.cast<String>() ?? [];
+      if (mounted) setState(() => _recentSearches = items);
+    } catch (_) {
+      await prefs.remove(_recentSearchesKey);
+    }
+  }
+
+  Future<void> _saveRecentSearch(String query) async {
+    // Skip internal commands and auto-generated messages (emoji prefixes)
+    if (query.startsWith('__') || query.length < 3) return;
+    // Also skip if first character is a high surrogate (emoji)
+    if (query.isNotEmpty && query.codeUnitAt(0) >= 0xD800 && query.codeUnitAt(0) <= 0xDBFF) return;
+    try {
+      // Avoid duplicates (case-insensitive)
+      _recentSearches.removeWhere((s) => s.toLowerCase() == query.toLowerCase());
+      _recentSearches.insert(0, query);
+      if (_recentSearches.length > _maxRecentSearches) {
+        _recentSearches = _recentSearches.sublist(0, _maxRecentSearches);
+      }
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_recentSearchesKey, jsonEncode({
+        'ts': DateTime.now().toIso8601String(),
+        'items': _recentSearches,
+      }));
+    } catch (e) {
+      print('Error saving recent search: $e');
+    }
+  }
+
+  Future<void> _clearRecentSearches() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_recentSearchesKey);
+    if (mounted) setState(() => _recentSearches.clear());
+  }
+
+  // ─── Recent searches UI section for welcome screen ───
+
+  List<Widget> _buildRecentSearches(bool isDark, Color tp, Color ts) {
+    if (_recentSearches.isEmpty) return [];
+    return [
+      const SizedBox(height: 22),
+      Row(children: [
+        Expanded(child: Text('Recent', style: TextStyle(color: ts, fontSize: 12, fontWeight: FontWeight.w600))),
+        GestureDetector(
+          onTap: _clearRecentSearches,
+          child: Text('Clear', style: TextStyle(color: ts.withOpacity(0.5), fontSize: 11)),
+        ),
+      ]),
+      const SizedBox(height: 8),
+      Wrap(
+        spacing: 6, runSpacing: 6,
+        alignment: WrapAlignment.start,
+        children: _recentSearches.take(6).map((q) => Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => _sendMessage(q),
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF2F2F2),
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.history_rounded, size: 13, color: ts.withOpacity(0.5)),
+                const SizedBox(width: 5),
+                Flexible(child: Text(
+                  q.length > 35 ? '${q.substring(0, 35)}...' : q,
+                  style: TextStyle(fontSize: 12, color: tp, fontWeight: FontWeight.w500),
+                  overflow: TextOverflow.ellipsis,
+                )),
+              ]),
+            ),
+          ),
+        )).toList(),
+      ),
+    ];
   }
 
   List<_QuickAction> get _contextualActions {
@@ -93,6 +192,9 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
     final hasCart = cartProvider.items.isNotEmpty;
 
     final actions = <_QuickAction>[];
+
+    // Smart Cart — always first, it's the flagship feature
+    actions.add(_QuickAction('\uD83D\uDED2 Plan my groceries', Icons.psychology_rounded, '__SMART_CART__'));
 
     // Time-based suggestion
     if (h >= 6 && h < 10) {
@@ -103,15 +205,18 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
       actions.add(_QuickAction('Dinner ideas', Icons.dinner_dining_rounded, 'What should I cook for dinner?'));
     }
 
-    // Core actions
-    actions.add(_QuickAction('What\'s in stock?', Icons.inventory_2_rounded, 'What products are available right now?'));
-    actions.add(_QuickAction('Health tips', Icons.favorite_rounded, 'Give me a healthy eating tip based on what you sell'));
-    actions.add(_QuickAction('Budget advice', Icons.savings_rounded, 'How can I save money on my groceries this week?'));
+    // Budget — always available
+    actions.add(_QuickAction('Budget advice', Icons.savings_rounded, 'How can I save money on groceries this week? Give me specific tips based on my spending.'));
 
+    // Cart actions
     if (hasCart) {
-      actions.add(_QuickAction('Check my cart', Icons.shopping_cart_checkout_rounded, 'Is my cart balanced and good value?'));
+      actions.add(_QuickAction('Analyze my cart', Icons.analytics_rounded, '__ANALYZE_CART__'));
+      actions.add(_QuickAction('Complete my cart', Icons.add_shopping_cart_rounded, 'What am I missing in my cart? Suggest items to complete my shopping.'));
     }
 
+    // Core actions
+    actions.add(_QuickAction('What\'s available?', Icons.inventory_2_rounded, 'What products are available right now? Show me the best deals.'));
+    actions.add(_QuickAction('Health tips', Icons.favorite_rounded, 'Give me a practical healthy eating tip based on products you sell'));
     actions.add(_QuickAction('Help with order', Icons.support_agent_rounded, 'I need help with my order'));
 
     return actions;
@@ -137,6 +242,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
     if (text.isEmpty || _isSending) return;
 
     if (preset == null) _controller.clear();
+    _saveRecentSearch(text);
     setState(() {
       _messages.add(_ChatMessage(text: text, isUser: true));
       _isSending = true;
@@ -153,7 +259,16 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
           .take(6)
           .toList()
           .reversed
-          .map((m) => {'text': m.isUser ? m.text : (m.aiReply?.note ?? m.text), 'isUser': m.isUser})
+          .map((m) {
+            if (m.isUser) {
+              return {'text': m.text, 'isUser': true};
+            }
+            // For AI replies, include the full note so AI remembers context
+            final note = m.aiReply?.note ?? m.text;
+            final itemNames = m.aiReply?.items.map((i) => i.name).join(', ') ?? '';
+            final fullText = itemNames.isNotEmpty ? '$note\n[Suggested: $itemNames]' : note;
+            return {'text': fullText, 'isUser': false};
+          })
           .toList();
 
       final reply = await _aiService.sendMessage(
@@ -221,35 +336,21 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
                 // Header
                 Container(
                   margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(colors: [_brand, Color(0xFF2E7D32)]),
-                    borderRadius: BorderRadius.circular(16),
+                    color: _brand,
+                    borderRadius: BorderRadius.circular(14),
                   ),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        width: 44, height: 44,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(Icons.psychology_rounded, color: Colors.white, size: 24),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('Smart Cart Planner', style: TextStyle(
-                              color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: -0.3,
-                            )),
-                            Text('AI builds your perfect grocery list', style: TextStyle(
-                              color: Colors.white.withOpacity(0.8), fontSize: 12,
-                            )),
-                          ],
-                        ),
-                      ),
+                      const Text('Plan Your Groceries', style: TextStyle(
+                        color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: -0.3,
+                      )),
+                      const SizedBox(height: 2),
+                      Text('Set your budget, we\'ll build the list', style: TextStyle(
+                        color: Colors.white.withOpacity(0.8), fontSize: 12,
+                      )),
                     ],
                   ),
                 ),
@@ -336,7 +437,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
                         // Generate button
                         SizedBox(
                           width: double.infinity,
-                          height: 54,
+                          height: 50,
                           child: ElevatedButton(
                             onPressed: () {
                               final b = double.tryParse(budgetCtrl.text.replaceAll(',', ''));
@@ -352,19 +453,12 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
                             style: ElevatedButton.styleFrom(
                               backgroundColor: _brand,
                               foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               elevation: 0,
                             ),
-                            child: const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.auto_awesome_rounded, size: 20),
-                                SizedBox(width: 10),
-                                Text('Build My Grocery Plan', style: TextStyle(
-                                  fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: -0.2,
-                                )),
-                              ],
-                            ),
+                            child: const Text('Build My Grocery Plan', style: TextStyle(
+                              fontSize: 15, fontWeight: FontWeight.w700,
+                            )),
                           ),
                         ),
                       ],
@@ -503,7 +597,9 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
   }
 
   void _scrollToBottom() {
+    if (!mounted) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent + 100,
@@ -524,6 +620,140 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
       if (_messages.isNotEmpty && _messages.last.isUser) setState(() => _messages.removeLast());
       _sendMessage(lastUserMsg);
     }
+  }
+
+  // ─── Add AI-suggested items to cart ───
+
+  /// Find a matching Product from vendor data by name (fuzzy match).
+  Product? _findProduct(String name) {
+    final vendorProvider = context.read<VendorProvider>();
+    final productProvider = context.read<ProductProvider>();
+    final lower = name.toLowerCase().trim();
+
+    // Search across all vendor products
+    for (final vendor in vendorProvider.vendors) {
+      final products = productProvider.getProductsByVendor(vendor.id);
+      for (final p in products) {
+        if (p.name.toLowerCase() == lower) return p;
+      }
+    }
+    // Fuzzy: substring match
+    for (final vendor in vendorProvider.vendors) {
+      final products = productProvider.getProductsByVendor(vendor.id);
+      for (final p in products) {
+        if (p.name.toLowerCase().contains(lower) || lower.contains(p.name.toLowerCase())) return p;
+      }
+    }
+    // Also check allProducts fallback
+    for (final p in productProvider.allProducts) {
+      if (p.name.toLowerCase() == lower) return p;
+      if (p.name.toLowerCase().contains(lower) || lower.contains(p.name.toLowerCase())) return p;
+    }
+    return null;
+  }
+
+  /// Add a single AI item to cart
+  void _addSingleItemToCart(AiReplyItem aiItem) {
+    final product = _findProduct(aiItem.name);
+    if (product == null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('"${aiItem.name}" not found — try browsing the store first'),
+        backgroundColor: Colors.grey[800],
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        duration: const Duration(seconds: 2),
+      ));
+      return;
+    }
+
+    final cart = context.read<CartProvider>();
+    final vid = aiItem.vendorId ?? product.vendorId;
+    for (int i = 0; i < aiItem.qty; i++) {
+      cart.addToCart(product, vendorId: vid);
+    }
+    HapticFeedback.lightImpact();
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('${aiItem.name} ×${aiItem.qty} added'),
+      backgroundColor: _brand,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      duration: const Duration(seconds: 2),
+    ));
+  }
+
+  /// Add all AI-suggested items to cart
+  void _addAllItemsToCart(List<AiReplyItem> items) {
+    final cart = context.read<CartProvider>();
+    int added = 0;
+    int notFound = 0;
+
+    for (final aiItem in items) {
+      final product = _findProduct(aiItem.name);
+      if (product != null) {
+        final vid = aiItem.vendorId ?? product.vendorId;
+        for (int i = 0; i < aiItem.qty; i++) {
+          cart.addToCart(product, vendorId: vid);
+        }
+        added++;
+      } else {
+        notFound++;
+      }
+    }
+
+    HapticFeedback.mediumImpact();
+    final msg = notFound > 0
+        ? '$added added, $notFound not found'
+        : '$added items added to cart';
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg),
+      backgroundColor: _brand,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      duration: const Duration(seconds: 3),
+      action: SnackBarAction(
+        label: 'VIEW CART',
+        textColor: Colors.white,
+        onPressed: () => context.push('/cart'),
+      ),
+    ));
+  }
+
+  /// Add Smart Cart items to local cart (with edited quantities)
+  void _addSmartCartToLocalCart(List<SmartCartItem> items) {
+    final cart = context.read<CartProvider>();
+    int added = 0;
+    int notFound = 0;
+
+    for (final scItem in items) {
+      if (scItem.quantity <= 0) continue;
+      final product = _findProduct(scItem.name);
+      if (product != null) {
+        final vid = scItem.vendorId ?? product.vendorId;
+        for (int i = 0; i < scItem.quantity; i++) {
+          cart.addToCart(product, vendorId: vid);
+        }
+        added++;
+      } else {
+        notFound++;
+      }
+    }
+
+    HapticFeedback.mediumImpact();
+    final msg = notFound > 0
+        ? '$added added, $notFound not found'
+        : '$added items added to cart';
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg),
+      backgroundColor: _brand,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      duration: const Duration(seconds: 3),
+      action: SnackBarAction(
+        label: 'VIEW CART',
+        textColor: Colors.white,
+        onPressed: () => context.push('/cart'),
+      ),
+    ));
   }
 
   // ═══════════ BUILD ═══════════
@@ -561,10 +791,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
       child: Container(
         decoration: BoxDecoration(
           color: surface,
-          boxShadow: [BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
-            blurRadius: 6, offset: const Offset(0, 1),
-          )],
+          border: Border(bottom: BorderSide(color: isDark ? const Color(0xFF222222) : const Color(0xFFEEEEEE), width: 0.5)),
         ),
         child: SafeArea(
           child: Padding(
@@ -573,16 +800,15 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
               children: [
                 IconButton(
                   icon: Icon(Icons.arrow_back_ios_new_rounded, color: tp, size: 20),
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: () => context.pop(),
                 ),
-                // Avatar
                 Container(
-                  width: 36, height: 36,
+                  width: 34, height: 34,
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(colors: [_brand, _brandLight]),
-                    borderRadius: BorderRadius.circular(11),
+                    color: _brand,
+                    shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 18),
+                  child: const Center(child: Text('N', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800))),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -593,20 +819,10 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
                       Text('Ntwaza Assistant', style: TextStyle(
                         color: tp, fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: -0.3,
                       )),
-                      Row(children: [
-                        Container(
-                          width: 6, height: 6,
-                          decoration: BoxDecoration(
-                            color: _isSending ? Colors.orange : _brandLight,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 5),
-                        Text(
-                          _isSending ? 'Typing...' : 'Online',
-                          style: TextStyle(color: ts, fontSize: 11, fontWeight: FontWeight.w500),
-                        ),
-                      ]),
+                      Text(
+                        _isSending ? 'Typing...' : 'Online',
+                        style: TextStyle(color: _isSending ? Colors.orange : ts, fontSize: 11.5, fontWeight: FontWeight.w500),
+                      ),
                     ],
                   ),
                 ),
@@ -614,7 +830,10 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
                   IconButton(
                     icon: Icon(Icons.refresh_rounded, color: ts, size: 20),
                     tooltip: 'New chat',
-                    onPressed: () => setState(() { _messages.clear(); _showWelcome = true; }),
+                    onPressed: () {
+                      setState(() { _messages.clear(); _showWelcome = true; });
+                      _loadRecentSearches();
+                    },
                   ),
               ],
             ),
@@ -627,127 +846,114 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
   // ═══════════ WELCOME SCREEN ═══════════
 
   Widget _buildWelcome(bool isDark, Color surface, Color tp, Color ts, double w) {
+    final cartProvider = context.read<CartProvider>();
+    final hasCart = cartProvider.items.isNotEmpty;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 40, 20, 16),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Compact hero
-          Container(
-            width: 64, height: 64,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [_brand, _brandLight], begin: Alignment.topLeft, end: Alignment.bottomRight),
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [BoxShadow(color: _brand.withOpacity(0.2), blurRadius: 20, offset: const Offset(0, 8))],
-            ),
-            child: const Icon(Icons.storefront_rounded, color: Colors.white, size: 32),
-          ),
-          const SizedBox(height: 20),
-          Text('Your shopping guide $_timeEmoji', style: TextStyle(
-            color: tp, fontSize: 22, fontWeight: FontWeight.w800, letterSpacing: -0.5,
-          )),
+          // Greeting — left aligned, minimal
+          Center(child: Text(_greeting, style: TextStyle(
+            color: tp, fontSize: 22, fontWeight: FontWeight.w600,
+          ))),
           const SizedBox(height: 4),
-          Text('Smart shopping, health tips & budget\nadvice \u2014 in simple words.', 
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: ts, fontSize: 14, fontWeight: FontWeight.w400, height: 1.4,
-            ),
-          ),
-          const SizedBox(height: 32),
+          Center(child: Text('How can I help you today?', style: TextStyle(color: ts, fontSize: 13))),
 
-          // Quick action chips — the only interactive element
+          const SizedBox(height: 28),
+
+          // Action row — text only, no icons
+          Row(children: [
+            Expanded(child: _welcomeButton(
+              label: 'Plan Groceries',
+              onTap: () => _handleAction('__SMART_CART__'),
+              isDark: isDark, tp: tp, isPrimary: true,
+            )),
+            const SizedBox(width: 10),
+            Expanded(child: _welcomeButton(
+              label: 'Budget Tips',
+              onTap: () => _sendMessage('How can I save money on my groceries? Give me specific tips.'),
+              isDark: isDark, tp: tp,
+            )),
+          ]),
+
+          if (hasCart) ...[
+            const SizedBox(height: 8),
+            _welcomeButton(
+              label: 'Analyze Cart  \u2022  ${cartProvider.itemCount} items',
+              onTap: () => _handleAction('__ANALYZE_CART__'),
+              isDark: isDark, tp: tp, full: true,
+            ),
+          ],
+
+          // Recent searches
+          ..._buildRecentSearches(isDark, tp, ts),
+
+          const SizedBox(height: 24),
+
+          // Suggestions — simple chips
+          Text('Suggestions', style: TextStyle(color: ts, fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 0.3)),
+          const SizedBox(height: 8),
           Wrap(
-            spacing: 8, runSpacing: 8,
-            alignment: WrapAlignment.center,
-            children: _contextualActions.map((a) => _actionChip(a, isDark)).toList(),
+            spacing: 6, runSpacing: 6,
+            children: _contextualActions
+                .where((a) => a.action != '__SMART_CART__' && a.action != '__ANALYZE_CART__')
+                .map((a) => _actionChip(a, isDark))
+                .toList(),
           ),
         ],
       ),
     );
   }
 
-  Widget _featureCard({
-    required IconData icon, required Color iconColor,
-    required String title, required String subtitle,
-    required bool isDark, required Color surface,
-    required Color tp, required Color ts,
-    VoidCallback? onTap, String? badge,
+  // ── Clean welcome button (replaces heavy feature tiles) ──
+
+  Widget _welcomeButton({
+    required String label,
+    required VoidCallback onTap,
+    required bool isDark,
+    required Color tp,
+    bool full = false,
+    bool isPrimary = false,
   }) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(10),
         child: Container(
-          padding: const EdgeInsets.all(16),
+          width: full ? double.infinity : null,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            color: surface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE8E8E8)),
+            borderRadius: BorderRadius.circular(10),
+            color: isPrimary
+                ? _brand
+                : (isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF0F0F0)),
           ),
-          child: Row(children: [
-            Container(
-              width: 44, height: 44,
-              decoration: BoxDecoration(
-                color: iconColor.withOpacity(isDark ? 0.15 : 0.08),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: iconColor, size: 22),
-            ),
-            const SizedBox(width: 14),
-            Expanded(child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(children: [
-                  Text(title, style: TextStyle(
-                    color: tp, fontSize: 14.5, fontWeight: FontWeight.w700,
-                  )),
-                  if (badge != null) ...[
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(colors: [_brand, _brandLight]),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(badge, style: const TextStyle(
-                        color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800,
-                      )),
-                    ),
-                  ],
-                ]),
-                const SizedBox(height: 3),
-                Text(subtitle, style: TextStyle(color: ts, fontSize: 12)),
-              ],
+          child: Center(
+            child: Text(label, style: TextStyle(
+              color: isPrimary ? Colors.white : tp,
+              fontSize: 13.5,
+              fontWeight: FontWeight.w600,
             )),
-            Icon(Icons.chevron_right_rounded, color: ts.withOpacity(0.5), size: 20),
-          ]),
+          ),
         ),
       ),
     );
   }
 
   Widget _actionChip(_QuickAction a, bool isDark) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => _handleAction(a.action),
-        borderRadius: BorderRadius.circular(20),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            color: _brand.withOpacity(isDark ? 0.12 : 0.05),
-            border: Border.all(color: _brand.withOpacity(0.15)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(a.icon, size: 14, color: _brandLight),
-              const SizedBox(width: 6),
-              Text(a.label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: _brandLight)),
-            ],
-          ),
+    final chipText = isDark ? Colors.white70 : const Color(0xFF555555);
+    return GestureDetector(
+      onTap: () => _handleAction(a.action),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF2F2F2),
         ),
+        child: Text(a.label, style: TextStyle(fontSize: 12, color: chipText)),
       ),
     );
   }
@@ -819,8 +1025,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
                       decoration: BoxDecoration(
-                        gradient: isUser ? const LinearGradient(colors: [_brand, Color(0xFF2E7D32)]) : null,
-                        color: isUser ? null : msg.isError
+                        color: isUser ? _brand : msg.isError
                             ? (isDark ? const Color(0xFF2D1B1B) : const Color(0xFFFFF3F3))
                             : surface,
                         borderRadius: BorderRadius.only(
@@ -829,10 +1034,6 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
                           bottomLeft: Radius.circular(isUser ? 18 : 4),
                           bottomRight: Radius.circular(isUser ? 4 : 18),
                         ),
-                        boxShadow: [BoxShadow(
-                          color: isUser ? _brand.withOpacity(0.15) : Colors.black.withOpacity(isDark ? 0.15 : 0.04),
-                          blurRadius: 6, offset: const Offset(0, 2),
-                        )],
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -904,127 +1105,94 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
                       topLeft: Radius.circular(18), topRight: Radius.circular(18),
                       bottomRight: Radius.circular(18), bottomLeft: Radius.circular(4),
                     ),
-                    border: Border.all(color: _brand.withOpacity(0.1)),
-                    boxShadow: [BoxShadow(
-                      color: Colors.black.withOpacity(isDark ? 0.15 : 0.04),
-                      blurRadius: 6, offset: const Offset(0, 2),
-                    )],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Note/bullets
+                      // Note text
                       if (reply.note.isNotEmpty)
                         Padding(
-                          padding: EdgeInsets.fromLTRB(14, 12, 14, reply.hasItems || reply.hasSwaps ? 4 : 12),
-                          child: _buildBullets(reply.note, tp, ts),
+                          padding: EdgeInsets.fromLTRB(14, 12, 14, reply.hasItems || reply.hasSwaps ? 6 : 12),
+                          child: _richText(reply.note, tp, ts, isDark),
                         ),
 
-                      // Items list
+                      // Items — compact list
                       if (reply.hasItems) ...[
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(14, 8, 14, 4),
-                          child: Row(children: [
-                            const Icon(Icons.shopping_cart_rounded, size: 13, color: _brandLight),
-                            const SizedBox(width: 6),
-                            Text('SUGGESTED ITEMS', style: TextStyle(
-                              color: ts, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 0.6,
-                            )),
-                          ]),
-                        ),
                         ...reply.items.map((item) => Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 3),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
                           child: Row(children: [
-                            Container(width: 5, height: 5, decoration: const BoxDecoration(color: _brandLight, shape: BoxShape.circle)),
-                            const SizedBox(width: 8),
-                            Expanded(child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('${item.name} \u00D7${item.qty}', style: TextStyle(
-                                  color: tp, fontSize: 13, fontWeight: FontWeight.w600,
-                                )),
-                                if (item.reason.isNotEmpty)
-                                  Text(item.reason, style: TextStyle(color: ts, fontSize: 11)),
-                              ],
+                            Expanded(child: Text('${item.name} \u00D7${item.qty}', style: TextStyle(
+                              color: tp, fontSize: 13, fontWeight: FontWeight.w500,
+                            ))),
+                            Text('${_fmt.format(item.subtotal)} RWF', style: TextStyle(
+                              color: ts, fontSize: 12,
                             )),
-                            Text('${_fmt.format(item.subtotal)} RWF', style: const TextStyle(
-                              color: _brandLight, fontSize: 12, fontWeight: FontWeight.w700,
-                            )),
+                            const SizedBox(width: 6),
+                            GestureDetector(
+                              onTap: () => _addSingleItemToCart(item),
+                              child: Icon(Icons.add_circle_outline_rounded, size: 20, color: _brandLight),
+                            ),
                           ]),
                         )),
-                        // Total bar
+                        // Total + Add All
                         if (reply.total != null && reply.total! > 0)
-                          Container(
-                            margin: const EdgeInsets.fromLTRB(14, 8, 14, 4),
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: _brand.withOpacity(isDark ? 0.15 : 0.06),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(14, 6, 14, 0),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text('Total', style: TextStyle(color: tp, fontSize: 12, fontWeight: FontWeight.w700)),
                                 Text('${_fmt.format(reply.total!)} RWF', style: const TextStyle(
-                                  color: _brand, fontSize: 13, fontWeight: FontWeight.w800,
+                                  color: _brand, fontSize: 13, fontWeight: FontWeight.w700,
                                 )),
                               ],
                             ),
                           ),
-                      ],
-
-                      // Swaps
-                      if (reply.hasSwaps) ...[
                         Padding(
                           padding: const EdgeInsets.fromLTRB(14, 8, 14, 4),
-                          child: Row(children: [
-                            const Icon(Icons.swap_horiz_rounded, size: 13, color: _brandGold),
-                            const SizedBox(width: 6),
-                            Text('SWAP IDEAS', style: TextStyle(
-                              color: ts, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 0.6,
-                            )),
-                          ]),
-                        ),
-                        ...reply.swaps.map((swap) => Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 3),
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: _brandGold.withOpacity(isDark ? 0.08 : 0.04),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(children: [
-                            Flexible(
-                              flex: 2,
-                              child: Text(swap.remove, style: TextStyle(
-                                color: ts, fontSize: 12, decoration: TextDecoration.lineThrough,
-                              )),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 6),
-                              child: Icon(Icons.arrow_forward_rounded, size: 14, color: _brandGold),
-                            ),
-                            Flexible(
-                              flex: 3,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(swap.add, style: TextStyle(
-                                    color: tp, fontSize: 12, fontWeight: FontWeight.w600,
-                                  )),
-                                  if (swap.why.isNotEmpty)
-                                    Text(swap.why, style: TextStyle(color: ts, fontSize: 10.5)),
-                                ],
+                          child: SizedBox(
+                            width: double.infinity, height: 36,
+                            child: ElevatedButton(
+                              onPressed: () => _addAllItemsToCart(reply.items),
+                              child: Text('Add ${reply.items.length} to cart', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _brand,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                elevation: 0,
                               ),
                             ),
+                          ),
+                        ),
+                      ],
+
+                      // Swaps — simple inline
+                      if (reply.hasSwaps) ...[
+                        ...reply.swaps.map((swap) => Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+                          child: Row(children: [
+                            Text(swap.remove, style: TextStyle(
+                              color: ts, fontSize: 12, decoration: TextDecoration.lineThrough,
+                            )),
+                            const Text(' \u2192 ', style: TextStyle(fontSize: 12)),
+                            Expanded(child: Text(swap.add, style: TextStyle(
+                              color: tp, fontSize: 12, fontWeight: FontWeight.w600,
+                            ))),
                           ]),
                         )),
                       ],
 
-                      // Proactive tip (health / budget / seasonal)
-                      if (reply.hasTip) _buildTipBadge(reply.tip!, isDark, tp, ts),
+                      // Tip — inline
+                      if (reply.hasTip)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(14, 6, 14, 0),
+                          child: Text('\uD83D\uDCA1 ${reply.tip!.text}', style: TextStyle(
+                            color: ts, fontSize: 12, height: 1.3,
+                          )),
+                        ),
 
                       if (reply.hasItems || reply.hasSwaps || reply.hasTip)
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 10),
                     ],
                   ),
                 ),
@@ -1039,63 +1207,6 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
           )),
         ],
       ),
-    );
-  }
-
-  // ── Bullet point renderer ──
-
-  Widget _buildBullets(String text, Color tp, Color ts) {
-    final lines = text.split('\n').where((l) => l.trim().isNotEmpty).toList();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: lines.map((line) {
-        final clean = line.replaceAll(RegExp(r'^[•\-\*]\s*'), '').trim();
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 3),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(top: 6),
-                child: Container(width: 4, height: 4, decoration: BoxDecoration(
-                  color: _brand.withOpacity(0.5), shape: BoxShape.circle,
-                )),
-              ),
-              const SizedBox(width: 8),
-              Expanded(child: Text(clean, style: TextStyle(color: tp, fontSize: 13.5, height: 1.4))),
-            ],
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  // ── Proactive tip badge (health / budget / seasonal) ──
-
-  Widget _buildTipBadge(AiReplyTip tip, bool isDark, Color tp, Color ts) {
-    final isHealth = tip.type == 'health';
-    final isBudget = tip.type == 'budget';
-    final color = isBudget ? const Color(0xFF1565C0) : isHealth ? const Color(0xFFE91E63) : _brandLight;
-    final icon = isBudget ? Icons.savings_rounded : isHealth ? Icons.favorite_rounded : Icons.eco_rounded;
-    final label = isBudget ? 'Budget Tip' : isHealth ? 'Health Tip' : 'Seasonal Tip';
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(14, 8, 14, 0),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: color.withOpacity(isDark ? 0.10 : 0.05),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withOpacity(0.15)),
-      ),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Icon(icon, size: 15, color: color),
-        const SizedBox(width: 8),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(label, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 0.4)),
-          const SizedBox(height: 2),
-          Text(tip.text, style: TextStyle(color: tp, fontSize: 12.5, height: 1.35)),
-        ])),
-      ]),
     );
   }
 
@@ -1115,7 +1226,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
       if (line.trimLeft().startsWith('- ') || line.trimLeft().startsWith('\u2022 ')) {
         spans.add(TextSpan(
           text: '  \u2022 ',
-          style: TextStyle(color: _brandLight, fontWeight: FontWeight.w700, fontSize: 14.5),
+          style: TextStyle(color: tp, fontWeight: FontWeight.w700, fontSize: 14.5),
         ));
         _parseInline(line.trimLeft().substring(2), spans, tp, isDark);
       }
@@ -1125,7 +1236,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
         if (match != null) {
           spans.add(TextSpan(
             text: '${match.group(1)} ',
-            style: TextStyle(color: _brandLight, fontWeight: FontWeight.w700, fontSize: 14.5),
+            style: TextStyle(color: tp, fontWeight: FontWeight.w700, fontSize: 14.5),
           ));
           _parseInline(match.group(2) ?? '', spans, tp, isDark);
         } else {
@@ -1159,7 +1270,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
           if (RegExp(r'^\d[\d,]*\s*RWF$').hasMatch(pp.trim())) {
             spans.add(TextSpan(
               text: pp,
-              style: TextStyle(color: _brandLight, fontWeight: FontWeight.w700),
+              style: TextStyle(color: tp, fontWeight: FontWeight.w700),
             ));
           } else {
             spans.add(TextSpan(text: pp));
@@ -1172,15 +1283,23 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
   // ─── Post-message contextual chips ───
 
   Widget _postMessageChips(String text, bool isDark) {
-    // Keep contextual chips minimal
     final lower = text.toLowerCase();
     final chips = <_QuickAction>[];
 
+    if (lower.contains('budget') || lower.contains('save') || lower.contains('spend')) {
+      chips.add(_QuickAction('Plan budget', Icons.psychology_rounded, '__SMART_CART__'));
+    }
+    if (lower.contains('cart') || lower.contains('added') || lower.contains('item')) {
+      chips.add(_QuickAction('View cart', Icons.shopping_cart_rounded, 'What\'s in my cart right now?'));
+    }
+    if (lower.contains('health') || lower.contains('nutrition') || lower.contains('protein') || lower.contains('vitamin')) {
+      chips.add(_QuickAction('More health tips', Icons.favorite_rounded, 'Give me more practical health tips'));
+    }
+    if (lower.contains('meal') || lower.contains('cook') || lower.contains('recipe') || lower.contains('breakfast') || lower.contains('lunch') || lower.contains('dinner')) {
+      chips.add(_QuickAction('Meal ideas', Icons.restaurant_rounded, '__MEAL_IDEAS__'));
+    }
     if (lower.contains('order') || lower.contains('delivery') || lower.contains('track')) {
       chips.add(_QuickAction('Contact support', Icons.support_agent_rounded, 'How do I contact support about my order?'));
-    }
-    if (lower.contains('cart') || lower.contains('added')) {
-      chips.add(_QuickAction('View cart', Icons.shopping_cart_rounded, 'What\'s in my cart?'));
     }
 
     if (chips.isEmpty) return const SizedBox.shrink();
@@ -1189,7 +1308,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
       padding: const EdgeInsets.only(top: 6),
       child: Wrap(
         spacing: 6,
-        children: chips.map((c) => _miniChip(c, isDark)).toList(),
+        children: chips.take(3).map((c) => _miniChip(c, isDark)).toList(),
       ),
     );
   }
@@ -1223,6 +1342,14 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
     final b = r.budget;
     final n = r.nutrition;
 
+    // Compute live total from (possibly edited) items
+    double liveTotal = 0;
+    for (final item in r.items) {
+      liveTotal += item.price * item.quantity;
+    }
+    final liveRemaining = b.requested - liveTotal;
+    final livePct = b.requested > 0 ? (liveTotal / b.requested * 100) : 0.0;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
@@ -1232,136 +1359,131 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
           const SizedBox(width: 8),
           Flexible(child: Container(
             constraints: BoxConstraints(maxWidth: w * 0.88),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: surface,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: _brand.withOpacity(0.15)),
-              boxShadow: [BoxShadow(color: _brand.withOpacity(isDark ? 0.08 : 0.05), blurRadius: 12, offset: const Offset(0, 4))],
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(18), topRight: Radius.circular(18),
+                bottomRight: Radius.circular(18), bottomLeft: Radius.circular(4),
+              ),
             ),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              // Header
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [_brand, Color(0xFF2E7D32)]),
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(17)),
-                ),
-                child: Row(children: [
-                  const Icon(Icons.psychology_rounded, color: Colors.white, size: 20),
-                  const SizedBox(width: 10),
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    const Text('Smart Cart Plan', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
-                    Text('${r.items.length} items \u2022 ${_fmt.format(b.totalCost)} RWF', style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 11.5)),
-                  ])),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                    decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(10)),
-                    child: Text('${b.usedPercent.round()}%', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
-                  ),
-                ]),
-              ),
+              // Inline title + summary
+              Row(children: [
+                Expanded(child: Text(
+                  'Grocery Plan \u2022 ${r.items.where((i) => i.quantity > 0).length} items',
+                  style: TextStyle(color: tp, fontSize: 14, fontWeight: FontWeight.w600),
+                )),
+                Text('${_fmt.format(liveTotal)} RWF', style: TextStyle(color: ts, fontSize: 12)),
+              ]),
 
-              // Items
-              Padding(
-                padding: const EdgeInsets.fromLTRB(14, 12, 14, 4),
-                child: Text('GROCERY LIST', style: TextStyle(color: ts, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 0.8)),
-              ),
+              const SizedBox(height: 10),
+
+              // Items — clean rows
               ...r.items.map((item) => Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                padding: const EdgeInsets.only(bottom: 4),
                 child: Row(children: [
-                  Container(width: 6, height: 6, decoration: const BoxDecoration(color: _brandLight, shape: BoxShape.circle)),
-                  const SizedBox(width: 8),
-                  Expanded(child: Text('${item.name} \u00D7${item.quantity}', style: TextStyle(color: tp, fontSize: 13))),
-                  Text('${_fmt.format(item.subtotal)} RWF', style: TextStyle(color: ts, fontSize: 12, fontWeight: FontWeight.w600)),
+                  Expanded(child: Text(
+                    item.name,
+                    style: TextStyle(
+                      color: item.quantity > 0 ? tp : ts,
+                      fontSize: 13,
+                      decoration: item.quantity <= 0 ? TextDecoration.lineThrough : null,
+                    ),
+                  )),
+                  // Qty controls — minimal
+                  Row(mainAxisSize: MainAxisSize.min, children: [
+                    GestureDetector(
+                      onTap: () {
+                        if (item.quantity > 0) {
+                          HapticFeedback.selectionClick();
+                          setState(() { item.quantity--; item.subtotal = item.price * item.quantity; });
+                        }
+                      },
+                      child: Icon(Icons.remove_circle_outline, size: 18, color: ts),
+                    ),
+                    SizedBox(
+                      width: 24, child: Center(child: Text(
+                        '${item.quantity}', style: TextStyle(color: tp, fontSize: 13, fontWeight: FontWeight.w600),
+                      )),
+                    ),
+                    GestureDetector(
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        setState(() { item.quantity++; item.subtotal = item.price * item.quantity; });
+                      },
+                      child: Icon(Icons.add_circle_outline, size: 18, color: ts),
+                    ),
+                  ]),
+                  SizedBox(
+                    width: 60, child: Text(
+                      '${_fmt.format(item.price * item.quantity)}',
+                      textAlign: TextAlign.right,
+                      style: TextStyle(color: ts, fontSize: 12),
+                    ),
+                  ),
                 ]),
               )),
 
-              // Budget bar
-              Padding(
-                padding: const EdgeInsets.fromLTRB(14, 14, 14, 4),
-                child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                  Text('Budget', style: TextStyle(color: ts, fontSize: 11)),
-                  Text('${_fmt.format(b.remaining)} RWF left', style: const TextStyle(color: _brandLight, fontSize: 11, fontWeight: FontWeight.w600)),
-                ]),
+              // Budget line
+              const SizedBox(height: 8),
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                Text('${_fmt.format(b.requested)} RWF budget', style: TextStyle(color: ts, fontSize: 11)),
+                Text(
+                  liveRemaining >= 0 ? '${_fmt.format(liveRemaining)} left' : '${_fmt.format(-liveRemaining)} over',
+                  style: TextStyle(
+                    color: liveRemaining < 0 ? Colors.red[400] : _brandLight,
+                    fontSize: 11, fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ]),
+              const SizedBox(height: 4),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(3),
+                child: LinearProgressIndicator(
+                  value: (livePct / 100).clamp(0.0, 1.0),
+                  backgroundColor: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE8E8E8),
+                  valueColor: AlwaysStoppedAnimation(livePct > 100 ? Colors.red[400]! : _brandLight),
+                  minHeight: 4,
+                ),
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: (b.usedPercent / 100).clamp(0.0, 1.0),
-                    backgroundColor: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE8E8E8),
-                    valueColor: AlwaysStoppedAnimation(b.usedPercent > 95 ? Colors.orange : _brandLight),
-                    minHeight: 6,
-                  ),
-                ),
-              ),
 
-              // Nutrition
-              if (n != null) ...[
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 14, 14, 4),
-                  child: Row(children: [
-                    Icon(Icons.local_fire_department_rounded, size: 15, color: Colors.orange[400]),
-                    const SizedBox(width: 4),
-                    Text('NUTRITION', style: TextStyle(color: ts, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 0.8)),
-                    const Spacer(),
-                    _ratingBadge(n.balanceRating),
-                  ]),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  child: Text(
-                    '~${n.dailyCalories.round()} kcal/day \u2022 ${n.householdSize} person${n.householdSize > 1 ? 's' : ''} \u2022 ${n.durationDays} days',
-                    style: TextStyle(color: ts, fontSize: 11),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 8, 14, 4),
-                  child: Row(children: [
-                    _macroBar('Protein', n.proteinPercent, Colors.blue, isDark),
-                    const SizedBox(width: 6),
-                    _macroBar('Carbs', n.carbsPercent, Colors.amber[700]!, isDark),
-                    const SizedBox(width: 6),
-                    _macroBar('Fats', n.fatsPercent, Colors.red[400]!, isDark),
-                    const SizedBox(width: 6),
-                    _macroBar('Fiber', n.fiberPercent, Colors.green, isDark),
-                  ]),
-                ),
-              ],
-
-              // Cart status
-              if (r.itemsAddedToCart > 0)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 10, 14, 4),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(color: _brandLight.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-                    child: Row(mainAxisSize: MainAxisSize.min, children: [
-                      const Icon(Icons.check_circle_rounded, size: 14, color: _brandLight),
-                      const SizedBox(width: 6),
-                      Text('${r.itemsAddedToCart} items added to cart', style: const TextStyle(color: _brandLight, fontSize: 12, fontWeight: FontWeight.w600)),
-                    ]),
-                  ),
-                ),
-
-              // Re-optimize
-              Padding(
-                padding: const EdgeInsets.all(14),
-                child: SizedBox(
-                  width: double.infinity, height: 40,
-                  child: OutlinedButton.icon(
-                    onPressed: _isSmartCartLoading ? null : _showSmartCartSheet,
-                    icon: const Icon(Icons.refresh_rounded, size: 16),
-                    label: const Text('Re-optimize', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: _brand,
-                      side: BorderSide(color: _brand.withOpacity(0.25)),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              // Buttons
+              const SizedBox(height: 12),
+              Row(children: [
+                Expanded(
+                  flex: 3,
+                  child: SizedBox(
+                    height: 38,
+                    child: ElevatedButton(
+                      onPressed: () => _addSmartCartToLocalCart(r.items),
+                      child: Text('Add to Cart', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _brand,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        elevation: 0,
+                      ),
                     ),
                   ),
                 ),
-              ),
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 2,
+                  child: SizedBox(
+                    height: 38,
+                    child: OutlinedButton(
+                      onPressed: _isSmartCartLoading ? null : _showSmartCartSheet,
+                      child: const Text('Redo', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: tp,
+                        side: BorderSide(color: isDark ? const Color(0xFF333333) : const Color(0xFFDDDDDD)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  ),
+                ),
+              ]),
             ]),
           )),
         ],
@@ -1381,97 +1503,44 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
           const SizedBox(width: 8),
           Flexible(child: Container(
             constraints: BoxConstraints(maxWidth: w * 0.88),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: surface,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: Colors.blue.withOpacity(0.15)),
-              boxShadow: [BoxShadow(color: Colors.blue.withOpacity(0.05), blurRadius: 12, offset: const Offset(0, 4))],
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(18), topRight: Radius.circular(18),
+                bottomRight: Radius.circular(18), bottomLeft: Radius.circular(4),
+              ),
             ),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              // Header
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [Colors.blue[700]!, Colors.blue[500]!]),
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(17)),
-                ),
-                child: Row(children: [
-                  const Icon(Icons.analytics_rounded, color: Colors.white, size: 20),
-                  const SizedBox(width: 10),
-                  const Expanded(child: Text('Cart Analysis', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800))),
-                ]),
-              ),
+              // Inline title
+              Text('Cart Analysis', style: TextStyle(color: _brandLight, fontSize: 13, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 6),
 
-              // Summary
               if (a.summary.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 4),
-                  child: Text(a.summary, style: TextStyle(color: tp, fontSize: 13.5, height: 1.45)),
-                ),
+                Text(a.summary, style: TextStyle(color: tp, fontSize: 13.5, height: 1.45)),
 
-              // Nutrition note
-              if (a.nutritionNote != null && a.nutritionNote!.isNotEmpty)
-                _analysisSection(Icons.local_fire_department_rounded, Colors.orange, 'Nutrition', a.nutritionNote!, tp, ts, isDark),
+              if (a.nutritionNote != null && a.nutritionNote!.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text('Nutrition \u2014 ${a.nutritionNote!}', style: TextStyle(color: ts, fontSize: 12.5, height: 1.4)),
+              ],
 
-              // Savings tip
-              if (a.savingsTip != null && a.savingsTip!.isNotEmpty)
-                _analysisSection(Icons.savings_rounded, _brandLight, 'Savings Tip', a.savingsTip!, tp, ts, isDark),
+              if (a.savingsTip != null && a.savingsTip!.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text('\uD83D\uDCA1 ${a.savingsTip!}', style: TextStyle(color: ts, fontSize: 12.5, height: 1.4)),
+              ],
 
-              // Missing staples
-              if (a.missingStaples.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 8, 14, 4),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Row(children: [
-                      Icon(Icons.add_shopping_cart_rounded, size: 14, color: Colors.red[400]),
-                      const SizedBox(width: 6),
-                      Text('Missing Staples', style: TextStyle(color: tp, fontSize: 12, fontWeight: FontWeight.w700)),
-                    ]),
-                    const SizedBox(height: 4),
-                    Wrap(
-                      spacing: 6, runSpacing: 4,
-                      children: a.missingStaples.map((s) => Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(isDark ? 0.12 : 0.06),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(s, style: TextStyle(fontSize: 11, color: Colors.red[400], fontWeight: FontWeight.w600)),
-                      )).toList(),
-                    ),
-                  ]),
-                ),
+              if (a.missingStaples.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text('You might need: ${a.missingStaples.join(', ')}', style: TextStyle(color: tp, fontSize: 12.5)),
+              ],
 
-              // Meal suggestion
-              if (a.mealSuggestion != null && a.mealSuggestion!.isNotEmpty)
-                _analysisSection(Icons.restaurant_rounded, _brandGold, 'Meal Idea', a.mealSuggestion!, tp, ts, isDark),
-
-              const SizedBox(height: 14),
+              if (a.mealSuggestion != null && a.mealSuggestion!.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text('\uD83C\uDF73 ${a.mealSuggestion!}', style: TextStyle(color: ts, fontSize: 12.5, height: 1.4)),
+              ],
             ]),
           )),
         ],
-      ),
-    );
-  }
-
-  Widget _analysisSection(IconData icon, Color color, String title, String text, Color tp, Color ts, bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 2),
-      child: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: color.withOpacity(isDark ? 0.08 : 0.04),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Icon(icon, size: 16, color: color),
-          const SizedBox(width: 8),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(title, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 2),
-            Text(text, style: TextStyle(color: tp, fontSize: 12.5, height: 1.4)),
-          ])),
-        ]),
       ),
     );
   }
@@ -1488,74 +1557,33 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
           const SizedBox(width: 8),
           Flexible(child: Container(
             constraints: BoxConstraints(maxWidth: w * 0.88),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: surface,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: Colors.orange.withOpacity(0.15)),
-              boxShadow: [BoxShadow(color: Colors.orange.withOpacity(0.05), blurRadius: 12, offset: const Offset(0, 4))],
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(18), topRight: Radius.circular(18),
+                bottomRight: Radius.circular(18), bottomLeft: Radius.circular(4),
+              ),
             ),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              // Header
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [Colors.orange[700]!, Colors.orange[500]!]),
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(17)),
-                ),
-                child: Row(children: [
-                  const Icon(Icons.restaurant_menu_rounded, color: Colors.white, size: 20),
-                  const SizedBox(width: 10),
-                  Expanded(child: Text('${meals.length} Meal Ideas', style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800))),
-                ]),
-              ),
+              Text('${meals.length} Meal Ideas', style: TextStyle(color: _brandLight, fontSize: 13, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 8),
 
-              ...meals.asMap().entries.map((entry) {
-                final idx = entry.key;
-                final m = entry.value;
-                return Container(
-                  margin: EdgeInsets.fromLTRB(14, idx == 0 ? 12 : 4, 14, 4),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFFFF8F0),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.orange.withOpacity(0.1)),
-                  ),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Row(children: [
-                      Text('\uD83C\uDF73', style: const TextStyle(fontSize: 16)),
-                      const SizedBox(width: 8),
-                      Expanded(child: Text(m.name, style: TextStyle(
-                        color: tp, fontSize: 14, fontWeight: FontWeight.w700,
-                      ))),
-                      if (m.time.isNotEmpty)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(color: Colors.orange.withOpacity(0.12), borderRadius: BorderRadius.circular(6)),
-                          child: Text(m.time, style: TextStyle(color: Colors.orange[700], fontSize: 10, fontWeight: FontWeight.w600)),
-                        ),
-                    ]),
-                    if (m.ingredients.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Wrap(
-                        spacing: 4, runSpacing: 4,
-                        children: m.ingredients.map((i) => Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: _brandLight.withOpacity(isDark ? 0.12 : 0.06),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(i, style: TextStyle(fontSize: 10, color: _brandLight, fontWeight: FontWeight.w600)),
-                        )).toList(),
-                      ),
-                    ],
-                    if (m.tip.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Text('\uD83D\uDCA1 ${m.tip}', style: TextStyle(color: ts, fontSize: 11.5, fontStyle: FontStyle.italic)),
-                    ],
-                  ]),
-                );
-              }),
-              const SizedBox(height: 14),
+              ...meals.map((m) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(m.name, style: TextStyle(color: tp, fontSize: 13.5, fontWeight: FontWeight.w600)),
+                  if (m.time.isNotEmpty)
+                    Text(m.time, style: TextStyle(color: ts, fontSize: 11)),
+                  if (m.ingredients.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 3),
+                      child: Text(m.ingredients.join(', '), style: TextStyle(color: ts, fontSize: 11.5)),
+                    ),
+                  if (m.tip.isNotEmpty)
+                    Text(m.tip, style: TextStyle(color: ts, fontSize: 11.5, fontStyle: FontStyle.italic)),
+                ]),
+              )),
             ]),
           )),
         ],
@@ -1584,7 +1612,6 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
                   topLeft: Radius.circular(18), topRight: Radius.circular(18),
                   bottomRight: Radius.circular(18), bottomLeft: Radius.circular(4),
                 ),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(isDark ? 0.15 : 0.04), blurRadius: 6, offset: const Offset(0, 2))],
               ),
               child: AnimatedBuilder(
                 animation: _dotController,
@@ -1621,10 +1648,27 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
     return Container(
       decoration: BoxDecoration(
         color: surface,
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(isDark ? 0.3 : 0.05), blurRadius: 8, offset: const Offset(0, -2))],
+        border: Border(top: BorderSide(color: isDark ? const Color(0xFF222222) : const Color(0xFFEEEEEE), width: 0.5)),
       ),
-      padding: EdgeInsets.fromLTRB(12, 8, 12, 8 + MediaQuery.of(context).padding.bottom),
+      padding: EdgeInsets.fromLTRB(8, 8, 8, 8 + MediaQuery.of(context).padding.bottom),
       child: Row(children: [
+        // Smart Cart shortcut
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: _isSmartCartLoading ? null : _showSmartCartSheet,
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              width: 38, height: 38,
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF2F2F2),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.psychology_rounded, size: 20, color: ts),
+            ),
+          ),
+        ),
+        const SizedBox(width: 6),
         Expanded(
           child: Container(
             decoration: BoxDecoration(
@@ -1641,7 +1685,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
               textCapitalization: TextCapitalization.sentences,
               onSubmitted: (_) => _sendMessage(),
               decoration: InputDecoration(
-                hintText: 'What should I buy today?',
+                hintText: 'Ask anything about shopping...',
                 hintStyle: TextStyle(color: ts.withOpacity(0.5), fontSize: 14),
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
@@ -1649,23 +1693,22 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
             ),
           ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 6),
         Container(
-          width: 46, height: 46,
+          width: 40, height: 40,
           decoration: BoxDecoration(
-            gradient: const LinearGradient(colors: [_brand, Color(0xFF2E7D32)]),
-            borderRadius: BorderRadius.circular(23),
-            boxShadow: [BoxShadow(color: _brand.withOpacity(0.25), blurRadius: 8, offset: const Offset(0, 2))],
+            color: _brand,
+            shape: BoxShape.circle,
           ),
           child: Material(
             color: Colors.transparent,
             child: InkWell(
               onTap: _isSending ? null : () => _sendMessage(),
-              borderRadius: BorderRadius.circular(23),
+              customBorder: const CircleBorder(),
               child: Center(
                 child: _isSending
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : const Icon(Icons.arrow_upward_rounded, color: Colors.white, size: 22),
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Icon(Icons.arrow_upward_rounded, color: Colors.white, size: 20),
               ),
             ),
           ),
@@ -1677,14 +1720,14 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
   // ═══════════ HELPERS ═══════════
 
   Widget _avatar({bool small = false}) {
-    final s = small ? 26.0 : 34.0;
+    final s = small ? 24.0 : 32.0;
     return Container(
       width: s, height: s,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [_brand, _brandLight]),
-        borderRadius: BorderRadius.circular(s * 0.32),
+      decoration: const BoxDecoration(
+        color: _brand,
+        shape: BoxShape.circle,
       ),
-      child: Icon(Icons.auto_awesome_rounded, color: Colors.white, size: small ? 14 : 18),
+      child: Center(child: Text('N', style: TextStyle(color: Colors.white, fontSize: small ? 11 : 14, fontWeight: FontWeight.w800))),
     );
   }
 

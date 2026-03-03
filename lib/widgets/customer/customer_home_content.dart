@@ -1744,53 +1744,62 @@ void _showAddressManagementDialog(BuildContext context, bool isDarkMode, Color c
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 6),
-                      // Rating · Delivery time · Distance — single clean row
+                      // --- 2×2 grid layout for vendor info ---
                       Row(children: [
-                        Icon(Icons.star_rounded, size: 13, color: isDarkMode ? const Color(0xFFFFD54F) : const Color(0xFFFFA000)),
-                        const SizedBox(width: 2),
-                        (vendor.totalRatings == 0)
-                          ? Text('New', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: isDarkMode ? const Color(0xFFFFD54F) : const Color(0xFFFF8F00)))
-                          : Text(vendor.formattedRating, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: subtextColor)),
-                        Text('  \u00B7  ', style: TextStyle(color: subtextColor.withOpacity(0.4), fontSize: 10)),
-                        Icon(Icons.schedule_outlined, size: 12, color: subtextColor),
-                        const SizedBox(width: 2),
-                        Text(deliveryTime, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: subtextColor)),
-                        if (distanceText != 'D/U') ...[
-                          Text('  \u00B7  ', style: TextStyle(color: subtextColor.withOpacity(0.4), fontSize: 10)),
-                          Icon(Icons.near_me_outlined, size: 11, color: subtextColor),
-                          const SizedBox(width: 2),
-                          Flexible(child: Text(distanceText, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: subtextColor), overflow: TextOverflow.ellipsis)),
-                        ],
+                        // Rating (left)
+                        Expanded(
+                          child: Row(mainAxisSize: MainAxisSize.min, children: [
+                            Icon(Icons.star_rounded, size: 13, color: isDarkMode ? const Color(0xFFFFD54F) : const Color(0xFFFFA000)),
+                            const SizedBox(width: 3),
+                            (vendor.totalRatings == 0)
+                              ? Text('New', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: isDarkMode ? const Color(0xFFFFD54F) : const Color(0xFFFF8F00)))
+                              : Text(vendor.formattedRating, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: subtextColor)),
+                          ]),
+                        ),
+                        // Distance (right)
+                        if (distanceText != 'D/U')
+                          Expanded(
+                            child: Row(mainAxisSize: MainAxisSize.min, children: [
+                              Icon(Icons.near_me_outlined, size: 12, color: subtextColor),
+                              const SizedBox(width: 3),
+                              Flexible(child: Text(distanceText, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: subtextColor), overflow: TextOverflow.ellipsis)),
+                            ]),
+                          ),
                       ]),
                       const SizedBox(height: 5),
-                      // Delivery fee row
                       Row(children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: (isDarkMode ? const Color(0xFF1B5E20) : const Color(0xFF4CAF50)).withOpacity(isDarkMode ? 0.15 : 0.08),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            'DF $deliveryFeeText', 
-                            style: TextStyle(
-                              fontSize: 10, 
-                              fontWeight: FontWeight.w600, 
-                              color: isDarkMode ? const Color(0xFF66BB6A) : const Color(0xFF2E7D32),
-                            ),
-                          ),
+                        // Delivery time (left)
+                        Expanded(
+                          child: Row(mainAxisSize: MainAxisSize.min, children: [
+                            Icon(Icons.schedule_outlined, size: 12, color: subtextColor),
+                            const SizedBox(width: 3),
+                            Flexible(child: Text(deliveryTime, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: subtextColor), overflow: TextOverflow.ellipsis)),
+                          ]),
                         ),
-                        if (!vendor.isDeliverable) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: subtextColor.withOpacity(0.08),
-                              borderRadius: BorderRadius.circular(4),
+                        // Delivery fee (right)
+                        Expanded(
+                          child: Row(mainAxisSize: MainAxisSize.min, children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: (isDarkMode ? const Color(0xFF1B5E20) : const Color(0xFF4CAF50)).withOpacity(isDarkMode ? 0.15 : 0.08),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                'DF $deliveryFeeText', 
+                                style: TextStyle(
+                                  fontSize: 10, 
+                                  fontWeight: FontWeight.w600, 
+                                  color: isDarkMode ? const Color(0xFF66BB6A) : const Color(0xFF2E7D32),
+                                ),
+                              ),
                             ),
-                            child: Text('Too far', style: TextStyle(fontSize: 9, color: subtextColor, fontWeight: FontWeight.w500)),
-                          ),
-                        ],
+                            if (!vendor.isDeliverable) ...[
+                              const SizedBox(width: 4),
+                              Text('Too far', style: TextStyle(fontSize: 9, color: subtextColor, fontWeight: FontWeight.w500)),
+                            ],
+                          ]),
+                        ),
                       ]),
                     ],
                   )
@@ -2857,8 +2866,8 @@ Widget build(BuildContext context) {
   if (_currentAddress == null) {
     // Show location selection WITH app chrome
     mainContent = _buildLocationSelectionOverlay(isDarkMode, cardColor, textColor, subtextColor);
-  } else if (vendorProvider.vendors.isEmpty && !vendorProvider.isLoading && !isSearching) {
-    // Show no vendors WITH app chrome
+  } else if (vendorProvider.vendors.isEmpty && !vendorProvider.isLoading && !isSearching && vendorProvider.error == null) {
+    // Show no vendors only when there's no error (not a temporary failure)
     mainContent = _buildNoVendorsOverlay(isDarkMode, cardColor, textColor, subtextColor);
   } else {
     // Normal content

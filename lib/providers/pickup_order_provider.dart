@@ -50,12 +50,15 @@ class PickupOrderProvider extends ChangeNotifier {
       );
 
       if (response['success'] != null && response['success'] as bool) {
-        final data = response['data'] as Map<String, dynamic>? ?? {};
-        _pickupOrders = (data['orders'] as List<dynamic>?)
-                ?.map((json) => PickupOrder.fromJson(json as Map<String, dynamic>))
-                .toList() ??
-            [];
-        _totalOrders = data['total'] as int? ?? 0;
+        // Backend may return orders at top level or nested in 'data'
+        final data = response['data'] is Map ? response['data'] as Map<String, dynamic> : <String, dynamic>{};
+        final ordersList = response['orders'] as List<dynamic>?
+            ?? data['orders'] as List<dynamic>?
+            ?? [];
+        _pickupOrders = ordersList
+                .map((json) => PickupOrder.fromJson(json as Map<String, dynamic>))
+                .toList();
+        _totalOrders = (response['total'] as int?) ?? (data['total'] as int?) ?? 0;
         _currentPage = page;
 
         notifyListeners();
@@ -79,11 +82,13 @@ class PickupOrderProvider extends ChangeNotifier {
           await _apiService.get('/api/pickup-orders/customer/$customerId');
 
       if (response['success'] != null && response['success'] as bool) {
-        final data = response['data'] as Map<String, dynamic>? ?? {};
-        _pickupOrders = (data['orders'] as List<dynamic>?)
-                ?.map((json) => PickupOrder.fromJson(json as Map<String, dynamic>))
-                .toList() ??
-            [];
+        // Backend returns orders at top level, not nested in 'data'
+        final ordersList = response['orders'] as List<dynamic>?
+            ?? (response['data'] is Map ? (response['data'] as Map<String, dynamic>)['orders'] as List<dynamic>? : null)
+            ?? [];
+        _pickupOrders = ordersList
+                .map((json) => PickupOrder.fromJson(json as Map<String, dynamic>))
+                .toList();
 
         notifyListeners();
       } else {
@@ -106,11 +111,14 @@ class PickupOrderProvider extends ChangeNotifier {
           await _apiService.get('/api/pickup-orders/rider/$riderId');
 
       if (response['success'] != null && response['success'] as bool) {
-        final data = response['data'] as Map<String, dynamic>? ?? {};
-        _assignedOrders = (data['orders'] as List<dynamic>?)
-                ?.map((json) => PickupOrder.fromJson(json as Map<String, dynamic>))
-                .toList() ??
-            [];
+        // Backend may return orders at top level or nested in 'data'
+        final data = response['data'] is Map ? response['data'] as Map<String, dynamic> : <String, dynamic>{};
+        final ordersList = response['orders'] as List<dynamic>?
+            ?? data['orders'] as List<dynamic>?
+            ?? [];
+        _assignedOrders = ordersList
+                .map((json) => PickupOrder.fromJson(json as Map<String, dynamic>))
+                .toList();
 
         notifyListeners();
       } else {

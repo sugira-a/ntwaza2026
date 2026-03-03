@@ -370,18 +370,21 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
             ],
           ),
         ),
-        // Back button (GREEN)
+        // Back button
         Positioned(
           top: MediaQuery.of(context).padding.top + 8,
           left: 8,
           child: Container(
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.green.shade600,
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 8, offset: Offset(0, 2))],
+              color: isDarkMode ? Colors.black.withOpacity(0.6) : Colors.white.withOpacity(0.9),
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 8, offset: Offset(0, 2))],
             ),
             child: IconButton(
-              icon: Icon(Icons.arrow_back, color: Colors.white, size: 28),
+              padding: EdgeInsets.zero,
+              icon: Icon(Icons.arrow_back_ios_new_rounded, color: isDarkMode ? Colors.white : Colors.black, size: 18),
               onPressed: () => Navigator.pop(context),
               tooltip: 'Back',
             ),
@@ -391,10 +394,20 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
         Positioned(
           top: MediaQuery.of(context).padding.top + 8,
           right: 8,
-          child: IconButton(
-            icon: Icon(Icons.more_vert, color: Colors.white, size: 28),
-            onPressed: () => _showSettingsMenu(context, isDarkMode, themeProvider, cardColor, textColor),
-            tooltip: 'Menu',
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: isDarkMode ? Colors.black.withOpacity(0.6) : Colors.white.withOpacity(0.9),
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 8, offset: Offset(0, 2))],
+            ),
+            child: IconButton(
+              padding: EdgeInsets.zero,
+              icon: Icon(Icons.more_vert_rounded, color: isDarkMode ? Colors.white : Colors.black, size: 20),
+              onPressed: () => _showSettingsMenu(context, isDarkMode, themeProvider, cardColor, textColor),
+              tooltip: 'Menu',
+            ),
           ),
         ),
       ],

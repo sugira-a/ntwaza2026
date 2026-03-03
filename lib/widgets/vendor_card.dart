@@ -119,21 +119,48 @@ class VendorCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 5),
+                  // Row 1: Rating | Distance
                   Row(
                     children: [
-                      Icon(Icons.star_rounded, size: 12, color: isDarkMode ? const Color(0xFFFFD54F) : Colors.amber.shade700),
-                      const SizedBox(width: 3),
-                      Text(
-                        vendor.isNew ? 'New' : vendor.rating.toStringAsFixed(1),
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: subtextColor),
+                      Expanded(
+                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          Icon(Icons.star_rounded, size: 12, color: isDarkMode ? const Color(0xFFFFD54F) : Colors.amber.shade700),
+                          const SizedBox(width: 3),
+                          Text(
+                            vendor.isNew ? 'New' : vendor.rating.toStringAsFixed(1),
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: subtextColor),
+                          ),
+                          if (vendor.totalRatings > 0)
+                            Text(' (${vendor.totalRatings})', style: TextStyle(fontSize: 10, color: subtextColor.withOpacity(0.7))),
+                        ]),
                       ),
-                      if (vendor.totalRatings > 0) ...[
-                        Text(' (${vendor.totalRatings})', style: TextStyle(fontSize: 10, color: subtextColor.withOpacity(0.7))),
-                      ],
-                      const Spacer(),
-                      Text(
-                        'DF ${vendor.deliveryFee.toStringAsFixed(0)}',
-                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500, color: subtextColor),
+                      Expanded(
+                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          Icon(Icons.near_me_outlined, size: 11, color: subtextColor),
+                          const SizedBox(width: 3),
+                          Flexible(child: Text(vendor.formattedDistance, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: subtextColor), overflow: TextOverflow.ellipsis)),
+                        ]),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  // Row 2: Delivery time | Delivery fee
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          Icon(Icons.schedule_outlined, size: 11, color: subtextColor),
+                          const SizedBox(width: 3),
+                          Flexible(child: Text(vendor.formattedDeliveryTime, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: subtextColor), overflow: TextOverflow.ellipsis)),
+                        ]),
+                      ),
+                      Expanded(
+                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          Text(
+                            'DF ${vendor.deliveryFee.toStringAsFixed(0)}',
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: isDarkMode ? const Color(0xFF66BB6A) : const Color(0xFF2E7D32)),
+                          ),
+                        ]),
                       ),
                     ],
                   ),

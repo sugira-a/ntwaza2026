@@ -57,6 +57,7 @@ class AiReplyItem {
   final double subtotal;
   final String reason;
   final String? category;
+  final String? vendorId;
 
   AiReplyItem({
     required this.name,
@@ -65,6 +66,7 @@ class AiReplyItem {
     required this.subtotal,
     this.reason = '',
     this.category,
+    this.vendorId,
   });
 
   factory AiReplyItem.fromJson(Map<String, dynamic> json) {
@@ -77,6 +79,7 @@ class AiReplyItem {
       subtotal: (json['subtotal'] as num?)?.toDouble() ?? price * qty,
       reason: json['reason'] as String? ?? '',
       category: json['category'] as String?,
+      vendorId: json['vendor_id'] as String?,
     );
   }
 }
@@ -142,11 +145,14 @@ class SmartCartResult {
 
 class SmartCartItem {
   final String name;
-  final int quantity;
+  int quantity;
   final double price;
-  final double subtotal;
+  double subtotal;
   final String? category;
   final String? unit;
+  final String? productId;
+  final String? vendorId;
+  final String? imageUrl;
 
   SmartCartItem({
     required this.name,
@@ -155,6 +161,9 @@ class SmartCartItem {
     required this.subtotal,
     this.category,
     this.unit,
+    this.productId,
+    this.vendorId,
+    this.imageUrl,
   });
 
   factory SmartCartItem.fromJson(Map<String, dynamic> json) {
@@ -167,6 +176,9 @@ class SmartCartItem {
       subtotal: (json['subtotal'] as num?)?.toDouble() ?? price * qty,
       category: json['category'] as String?,
       unit: json['unit'] as String?,
+      productId: json['product_id'] as String?,
+      vendorId: json['vendor_id'] as String?,
+      imageUrl: json['image_url'] as String?,
     );
   }
 }

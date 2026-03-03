@@ -40,12 +40,15 @@ class _CreatePickupOrderScreenState extends State<CreatePickupOrderScreen> {
   bool _isSubmitting = false;
   bool _isCalculatingDistance = false;
   Map<String, dynamic>? _roadDistanceData;
-  static const double _baseFee = 1200;
-  static const double _perKmFee = 200;
-  static const double _distanceThresholdKm = 5;
-  static const double _maxTierKm = 15;
-  static const double _flatFeeAboveMaxKm = 3500;
-  static const double _heavyWeightKg = 10;
+
+  // Pricing — loaded from backend (admin-editable), with safe defaults
+  double _baseFee = 1200;
+  double _perKmFee = 200;
+  double _distanceThresholdKm = 5;
+  double _maxTierKm = 15;
+  double _flatFeeAboveMaxKm = 3500;
+  double _heavyWeightKg = 10;
+  bool _pricingLoaded = false;
 
   @override
   void initState() {
@@ -62,6 +65,29 @@ class _CreatePickupOrderScreenState extends State<CreatePickupOrderScreen> {
       if (fullName.isNotEmpty) {
         _senderNameController.text = fullName;
       }
+    }
+    // Fetch pricing from backend (admin-editable)
+    _fetchPricing();
+  }
+
+  Future<void> _fetchPricing() async {
+    try {
+      final api = context.read<AuthProvider>().apiService;
+      final response = await api.get('/api/pickup-orders/pricing');
+      if (response['success'] == true && response['pricing'] != null) {
+        final p = response['pricing'] as Map<String, dynamic>;
+        setState(() {
+          _baseFee = (p['base_fee'] as num?)?.toDouble() ?? 1200;
+          _perKmFee = (p['per_km_fee'] as num?)?.toDouble() ?? 200;
+          _distanceThresholdKm = (p['distance_threshold_km'] as num?)?.toDouble() ?? 5;
+          _maxTierKm = (p['pricing_cap_km'] as num?)?.toDouble() ?? 15;
+          _flatFeeAboveMaxKm = (p['pricing_cap_price'] as num?)?.toDouble() ?? 3500;
+          _heavyWeightKg = (p['heavy_weight_kg'] as num?)?.toDouble() ?? 10;
+          _pricingLoaded = true;
+        });
+      }
+    } catch (e) {
+      print('⚠️ Failed to fetch pickup pricing, using defaults: $e');
     }
   }
 
@@ -631,13 +657,7 @@ class _CreatePickupOrderScreenState extends State<CreatePickupOrderScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () {
-            if (Navigator.of(context).canPop()) {
-              Navigator.of(context).pop();
-            } else if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go('/');
-            }
+            context.pop();
           },
         ),
         title: const Text(

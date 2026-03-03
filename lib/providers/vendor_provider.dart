@@ -295,10 +295,26 @@ class VendorProvider with ChangeNotifier {
       }
       
       if (lat == null || lng == null) {
-        throw Exception('Location required for delivery calculations');
+        // Don't throw - keep existing vendors visible instead of showing "no vendors"
+        print('⚠️ Location not available yet - keeping existing vendors');
+        if (_vendors.isEmpty) {
+          await loadCachedVendors();
+        }
+        _error = null;
+        _isLoading = false;
+        notifyListeners();
+        return;
       }
       
-      _vendors = await _vendorService.getVendors(latitude: lat, longitude: lng);
+      final freshVendors = await _vendorService.getVendors(latitude: lat, longitude: lng);
+      // Only replace vendors if we got results; keep old list otherwise
+      if (freshVendors.isNotEmpty) {
+        _vendors = freshVendors;
+      } else if (_vendors.isNotEmpty) {
+        print('⚠️ Server returned 0 vendors - keeping cached list');
+      } else {
+        _vendors = freshVendors;
+      }
       _filteredVendors = [];
       _lastFetchTime = DateTime.now();
       
@@ -339,14 +355,21 @@ class VendorProvider with ChangeNotifier {
       }
       
       if (lat == null || lng == null) {
-        throw Exception('Location required');
+        // Don't throw - keep existing vendors
+        print('⚠️ Location not available - keeping existing vendors');
+        _isLoading = false;
+        notifyListeners();
+        return;
       }
       
-      _vendors = await _vendorService.getVendors(
+      final freshVendors = await _vendorService.getVendors(
         category: category,
         latitude: lat,
         longitude: lng,
       );
+      if (freshVendors.isNotEmpty || _vendors.isEmpty) {
+        _vendors = freshVendors;
+      }
       _filteredVendors = [];
       
       print('✅ Found ${_vendors.length} $category vendors');

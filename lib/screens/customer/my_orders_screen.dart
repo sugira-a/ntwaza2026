@@ -138,7 +138,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
       backgroundColor: isDark ? const Color(0xFF0D1117) : const Color(0xFF0B0F14),
       leading: IconButton(
         icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-        onPressed: () => Navigator.canPop(context) ? Navigator.pop(context) : context.go('/'),
+        onPressed: () => context.pop(),
       ),
       flexibleSpace: FlexibleSpaceBar(
         collapseMode: CollapseMode.parallax,

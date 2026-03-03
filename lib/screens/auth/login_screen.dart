@@ -41,11 +41,21 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (mounted) {
         if (success) {
-          // Auto-detect location for customer users
+          // Show welcome message BEFORE navigating (context still valid)
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Welcome back, ${authProvider.user?.firstName ?? "User"}!'),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+
+          // Fire location detect in background (don't block navigation)
           if (!authProvider.isAdmin && !authProvider.isVendor && !authProvider.isRider) {
-            await _autoDetectLocationOnLogin();
+            final addrProvider = context.read<AddressProvider>();
+            _autoDetectLocationOnLogin(addrProvider); // runs async, no await
           }
-          
+
           if (authProvider.isAdmin) {
             context.go('/admin');
           } else if (authProvider.isVendor) {
@@ -55,14 +65,6 @@ class _LoginScreenState extends State<LoginScreen> {
           } else {
             context.go('/');
           }
-          
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Welcome back, ${authProvider.user?.firstName ?? "User"}!'),
-              backgroundColor: Colors.green,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
         } else if (authProvider.error == 'EMAIL_NOT_VERIFIED') {
           final email = _emailController.text.trim();
           ScaffoldMessenger.of(context).showSnackBar(
@@ -86,15 +88,16 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  /// Auto-detect user location on login so home screen shows real address
-  Future<void> _autoDetectLocationOnLogin() async {
+  /// Auto-detect user location on login so home screen shows real address.
+  /// Runs in background — never blocks navigation.
+  Future<void> _autoDetectLocationOnLogin(AddressProvider addressProvider) async {
     try {
       final locationService = LocationService();
       final hasPermission = await locationService.checkAndRequestPermission();
       if (!hasPermission) return;
 
       final position = await locationService.getCurrentLocation(forceRefresh: true);
-      if (position == null || !mounted) return;
+      if (position == null) return;
 
       String addressText = 'Current Location';
       try {
@@ -128,7 +131,6 @@ class _LoginScreenState extends State<LoginScreen> {
         createdAt: DateTime.now(),
       );
 
-      final addressProvider = context.read<AddressProvider>();
       await addressProvider.addAddress(address);
       addressProvider.selectAddress(address);
     } catch (e) {
