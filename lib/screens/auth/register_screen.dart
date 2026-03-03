@@ -2,9 +2,7 @@
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../providers/theme_provider.dart';
-import '../../providers/auth_provider.dart';
 import '../../services/api/api_service.dart';
-import '../../services/local_storage.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -100,29 +98,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
         password: _passwordCtrl.text,
       );
       
-      final token = response['access_token'];
-      if (token == null) throw Exception('No token received');
-      
-      await LocalStorage.saveUser(
-        'customer',
-        token,
-        _emailCtrl.text.trim(),
-        '${_firstNameCtrl.text} ${_lastNameCtrl.text}'
-      );
-      
       if (mounted) {
-        final authProvider = context.read<AuthProvider>();
-        authProvider.apiService.setToken(token);
-        await authProvider.initialize();
-        
+        final email = _emailCtrl.text.trim();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Welcome, ${_firstNameCtrl.text}!'),
+          const SnackBar(
+            content: Text('Verification code sent to your email!'),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 3),
           ),
         );
-        context.go('/');
+        context.go('/verify-email?email=${Uri.encodeComponent(email)}');
       }
     } catch (e) {
       _showError(_parseRegistrationError(e.toString()));

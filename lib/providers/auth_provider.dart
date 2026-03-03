@@ -212,6 +212,10 @@ class AuthProvider extends ChangeNotifier {
       return 'Invalid request. Please check your information and try again.';
     }
     
+    if (error.contains('not verified') || error.contains('verify your email')) {
+      return 'EMAIL_NOT_VERIFIED';
+    }
+
     if (error.contains('403') || error.contains('Forbidden')) {
       return 'Access denied. You don\'t have permission to perform this action.';
     }

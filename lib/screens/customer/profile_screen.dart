@@ -218,9 +218,11 @@ class ProfileScreen extends StatelessWidget {
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       leading: IconButton(
-        icon: Icon(Icons.arrow_back, color: textColor),
+        icon: Icon(Icons.arrow_back_ios_new_rounded, color: textColor, size: 20),
         onPressed: () {
-          if (context.canPop()) {
+          if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          } else if (context.canPop()) {
             context.pop();
           } else {
             context.go('/');
@@ -247,8 +249,8 @@ class ProfileScreen extends StatelessWidget {
               case 'edit':
                 _showEditProfileDialog(context, authProvider, isDark, cardColor, textColor, subtextColor);
                 break;
-              case 'notifications':
-                context.push('/notifications');
+              case 'orders':
+                context.push('/my-orders');
                 break;
               case 'help':
                 context.push('/help-support');
@@ -258,7 +260,7 @@ class ProfileScreen extends StatelessWidget {
                 break;
             }
           },
-          itemBuilder: (context) => [
+          itemBuilder: (ctx) => [
             PopupMenuItem(
               value: 'edit',
               child: Row(
@@ -270,12 +272,12 @@ class ProfileScreen extends StatelessWidget {
               ),
             ),
             PopupMenuItem(
-              value: 'notifications',
+              value: 'orders',
               child: Row(
                 children: [
-                  Icon(Icons.notifications_outlined, size: 20, color: textColor),
+                  Icon(Icons.receipt_long_outlined, size: 20, color: textColor),
                   const SizedBox(width: 12),
-                  Text('Notifications', style: TextStyle(color: textColor)),
+                  Text('My Orders', style: TextStyle(color: textColor)),
                 ],
               ),
             ),

@@ -1007,15 +1007,25 @@ class _AdminOrderDetailScreenState extends State<AdminOrderDetailScreen>
     setState(() => _assigningRider = true);
     try {
       final service = AdminDashboardService(context.read<AuthProvider>().apiService);
-      await service.assignOrderToRider(orderId: _order.id, riderId: riderId);
+      final result = await service.assignOrderToRider(orderId: _order.id, riderId: riderId);
       if (mounted) {
+        // Refresh order list
         context.read<AdminOrderProvider>().fetchOrders();
+        // Show success with rider name from response
+        final assignedName = result['rider_name'] ?? riderName;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Rider $riderName assigned successfully'),
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+                const SizedBox(width: 8),
+                Expanded(child: Text('$assignedName assigned — rider & customer notified')),
+              ],
+            ),
             backgroundColor: accentGreen,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            duration: const Duration(seconds: 3),
           ),
         );
       }

@@ -253,17 +253,17 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
       case 1: _handleCategoryTap('Restaurants'); break;
       case 2: _handleCategoryTap('Supermarkets'); break;
       case 3: 
-        final authProvider = context.read<AuthProvider>();
-        if (authProvider.isAuthenticated) {
-          context.go('/cart');
+        final authProvider3 = context.read<AuthProvider>();
+        if (authProvider3.isAuthenticated) {
+          context.push('/cart');
         } else {
           _showLoginPrompt(context, 'Please login to view your cart');
         }
         break;
       case 4:
-        final authProvider = context.read<AuthProvider>();
-        if (authProvider.isAuthenticated) {
-          context.go('/profile');
+        final authProvider4 = context.read<AuthProvider>();
+        if (authProvider4.isAuthenticated) {
+          context.push('/profile');
         } else {
           _showLoginPrompt(context, 'Please login to view your profile');
         }
@@ -504,19 +504,7 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
                         isDarkMode: isDarkMode,
                       ),
                       const SizedBox(height: 16),
-                      _buildMenuItemWithIcon(
-                        icon: Icons.local_shipping,
-                        iconColor: Colors.deepOrange,
-                        title: 'Pickup Orders',
-                        onTap: () {
-                          Navigator.pop(context);
-                          context.push('/pickup-orders');
-                        },
-                        textColor: textColor,
-                        subtextColor: subtextColor,
-                        isDarkMode: isDarkMode,
-                      ),
-                      const SizedBox(height: 16),
+
                       _buildMenuItemWithIcon(
                         icon: Icons.settings,
                         iconColor: Colors.grey[700]!,
@@ -1641,7 +1629,6 @@ void _showAddressManagementDialog(BuildContext context, bool isDarkMode, Color c
     final distanceText = vendor.formattedDistance;
     final deliveryFeeText = vendor.formattedDeliveryFee;
     final deliveryTime = vendor.formattedDeliveryTime;
-    final todayHours = _getTodayHours(vendor);
 
     final statusColor = vendor.isOpen 
         ? (isDarkMode ? const Color(0xFF81C784) : const Color(0xFF4CAF50))
@@ -1737,65 +1724,74 @@ void _showAddressManagementDialog(BuildContext context, bool isDarkMode, Color c
                     ],
                   )
                 ),
-                // Info section
+                // Info section — clean & professional
                 Padding(
                   padding: const EdgeInsets.fromLTRB(12, 10, 12, 10), 
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(vendor.name, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: textColor, letterSpacing: -0.2), maxLines: 1, overflow: TextOverflow.ellipsis),
+                      // Vendor name
+                      Text(
+                        vendor.name, 
+                        style: TextStyle(
+                          fontSize: 14, 
+                          fontWeight: FontWeight.w700, 
+                          color: textColor, 
+                          letterSpacing: -0.3,
+                        ), 
+                        maxLines: 1, 
+                        overflow: TextOverflow.ellipsis,
+                      ),
                       const SizedBox(height: 6),
-                      // Rating + delivery time
+                      // Rating · Delivery time · Distance — single clean row
                       Row(children: [
-                        Icon(Icons.star_rounded, size: 14, color: isDarkMode ? const Color(0xFFFFD54F) : const Color(0xFFFFA000)),
-                        const SizedBox(width: 3),
+                        Icon(Icons.star_rounded, size: 13, color: isDarkMode ? const Color(0xFFFFD54F) : const Color(0xFFFFA000)),
+                        const SizedBox(width: 2),
                         (vendor.totalRatings == 0)
-                          ? Text('New', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: isDarkMode ? const Color(0xFFFFD54F) : const Color(0xFFFF8F00)))
-                          : Text(vendor.formattedRating, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: textColor)),
-                        if (vendor.totalRatings > 0) ...[
-                          Text(' (${vendor.totalRatings})', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: subtextColor))
+                          ? Text('New', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: isDarkMode ? const Color(0xFFFFD54F) : const Color(0xFFFF8F00)))
+                          : Text(vendor.formattedRating, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: subtextColor)),
+                        Text('  \u00B7  ', style: TextStyle(color: subtextColor.withOpacity(0.4), fontSize: 10)),
+                        Icon(Icons.schedule_outlined, size: 12, color: subtextColor),
+                        const SizedBox(width: 2),
+                        Text(deliveryTime, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: subtextColor)),
+                        if (distanceText != 'D/U') ...[
+                          Text('  \u00B7  ', style: TextStyle(color: subtextColor.withOpacity(0.4), fontSize: 10)),
+                          Icon(Icons.near_me_outlined, size: 11, color: subtextColor),
+                          const SizedBox(width: 2),
+                          Flexible(child: Text(distanceText, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: subtextColor), overflow: TextOverflow.ellipsis)),
                         ],
-                        const Spacer(),
-                        Icon(Icons.schedule_outlined, size: 13, color: isDarkMode ? const Color(0xFF42A5F5) : const Color(0xFF1565C0)),
-                        const SizedBox(width: 3),
-                        Text(deliveryTime, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: isDarkMode ? const Color(0xFF42A5F5) : const Color(0xFF1565C0))),
                       ]),
                       const SizedBox(height: 5),
-                      // Distance + delivery fee
+                      // Delivery fee row
                       Row(children: [
-                        Icon(Icons.near_me_outlined, size: 12, color: isDarkMode ? const Color(0xFF66BB6A) : const Color(0xFF2E7D32)),
-                        const SizedBox(width: 3),
-                        Flexible(child: Text(distanceText, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: isDarkMode ? const Color(0xFF66BB6A) : const Color(0xFF2E7D32)), overflow: TextOverflow.ellipsis)),
-                        if (distanceText != 'D/U') ...[
-                          Text('  ·  ', style: TextStyle(color: subtextColor.withOpacity(0.5), fontSize: 11)),
-                          Text('DF: $deliveryFeeText', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: isDarkMode ? const Color(0xFF42A5F5) : const Color(0xFF1565C0))),
-                        ],
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: (isDarkMode ? const Color(0xFF1B5E20) : const Color(0xFF4CAF50)).withOpacity(isDarkMode ? 0.15 : 0.08),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'DF $deliveryFeeText', 
+                            style: TextStyle(
+                              fontSize: 10, 
+                              fontWeight: FontWeight.w600, 
+                              color: isDarkMode ? const Color(0xFF66BB6A) : const Color(0xFF2E7D32),
+                            ),
+                          ),
+                        ),
                         if (!vendor.isDeliverable) ...[
                           const SizedBox(width: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                             decoration: BoxDecoration(
-                              color: subtextColor.withOpacity(0.1),
+                              color: subtextColor.withOpacity(0.08),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text('Too far', style: TextStyle(fontSize: 9, color: subtextColor, fontWeight: FontWeight.w500)),
                           ),
                         ],
                       ]),
-                      // Today's working hours
-                      if (todayHours.isNotEmpty) ...[
-                        const SizedBox(height: 5),
-                        Row(children: [
-                          Icon(Icons.access_time_outlined, size: 11, color: vendor.isOpen 
-                              ? (isDarkMode ? const Color(0xFF66BB6A) : const Color(0xFF2E7D32))
-                              : (isDarkMode ? const Color(0xFFEF5350) : const Color(0xFFC62828))),
-                          const SizedBox(width: 3),
-                          Expanded(child: Text(todayHours, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: vendor.isOpen 
-                              ? (isDarkMode ? const Color(0xFF66BB6A) : const Color(0xFF2E7D32))
-                              : (isDarkMode ? const Color(0xFFEF5350) : const Color(0xFFC62828))), maxLines: 1, overflow: TextOverflow.ellipsis)),
-                        ]),
-                      ],
                     ],
                   )
                 ),

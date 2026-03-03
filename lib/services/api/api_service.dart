@@ -163,6 +163,22 @@ class ApiService {
     });
   }
 
+  /// Verify email with 6-digit OTP code
+  Future<Map<String, dynamic>> verifyEmail({
+    required String email,
+    required String code,
+  }) async {
+    return await post('/api/auth/verify-email', {
+      'email': email,
+      'code': code,
+    });
+  }
+
+  /// Resend verification OTP
+  Future<Map<String, dynamic>> resendOtp({required String email}) async {
+    return await post('/api/auth/resend-otp', {'email': email});
+  }
+
   Future<Map<String, dynamic>> login(String email, String password, {String? fcmToken}) async {
     final body = <String, dynamic>{
       'email': email,

@@ -1,5 +1,6 @@
 ﻿import '../screens/auth/forgot_password_screen.dart';
 import '../screens/auth/reset_password_screen.dart';
+import '../screens/auth/verify_email_screen.dart';
 // lib/routes/app_router.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -14,7 +15,7 @@ import '../screens/customer/profile_screen.dart';
 import '../screens/customer/help_support_screen.dart';
 import '../screens/customer/ai_assistant_screen.dart';
 import '../screens/customer/my_orders_screen.dart';
-import '../screens/customer/pickup_orders_screen.dart';
+// pickup_orders_screen removed — merged into my_orders_screen
 import '../screens/customer/privacy_policy_screen.dart';
 import '../screens/customer/terms_of_service_screen.dart';
 import '../screens/customer/create_pickup_order_screen.dart';
@@ -88,6 +89,14 @@ class AppRouter {
         path: '/register',
         name: 'register',
         builder: (context, state) => const RegisterScreen(),
+      ),
+      GoRoute(
+        path: '/verify-email',
+        name: 'verify-email',
+        builder: (context, state) {
+          final email = state.uri.queryParameters['email'] ?? '';
+          return VerifyEmailScreen(email: email);
+        },
       ),
       GoRoute(
         path: '/forgot-password',
@@ -223,12 +232,6 @@ class AppRouter {
         path: '/create-pickup-order',
         name: 'create-pickup-order',
         builder: (context, state) => const CreatePickupOrderScreen(),
-      ),
-
-      GoRoute(
-        path: '/pickup-orders',
-        name: 'pickup-orders',
-        builder: (context, state) => const PickupOrdersScreen(),
       ),
       
       GoRoute(

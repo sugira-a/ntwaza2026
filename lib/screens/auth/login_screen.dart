@@ -63,6 +63,16 @@ class _LoginScreenState extends State<LoginScreen> {
               behavior: SnackBarBehavior.floating,
             ),
           );
+        } else if (authProvider.error == 'EMAIL_NOT_VERIFIED') {
+          final email = _emailController.text.trim();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please verify your email first.'),
+              backgroundColor: Colors.orange,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          context.go('/verify-email?email=${Uri.encodeComponent(email)}');
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

@@ -94,7 +94,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
 
     final actions = <_QuickAction>[];
 
-    // Time-based suggestion first
+    // Time-based suggestion
     if (h >= 6 && h < 10) {
       actions.add(_QuickAction('Breakfast ideas', Icons.egg_alt_rounded, 'What quick breakfast can I make?'));
     } else if (h >= 11 && h < 14) {
@@ -103,19 +103,16 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
       actions.add(_QuickAction('Dinner ideas', Icons.dinner_dining_rounded, 'What should I cook for dinner?'));
     }
 
-    // Smart Cart always available
-    actions.add(_QuickAction('Smart Cart', Icons.psychology_rounded, '__SMART_CART__'));
+    // Core actions
+    actions.add(_QuickAction('What\'s in stock?', Icons.inventory_2_rounded, 'What products are available right now?'));
+    actions.add(_QuickAction('Health tips', Icons.favorite_rounded, 'Give me a healthy eating tip based on what you sell'));
+    actions.add(_QuickAction('Budget advice', Icons.savings_rounded, 'How can I save money on my groceries this week?'));
 
-    // Cart-aware actions
     if (hasCart) {
-      actions.add(_QuickAction('Analyze cart', Icons.analytics_rounded, '__ANALYZE_CART__'));
-      actions.add(_QuickAction('Meal ideas', Icons.restaurant_menu_rounded, '__MEAL_IDEAS__'));
-    } else {
-      actions.add(_QuickAction('Budget plan', Icons.savings_rounded, 'Help me plan groceries for 20,000 RWF for a week'));
-      actions.add(_QuickAction('What\'s popular?', Icons.trending_up_rounded, 'What are the most popular items right now?'));
+      actions.add(_QuickAction('Check my cart', Icons.shopping_cart_checkout_rounded, 'Is my cart balanced and good value?'));
     }
 
-    actions.add(_QuickAction('Open stores', Icons.storefront_rounded, 'Which stores are open?'));
+    actions.add(_QuickAction('Help with order', Icons.support_agent_rounded, 'I need help with my order'));
 
     return actions;
   }
@@ -153,10 +150,10 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
           .where((m) => m.text.isNotEmpty && m.smartCartResult == null && m.cartAnalysis == null && m.mealIdeas == null)
           .toList()
           .reversed
-          .take(10)
+          .take(6)
           .toList()
           .reversed
-          .map((m) => {'text': m.text, 'isUser': m.isUser})
+          .map((m) => {'text': m.isUser ? m.text : (m.aiReply?.note ?? m.text), 'isUser': m.isUser})
           .toList();
 
       final reply = await _aiService.sendMessage(
@@ -165,7 +162,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
         history: history,
       );
       if (!mounted) return;
-      setState(() => _messages.add(_ChatMessage(text: reply, isUser: false)));
+      setState(() => _messages.add(_ChatMessage(text: reply.note, isUser: false, aiReply: reply)));
     } catch (e) {
       if (!mounted) return;
       final errMsg = e.toString().contains('Failed to fetch') || e.toString().contains('Connection')
@@ -560,13 +557,13 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
 
   PreferredSizeWidget _appBar(bool isDark, Color surface, Color tp, Color ts) {
     return PreferredSize(
-      preferredSize: const Size.fromHeight(62),
+      preferredSize: const Size.fromHeight(58),
       child: Container(
         decoration: BoxDecoration(
           color: surface,
           boxShadow: [BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
-            blurRadius: 8, offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
+            blurRadius: 6, offset: const Offset(0, 1),
           )],
         ),
         child: SafeArea(
@@ -580,26 +577,25 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
                 ),
                 // Avatar
                 Container(
-                  width: 40, height: 40,
+                  width: 36, height: 36,
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(colors: [_brand, _brandLight]),
-                    borderRadius: BorderRadius.circular(13),
-                    boxShadow: [BoxShadow(color: _brand.withOpacity(0.25), blurRadius: 8, offset: const Offset(0, 2))],
+                    borderRadius: BorderRadius.circular(11),
                   ),
-                  child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 20),
+                  child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 18),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Ntwaza AI', style: TextStyle(
-                        color: tp, fontSize: 17, fontWeight: FontWeight.w800, letterSpacing: -0.3,
+                      Text('Ntwaza Assistant', style: TextStyle(
+                        color: tp, fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: -0.3,
                       )),
                       Row(children: [
                         Container(
-                          width: 7, height: 7,
+                          width: 6, height: 6,
                           decoration: BoxDecoration(
                             color: _isSending ? Colors.orange : _brandLight,
                             shape: BoxShape.circle,
@@ -607,44 +603,16 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
                         ),
                         const SizedBox(width: 5),
                         Text(
-                          _isSending ? 'Thinking...' : 'Your shopping advisor',
-                          style: TextStyle(color: ts, fontSize: 11.5, fontWeight: FontWeight.w500),
+                          _isSending ? 'Typing...' : 'Online',
+                          style: TextStyle(color: ts, fontSize: 11, fontWeight: FontWeight.w500),
                         ),
                       ]),
                     ],
                   ),
                 ),
-                // Smart Cart button
-                Container(
-                  margin: const EdgeInsets.only(right: 4),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(colors: [_brand, Color(0xFF2E7D32)]),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: _isSmartCartLoading ? null : _showSmartCartSheet,
-                      borderRadius: BorderRadius.circular(10),
-                      child: const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.psychology_rounded, color: Colors.white, size: 16),
-                            SizedBox(width: 4),
-                            Text('Smart', style: TextStyle(
-                              color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700,
-                            )),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
                 if (_messages.isNotEmpty)
                   IconButton(
-                    icon: Icon(Icons.refresh_rounded, color: ts, size: 22),
+                    icon: Icon(Icons.refresh_rounded, color: ts, size: 20),
                     tooltip: 'New chat',
                     onPressed: () => setState(() { _messages.clear(); _showWelcome = true; }),
                   ),
@@ -660,92 +628,33 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
 
   Widget _buildWelcome(bool isDark, Color surface, Color tp, Color ts, double w) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 28, 20, 16),
+      padding: const EdgeInsets.fromLTRB(20, 40, 20, 16),
       child: Column(
         children: [
-          // Hero
+          // Compact hero
           Container(
-            width: 76, height: 76,
+            width: 64, height: 64,
             decoration: BoxDecoration(
               gradient: const LinearGradient(colors: [_brand, _brandLight], begin: Alignment.topLeft, end: Alignment.bottomRight),
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [BoxShadow(color: _brand.withOpacity(0.25), blurRadius: 24, offset: const Offset(0, 10))],
-            ),
-            child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 38),
-          ),
-          const SizedBox(height: 22),
-          Text('$_greeting $_timeEmoji', style: TextStyle(
-            color: tp, fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: -0.5,
-          )),
-          const SizedBox(height: 6),
-          Text('How can I help you shop today?', style: TextStyle(
-            color: ts, fontSize: 14.5, fontWeight: FontWeight.w400,
-          )),
-          const SizedBox(height: 6),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-            decoration: BoxDecoration(
-              color: _brandLight.withOpacity(isDark ? 0.12 : 0.06),
               borderRadius: BorderRadius.circular(20),
+              boxShadow: [BoxShadow(color: _brand.withOpacity(0.2), blurRadius: 20, offset: const Offset(0, 8))],
             ),
-            child: Text(
-              'Powered by AI \u2022 Free \u2022 Private',
-              style: TextStyle(color: _brandLight, fontSize: 11, fontWeight: FontWeight.w600),
-            ),
-          ),
-          const SizedBox(height: 30),
-
-          // Feature Cards
-          _featureCard(
-            icon: Icons.psychology_rounded,
-            iconColor: _brandLight,
-            title: 'Smart Cart Planner',
-            subtitle: 'Set a budget, get a complete grocery plan with nutrition breakdown',
-            isDark: isDark, surface: surface, tp: tp, ts: ts,
-            onTap: _showSmartCartSheet,
-            badge: 'AI',
-          ),
-          const SizedBox(height: 10),
-          _featureCard(
-            icon: Icons.analytics_rounded,
-            iconColor: Colors.blue,
-            title: 'Cart Analysis',
-            subtitle: 'Get savings tips, nutrition score, and missing staples',
-            isDark: isDark, surface: surface, tp: tp, ts: ts,
-            onTap: () {
-              final cart = context.read<CartProvider>();
-              if (cart.items.isEmpty) {
-                _sendMessage('What products do you recommend?');
-              } else {
-                _analyzeCart();
-              }
-            },
-          ),
-          const SizedBox(height: 10),
-          _featureCard(
-            icon: Icons.restaurant_menu_rounded,
-            iconColor: Colors.orange,
-            title: 'Meal Ideas',
-            subtitle: 'Get recipes and cooking tips from available products',
-            isDark: isDark, surface: surface, tp: tp, ts: ts,
-            onTap: () => _getMealIdeas(),
-          ),
-          const SizedBox(height: 10),
-          _featureCard(
-            icon: Icons.chat_bubble_rounded,
-            iconColor: _brandGold,
-            title: 'Ask Anything',
-            subtitle: 'Products, prices, stores, orders, delivery \u2014 I know it all',
-            isDark: isDark, surface: surface, tp: tp, ts: ts,
-            onTap: () => _focusNode.requestFocus(),
+            child: const Icon(Icons.storefront_rounded, color: Colors.white, size: 32),
           ),
           const SizedBox(height: 20),
-
-          // Quick suggestions
-          Text('Quick Questions', style: TextStyle(
-            color: ts, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.5,
+          Text('Your shopping guide $_timeEmoji', style: TextStyle(
+            color: tp, fontSize: 22, fontWeight: FontWeight.w800, letterSpacing: -0.5,
           )),
-          const SizedBox(height: 10),
+          const SizedBox(height: 4),
+          Text('Smart shopping, health tips & budget\nadvice \u2014 in simple words.', 
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: ts, fontSize: 14, fontWeight: FontWeight.w400, height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 32),
+
+          // Quick action chips — the only interactive element
           Wrap(
             spacing: 8, runSpacing: 8,
             alignment: WrapAlignment.center,
@@ -874,6 +783,10 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
     if (msg.mealIdeas != null && msg.mealIdeas!.isNotEmpty) {
       return _mealIdeasCard(msg.mealIdeas!, isDark, surface, tp, ts, w);
     }
+    // Structured AI reply card
+    if (!msg.isUser && msg.aiReply != null && !msg.isError) {
+      return _buildAiReplyCard(msg, isDark, surface, tp, ts, w);
+    }
 
     final isUser = msg.isUser;
     final time = DateFormat('h:mm a').format(msg.timestamp);
@@ -933,11 +846,12 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
                                 Text('Tap to retry', style: TextStyle(color: Colors.red[300], fontSize: 10, fontWeight: FontWeight.w600)),
                               ]),
                             ),
-                          // Rich text rendering for AI responses
-                          if (!isUser) _richText(msg.text, tp, ts, isDark)
-                          else SelectableText(msg.text, style: const TextStyle(
-                            color: Colors.white, fontSize: 14.5, height: 1.45,
-                          )),
+                          if (isUser)
+                            SelectableText(msg.text, style: const TextStyle(
+                              color: Colors.white, fontSize: 14.5, height: 1.45,
+                            ))
+                          else
+                            _richText(msg.text, tp, ts, isDark),
                         ],
                       ),
                     ),
@@ -946,15 +860,242 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
                     padding: const EdgeInsets.only(top: 3, left: 4, right: 4),
                     child: Text(time, style: TextStyle(color: ts.withOpacity(0.5), fontSize: 10)),
                   ),
-
-                  // Contextual action chips after AI responses
-                  if (!isUser && !msg.isError && msg.text.isNotEmpty) _postMessageChips(msg.text, isDark),
                 ],
               ),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  // ═══════════ STRUCTURED AI REPLY CARD ═══════════
+
+  Widget _buildAiReplyCard(_ChatMessage msg, bool isDark, Color surface, Color tp, Color ts, double w) {
+    final reply = msg.aiReply!;
+    final time = DateFormat('h:mm a').format(msg.timestamp);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          _avatar(small: true),
+          const SizedBox(width: 8),
+          Flexible(child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              GestureDetector(
+                onLongPress: () {
+                  HapticFeedback.lightImpact();
+                  Clipboard.setData(ClipboardData(text: reply.note));
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: const Text('Copied'), backgroundColor: _brand,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    duration: const Duration(seconds: 1),
+                  ));
+                },
+                child: Container(
+                  constraints: BoxConstraints(maxWidth: w * 0.88),
+                  decoration: BoxDecoration(
+                    color: surface,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(18), topRight: Radius.circular(18),
+                      bottomRight: Radius.circular(18), bottomLeft: Radius.circular(4),
+                    ),
+                    border: Border.all(color: _brand.withOpacity(0.1)),
+                    boxShadow: [BoxShadow(
+                      color: Colors.black.withOpacity(isDark ? 0.15 : 0.04),
+                      blurRadius: 6, offset: const Offset(0, 2),
+                    )],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Note/bullets
+                      if (reply.note.isNotEmpty)
+                        Padding(
+                          padding: EdgeInsets.fromLTRB(14, 12, 14, reply.hasItems || reply.hasSwaps ? 4 : 12),
+                          child: _buildBullets(reply.note, tp, ts),
+                        ),
+
+                      // Items list
+                      if (reply.hasItems) ...[
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(14, 8, 14, 4),
+                          child: Row(children: [
+                            const Icon(Icons.shopping_cart_rounded, size: 13, color: _brandLight),
+                            const SizedBox(width: 6),
+                            Text('SUGGESTED ITEMS', style: TextStyle(
+                              color: ts, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 0.6,
+                            )),
+                          ]),
+                        ),
+                        ...reply.items.map((item) => Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 3),
+                          child: Row(children: [
+                            Container(width: 5, height: 5, decoration: const BoxDecoration(color: _brandLight, shape: BoxShape.circle)),
+                            const SizedBox(width: 8),
+                            Expanded(child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('${item.name} \u00D7${item.qty}', style: TextStyle(
+                                  color: tp, fontSize: 13, fontWeight: FontWeight.w600,
+                                )),
+                                if (item.reason.isNotEmpty)
+                                  Text(item.reason, style: TextStyle(color: ts, fontSize: 11)),
+                              ],
+                            )),
+                            Text('${_fmt.format(item.subtotal)} RWF', style: const TextStyle(
+                              color: _brandLight, fontSize: 12, fontWeight: FontWeight.w700,
+                            )),
+                          ]),
+                        )),
+                        // Total bar
+                        if (reply.total != null && reply.total! > 0)
+                          Container(
+                            margin: const EdgeInsets.fromLTRB(14, 8, 14, 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: _brand.withOpacity(isDark ? 0.15 : 0.06),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('Total', style: TextStyle(color: tp, fontSize: 12, fontWeight: FontWeight.w700)),
+                                Text('${_fmt.format(reply.total!)} RWF', style: const TextStyle(
+                                  color: _brand, fontSize: 13, fontWeight: FontWeight.w800,
+                                )),
+                              ],
+                            ),
+                          ),
+                      ],
+
+                      // Swaps
+                      if (reply.hasSwaps) ...[
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(14, 8, 14, 4),
+                          child: Row(children: [
+                            const Icon(Icons.swap_horiz_rounded, size: 13, color: _brandGold),
+                            const SizedBox(width: 6),
+                            Text('SWAP IDEAS', style: TextStyle(
+                              color: ts, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 0.6,
+                            )),
+                          ]),
+                        ),
+                        ...reply.swaps.map((swap) => Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 3),
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: _brandGold.withOpacity(isDark ? 0.08 : 0.04),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(children: [
+                            Flexible(
+                              flex: 2,
+                              child: Text(swap.remove, style: TextStyle(
+                                color: ts, fontSize: 12, decoration: TextDecoration.lineThrough,
+                              )),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 6),
+                              child: Icon(Icons.arrow_forward_rounded, size: 14, color: _brandGold),
+                            ),
+                            Flexible(
+                              flex: 3,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(swap.add, style: TextStyle(
+                                    color: tp, fontSize: 12, fontWeight: FontWeight.w600,
+                                  )),
+                                  if (swap.why.isNotEmpty)
+                                    Text(swap.why, style: TextStyle(color: ts, fontSize: 10.5)),
+                                ],
+                              ),
+                            ),
+                          ]),
+                        )),
+                      ],
+
+                      // Proactive tip (health / budget / seasonal)
+                      if (reply.hasTip) _buildTipBadge(reply.tip!, isDark, tp, ts),
+
+                      if (reply.hasItems || reply.hasSwaps || reply.hasTip)
+                        const SizedBox(height: 8),
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: 3, left: 4),
+                child: Text(time, style: TextStyle(color: ts.withOpacity(0.5), fontSize: 10)),
+              ),
+              // Contextual action chips
+              if (reply.note.isNotEmpty) _postMessageChips(reply.note, isDark),
+            ],
+          )),
+        ],
+      ),
+    );
+  }
+
+  // ── Bullet point renderer ──
+
+  Widget _buildBullets(String text, Color tp, Color ts) {
+    final lines = text.split('\n').where((l) => l.trim().isNotEmpty).toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: lines.map((line) {
+        final clean = line.replaceAll(RegExp(r'^[•\-\*]\s*'), '').trim();
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 3),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Container(width: 4, height: 4, decoration: BoxDecoration(
+                  color: _brand.withOpacity(0.5), shape: BoxShape.circle,
+                )),
+              ),
+              const SizedBox(width: 8),
+              Expanded(child: Text(clean, style: TextStyle(color: tp, fontSize: 13.5, height: 1.4))),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  // ── Proactive tip badge (health / budget / seasonal) ──
+
+  Widget _buildTipBadge(AiReplyTip tip, bool isDark, Color tp, Color ts) {
+    final isHealth = tip.type == 'health';
+    final isBudget = tip.type == 'budget';
+    final color = isBudget ? const Color(0xFF1565C0) : isHealth ? const Color(0xFFE91E63) : _brandLight;
+    final icon = isBudget ? Icons.savings_rounded : isHealth ? Icons.favorite_rounded : Icons.eco_rounded;
+    final label = isBudget ? 'Budget Tip' : isHealth ? 'Health Tip' : 'Seasonal Tip';
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: color.withOpacity(isDark ? 0.10 : 0.05),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withOpacity(0.15)),
+      ),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Icon(icon, size: 15, color: color),
+        const SizedBox(width: 8),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(label, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 0.4)),
+          const SizedBox(height: 2),
+          Text(tip.text, style: TextStyle(color: tp, fontSize: 12.5, height: 1.35)),
+        ])),
+      ]),
     );
   }
 
@@ -1031,17 +1172,15 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
   // ─── Post-message contextual chips ───
 
   Widget _postMessageChips(String text, bool isDark) {
+    // Keep contextual chips minimal
     final lower = text.toLowerCase();
     final chips = <_QuickAction>[];
 
-    if (lower.contains('budget') || lower.contains('grocery') || lower.contains('plan')) {
-      chips.add(_QuickAction('Plan it', Icons.psychology_rounded, '__SMART_CART__'));
+    if (lower.contains('order') || lower.contains('delivery') || lower.contains('track')) {
+      chips.add(_QuickAction('Contact support', Icons.support_agent_rounded, 'How do I contact support about my order?'));
     }
     if (lower.contains('cart') || lower.contains('added')) {
       chips.add(_QuickAction('View cart', Icons.shopping_cart_rounded, 'What\'s in my cart?'));
-    }
-    if (lower.contains('cook') || lower.contains('recipe') || lower.contains('meal')) {
-      chips.add(_QuickAction('More meals', Icons.restaurant_rounded, '__MEAL_IDEAS__'));
     }
 
     if (chips.isEmpty) return const SizedBox.shrink();
@@ -1502,7 +1641,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
               textCapitalization: TextCapitalization.sentences,
               onSubmitted: (_) => _sendMessage(),
               decoration: InputDecoration(
-                hintText: 'Ask about products, prices, stores...',
+                hintText: 'What should I buy today?',
                 hintStyle: TextStyle(color: ts.withOpacity(0.5), fontSize: 14),
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
@@ -1659,6 +1798,7 @@ class _ChatMessage {
   final bool isUser;
   final bool isError;
   final DateTime timestamp;
+  final AiReply? aiReply;
   final SmartCartResult? smartCartResult;
   final CartAnalysis? cartAnalysis;
   final List<MealIdea>? mealIdeas;
@@ -1667,6 +1807,7 @@ class _ChatMessage {
     required this.text,
     required this.isUser,
     this.isError = false,
+    this.aiReply,
     this.smartCartResult,
     this.cartAnalysis,
     this.mealIdeas,

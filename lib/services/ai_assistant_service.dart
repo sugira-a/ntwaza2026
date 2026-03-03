@@ -4,6 +4,99 @@ import '../providers/vendor_provider.dart';
 
 // ═══════════ Models ═══════════
 
+/// Structured AI reply — backend-enriched with real prices
+class AiReply {
+  final String note;
+  final List<AiReplyItem> items;
+  final List<AiReplySwap> swaps;
+  final AiReplyTip? tip;
+  final double? total;
+
+  AiReply({required this.note, this.items = const [], this.swaps = const [], this.tip, this.total});
+
+  factory AiReply.fromJson(Map<String, dynamic> json) {
+    final tipData = json['tip'];
+    return AiReply(
+      note: json['note'] as String? ?? '',
+      items: (json['items'] as List?)
+              ?.map((e) => AiReplyItem.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+      swaps: (json['swaps'] as List?)
+              ?.map((e) => AiReplySwap.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+      tip: tipData is Map<String, dynamic> ? AiReplyTip.fromJson(tipData) : null,
+      total: (json['total'] as num?)?.toDouble(),
+    );
+  }
+
+  bool get hasItems => items.isNotEmpty;
+  bool get hasSwaps => swaps.isNotEmpty;
+  bool get hasTip => tip != null && tip!.text.isNotEmpty;
+}
+
+class AiReplyTip {
+  final String type; // health, budget, seasonal
+  final String text;
+
+  AiReplyTip({required this.type, required this.text});
+
+  factory AiReplyTip.fromJson(Map<String, dynamic> json) {
+    return AiReplyTip(
+      type: json['type'] as String? ?? 'health',
+      text: json['text'] as String? ?? '',
+    );
+  }
+}
+
+class AiReplyItem {
+  final String name;
+  final int qty;
+  final double price;
+  final double subtotal;
+  final String reason;
+  final String? category;
+
+  AiReplyItem({
+    required this.name,
+    required this.qty,
+    required this.price,
+    required this.subtotal,
+    this.reason = '',
+    this.category,
+  });
+
+  factory AiReplyItem.fromJson(Map<String, dynamic> json) {
+    final price = (json['price'] as num?)?.toDouble() ?? 0;
+    final qty = json['qty'] as int? ?? 1;
+    return AiReplyItem(
+      name: json['name'] as String? ?? '',
+      qty: qty,
+      price: price,
+      subtotal: (json['subtotal'] as num?)?.toDouble() ?? price * qty,
+      reason: json['reason'] as String? ?? '',
+      category: json['category'] as String?,
+    );
+  }
+}
+
+class AiReplySwap {
+  final String remove;
+  final String add;
+  final String why;
+
+  AiReplySwap({required this.remove, required this.add, this.why = ''});
+
+  factory AiReplySwap.fromJson(Map<String, dynamic> json) {
+    return AiReplySwap(
+      remove: json['remove'] as String? ?? '',
+      add: json['add'] as String? ?? '',
+      why: json['why'] as String? ?? '',
+    );
+  }
+}
+
 /// Smart Cart result from the backend
 class SmartCartResult {
   final bool success;
@@ -234,8 +327,8 @@ class AiAssistantService {
     return ctx;
   }
 
-  /// General chat message
-  Future<String> sendMessage({
+  /// General chat message — returns structured AI reply
+  Future<AiReply> sendMessage({
     required String message,
     Map<String, dynamic>? context,
     List<Map<String, dynamic>>? history,
@@ -247,7 +340,12 @@ class AiAssistantService {
     });
 
     if (response is Map<String, dynamic> && response['success'] == true) {
-      return (response['reply'] ?? '').toString();
+      final reply = response['reply'];
+      if (reply is Map<String, dynamic>) {
+        return AiReply.fromJson(reply);
+      }
+      // Fallback: old-style string reply
+      return AiReply(note: reply?.toString() ?? '');
     }
 
     final error = response is Map<String, dynamic>
