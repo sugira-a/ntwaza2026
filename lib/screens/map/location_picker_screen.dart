@@ -10,6 +10,7 @@ import '../../providers/address_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../utils/location_validator.dart';
 import '../../services/api/api_service.dart';
+import '../../services/location_service.dart';
 import 'dart:async';
 import 'package:flutter/gestures.dart';
 import 'dart:convert';
@@ -118,8 +119,26 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
           _selectedAddress = widget.initialAddress!.fullAddress;
         }
       } else {
-        // Try to get current location with timeout
-        await _getCurrentLocationWithTimeout();
+        // PERFORMANCE FIX: Show map immediately at cached/default location
+        // then resolve GPS in background
+        final locationService = LocationService();
+        if (locationService.hasLocation) {
+          // Use cached GPS position immediately
+          _selectedLocation = LatLng(
+            locationService.currentPosition!.latitude,
+            locationService.currentPosition!.longitude,
+          );
+          _validateSelectedLocation();
+          setState(() => _isLoadingLocation = false);
+          _getAddressFromLatLng(_selectedLocation!, showError: false);
+        } else {
+          // No cached position — show Kigali center immediately, resolve GPS in bg
+          _selectedLocation = _kigaliCenter;
+          _selectedAddress = 'Getting your location...';
+          setState(() => _isLoadingLocation = false);
+          // Resolve GPS in background and animate to it
+          _resolveGpsInBackground();
+        }
       }
     } catch (e) {
       // Fall back to Kigali center
@@ -127,97 +146,64 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     }
   }
 
-  Future<void> _getCurrentLocationWithTimeout() async {
+  /// Resolve GPS position in background and animate map to it when ready
+  Future<void> _resolveGpsInBackground() async {
     try {
-      // Check if location services are enabled first
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        if (mounted) {
-          _showLocationServicesDisabledDialog();
-        }
-        _setDefaultLocation();
+        if (mounted) _showLocationServicesDisabledDialog();
         return;
       }
 
-      // Check permission
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
       }
-
-      if (permission == LocationPermission.deniedForever) {
-        _showPermissionDeniedDialog();
-        _setDefaultLocation();
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
         return;
       }
 
-      if (permission == LocationPermission.denied) {
-        _setDefaultLocation();
-        return;
-      }
-
-      // Get location with improved timeout and retry logic
+      // Single attempt with reasonable timeout
       Position? position;
-      int retries = 0;
-      const maxRetries = 3;
-      
-      while (retries < maxRetries) {
+      try {
+        position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+          forceAndroidLocationManager: false,
+          timeLimit: const Duration(seconds: 6),
+        );
+      } catch (e) {
+        // Fallback to low accuracy
         try {
           position = await Geolocator.getCurrentPosition(
-            desiredAccuracy: LocationAccuracy.best,
-            forceAndroidLocationManager: false,
-            timeLimit: const Duration(seconds: 12),
-          ).timeout(
-            const Duration(seconds: 15),
-            onTimeout: () {
-              throw TimeoutException('Location request timeout');
-            },
+            desiredAccuracy: LocationAccuracy.low,
+            forceAndroidLocationManager: true,
+            timeLimit: const Duration(seconds: 4),
           );
-          break; // Success, exit retry loop
-        } catch (e) {
-          retries++;
-          if (retries >= maxRetries) {
-            throw e;
-          }
-          // Wait before retry
-          await Future.delayed(Duration(seconds: retries));
+        } catch (_) {
+          position = await Geolocator.getLastKnownPosition();
         }
       }
 
-      if (position == null) {
-        _setDefaultLocation();
-        return;
-      }
+      if (position != null && mounted) {
+        final location = LatLng(position.latitude, position.longitude);
+        setState(() {
+          _selectedLocation = location;
+        });
+        _validateSelectedLocation();
 
-      _selectedLocation = LatLng(position.latitude, position.longitude);
-      _validateSelectedLocation();
-      
-      // Check if location is outside Kigali
-      if (_isOutsideServiceArea) {
-        if (mounted) {
-          _showOutsideServiceAreaDialog();
+        if (_mapController != null) {
+          try {
+            await _mapController!.animateCamera(
+              CameraUpdate.newLatLngZoom(location, 15),
+            );
+          } catch (_) {}
         }
+
+        _getAddressFromLatLng(location, showError: false);
       }
-      
-      setState(() => _isLoadingLocation = false);
-      
-      // Try to get address, but don't block if it fails
-      _getAddressFromLatLng(_selectedLocation!, showError: false);
     } catch (e) {
-      _setDefaultLocation();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Could not get your location. Using Kigali center instead.'),
-            backgroundColor: Colors.orange,
-            action: SnackBarAction(
-              label: 'Retry',
-              textColor: Colors.white,
-              onPressed: _getCurrentLocation,
-            ),
-          ),
-        );
-      }
+      print('⚠️ Background GPS resolution failed: $e');
     }
   }
 
@@ -938,7 +924,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
 
   Future<void> _getCurrentLocation() async {
     try {
-      setState(() => _isLoadingLocation = true);
+      setState(() => _isCentering = true);
 
       // Check if location services are enabled first
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -946,7 +932,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         if (mounted) {
           _showLocationServicesDisabledDialog();
         }
-        setState(() => _isLoadingLocation = false);
+        setState(() => _isCentering = false);
         return;
       }
 
@@ -959,134 +945,69 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         if (mounted) {
           _showPermissionDeniedDialog();
         }
-        setState(() => _isLoadingLocation = false);
+        setState(() => _isCentering = false);
         return;
       }
 
       if (permission == LocationPermission.denied) {
-        setState(() => _isLoadingLocation = false);
+        setState(() => _isCentering = false);
         return;
       }
 
-      // Get position with improved accuracy settings
+      // Single GPS attempt with fallback chain (no retries)
       Position? position;
-      int retries = 0;
-      
-      // Platform-appropriate settings
-      final maxRetries = kIsWeb ? 2 : 3;
-      final minAccuracyMeters = kIsWeb ? 500.0 : 50.0;
-      final desiredAccuracy = kIsWeb ? LocationAccuracy.medium : LocationAccuracy.best;
-      final timeoutDuration = kIsWeb ? 10 : 15;
-
-      while (retries < maxRetries) {
+      try {
+        position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+          forceAndroidLocationManager: false,
+          timeLimit: const Duration(seconds: 6),
+        );
+      } catch (e) {
         try {
           position = await Geolocator.getCurrentPosition(
-            desiredAccuracy: desiredAccuracy,
-            forceAndroidLocationManager: false,
-            timeLimit: Duration(seconds: timeoutDuration),
-          ).timeout(
-            Duration(seconds: timeoutDuration + 5),
-            onTimeout: () {
-              throw TimeoutException('Location request timeout');
-            },
+            desiredAccuracy: LocationAccuracy.low,
+            forceAndroidLocationManager: true,
+            timeLimit: const Duration(seconds: 4),
           );
-
-          final accuracy = position.accuracy;
-
-          // On web, accept any accuracy; on mobile, retry if poor
-          if (!kIsWeb && accuracy > minAccuracyMeters && retries < maxRetries - 1) {
-            retries++;
-            await Future.delayed(Duration(seconds: retries));
-            continue;
-          }
-
-          break; // Got acceptable accuracy or last retry
-        } on TimeoutException {
-          retries++;
-          if (retries >= maxRetries) {
-            throw TimeoutException('Location request timeout after $maxRetries retries');
-          }
-          await Future.delayed(Duration(seconds: retries));
+        } catch (_) {
+          position = await Geolocator.getLastKnownPosition();
         }
       }
 
-      if (!mounted || position == null) return;
-
-      final location = LatLng(position.latitude, position.longitude);
-      
-      // Verify location freshness
-      Duration locationAge = Duration.zero;
-      if (position.timestamp != null) {
-        locationAge = DateTime.now().difference(position.timestamp!);
-      }
-      
-      // Check for impossible location jumps
-      final isLocationSuspicious = _selectedLocation != null && 
-        _calculateDistance(_selectedLocation!.latitude, _selectedLocation!.longitude, 
-                          location.latitude, location.longitude) > 5000;
-      
-      // Show accuracy warning on mobile only
-      if (!kIsWeb && (locationAge.inSeconds > 15 || position.accuracy > 100)) {
+      if (!mounted || position == null) {
         if (mounted) {
+          setState(() => _isCentering = false);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('⚠️ Location accuracy: ${position.accuracy.toStringAsFixed(0)}m. Drag map to adjust if needed.'),
+              content: const Text('Could not get location. Try again or select manually.'),
               backgroundColor: Colors.orange,
-              duration: const Duration(seconds: 3),
+              action: SnackBarAction(
+                label: 'Retry',
+                textColor: Colors.white,
+                onPressed: _getCurrentLocation,
+              ),
             ),
           );
         }
-      }
-      
-      if (isLocationSuspicious) {
-        if (mounted) {
-          final shouldUse = await showDialog<bool>(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Large Location Change'),
-              content: const Text('Your location seems to have moved significantly. Use this new location?'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: const Text('Use Location'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2E7D32),
-                  ),
-                ),
-              ],
-            ),
-          );
-          
-          if (shouldUse != true) {
-            setState(() => _isLoadingLocation = false);
-            return;
-          }
-        }
+        return;
       }
 
-      // Check if controller is still valid
+      final location = LatLng(position.latitude, position.longitude);
+
+      // Animate map to new location
       if (_mapController != null && mounted) {
         try {
-          await Future.delayed(const Duration(milliseconds: 200));
-          if (mounted && _mapController != null) {
-            await _mapController!.animateCamera(
-              CameraUpdate.newLatLngZoom(location, 16),
-            );
-          }
-        } catch (e) {
-          // Silently ignore - controller may be disposed
-        }
+          await _mapController!.animateCamera(
+            CameraUpdate.newLatLngZoom(location, 16),
+          );
+        } catch (_) {}
       }
 
       if (!mounted) return;
 
       setState(() {
         _selectedLocation = location;
-        _isLoadingLocation = false;
+        _isCentering = false;
       });
       
       _validateSelectedLocation();
@@ -1097,11 +1018,11 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       }
       
       if (mounted) {
-        await _getAddressFromLatLng(location);
+        _getAddressFromLatLng(location, showError: false);
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _isLoadingLocation = false);
+        setState(() => _isCentering = false);
         
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

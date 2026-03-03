@@ -193,7 +193,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
 
     final actions = <_QuickAction>[];
 
-    // Smart Cart — always first, it's the flagship feature
+    // Smart Cart — always first, flagship feature
     actions.add(_QuickAction('\uD83D\uDED2 Plan my groceries', Icons.psychology_rounded, '__SMART_CART__'));
 
     // Time-based meal suggestion
@@ -205,8 +205,8 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
       actions.add(_QuickAction('Dinner ideas', Icons.dinner_dining_rounded, 'What should I cook for a healthy dinner? Consider nutrition balance.'));
     }
 
-    // Budget — always available
-    actions.add(_QuickAction('Budget advice', Icons.savings_rounded, 'How can I save money on groceries this week? Give me specific budget tips based on what\'s available.'));
+    // Budget
+    actions.add(_QuickAction('Budget plan', Icons.savings_rounded, 'I\'m on a tight budget. Help me plan affordable groceries for the week with good nutrition.'));
 
     // Cart actions
     if (hasCart) {
@@ -214,14 +214,21 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
       actions.add(_QuickAction('Complete my cart', Icons.add_shopping_cart_rounded, 'What am I missing in my cart? Suggest items for balanced nutrition and complete meals.'));
     }
 
-    // Health-focused actions
+    // Health
     actions.add(_QuickAction('Healthy shopping', Icons.health_and_safety_rounded, 'Build me a healthy shopping list with high protein, vegetables, and whole grains. Focus on nutrition.'));
+
+    // Family mode
+    actions.add(_QuickAction('Family groceries', Icons.family_restroom_rounded, 'Help me plan groceries for my family of 4 for a month. Include variety and balanced nutrition.'));
+
+    // Quick order
+    actions.add(_QuickAction('Quick basket', Icons.flash_on_rounded, 'Just give me a balanced grocery basket. Add the essentials to my cart now.'));
+
+    // Meal prep
     actions.add(_QuickAction('Meal prep guide', Icons.restaurant_menu_rounded, 'Help me plan affordable meal prep for the week. Include nutrition tips and budget breakdown.'));
 
     // Core actions
     actions.add(_QuickAction('What\'s available?', Icons.inventory_2_rounded, 'What products are available right now? Show me the best deals by category.'));
-    actions.add(_QuickAction('Health tips', Icons.favorite_rounded, 'Give me practical healthy eating tips for balanced nutrition based on local food. Include protein and vitamin sources.'));
-    actions.add(_QuickAction('Help with order', Icons.support_agent_rounded, 'I need help with my order'));
+    actions.add(_QuickAction('Help & support', Icons.support_agent_rounded, 'I need help with my order or delivery'));
 
     return actions;
   }
@@ -432,7 +439,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
                         const SizedBox(height: 8),
                         Wrap(
                           spacing: 6, runSpacing: 6,
-                          children: ['High protein', 'Vegetarian', 'No beef', 'Low carb', 'Family meals', 'Low budget', 'Balanced nutrition', 'Weight loss'].map((p) =>
+                          children: ['High protein', 'Vegetarian', 'No beef', 'Low carb', 'Family meals', 'Low budget', 'Balanced nutrition', 'Weight loss', 'Student budget', 'Meal prep', 'Halal'].map((p) =>
                             _prefChip(p, prefsCtrl, isDark),
                           ).toList(),
                         ),
@@ -860,11 +867,11 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Ntwaza Assistant', style: TextStyle(
+                      Text('NtWaza AI', style: TextStyle(
                         color: tp, fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: -0.3,
                       )),
                       Text(
-                        _isSending ? 'Typing...' : 'Online',
+                        _isSending ? 'Thinking...' : 'Shop smart. Eat well. Save more.',
                         style: TextStyle(color: _isSending ? Colors.orange : ts, fontSize: 11.5, fontWeight: FontWeight.w500),
                       ),
                     ],
@@ -903,7 +910,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
             color: tp, fontSize: 22, fontWeight: FontWeight.w600,
           ))),
           const SizedBox(height: 4),
-          Center(child: Text('Your smart shopping assistant', style: TextStyle(color: ts, fontSize: 13))),
+          Center(child: Text('Shop smart. Eat well. Save more.', style: TextStyle(color: ts, fontSize: 13))),
 
           const SizedBox(height: 24),
 
@@ -916,8 +923,8 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
             )),
             const SizedBox(width: 10),
             Expanded(child: _welcomeButton(
-              label: 'Budget Tips',
-              onTap: () => _sendMessage('How can I save money on my groceries? Give me specific budget tips based on available products.'),
+              label: 'Quick Basket',
+              onTap: () => _sendMessage('Just give me a balanced grocery basket with essentials. Add items to my cart.'),
               isDark: isDark, tp: tp,
             )),
           ]),
@@ -936,42 +943,44 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
 
           const SizedBox(height: 20),
 
-          // ── Health Section ──
+          // ── Health & Nutrition Section ──
           _sectionHeader('Health & Nutrition', Icons.favorite_rounded, ts),
           const SizedBox(height: 8),
           Wrap(
             spacing: 6, runSpacing: 6,
             children: [
               _actionChip(_QuickAction('Healthy shopping list', Icons.health_and_safety_rounded, 'Build me a healthy shopping list with high protein, vegetables, and whole grains. Include nutrition info.'), isDark),
-              _actionChip(_QuickAction('Nutrition tips', Icons.monitor_heart_outlined, 'Give me practical nutrition tips for balanced meals using locally available food'), isDark),
+              _actionChip(_QuickAction('Weight loss plan', Icons.monitor_weight_rounded, 'I want to lose weight. Help me plan healthy groceries that are low calorie but filling.'), isDark),
               _actionChip(_QuickAction('High protein meals', Icons.fitness_center_rounded, 'Suggest affordable high protein meals I can make from available products'), isDark),
+              _actionChip(_QuickAction('Energy boost', Icons.bolt_rounded, 'I feel tired often. What foods give me more energy? Suggest iron and vitamin rich items.'), isDark),
             ],
           ),
 
           const SizedBox(height: 18),
 
-          // ── Budget Section ──
-          _sectionHeader('Budget & Savings', Icons.savings_rounded, ts),
+          // ── Budget & Family Section ──
+          _sectionHeader('Budget & Family', Icons.savings_rounded, ts),
           const SizedBox(height: 8),
           Wrap(
             spacing: 6, runSpacing: 6,
             children: [
-              _actionChip(_QuickAction('Weekly budget plan', Icons.calendar_month_rounded, '__SMART_CART__'), isDark),
-              _actionChip(_QuickAction('Best deals now', Icons.local_offer_rounded, 'What are the best value products available right now? Show cheapest items by category.'), isDark),
-              _actionChip(_QuickAction('Save on groceries', Icons.trending_down_rounded, 'How can I reduce my grocery spending? Give practical tips with specific products.'), isDark),
+              _actionChip(_QuickAction('Student budget', Icons.school_rounded, 'I\'m a student with 10,000 RWF. Plan my groceries for a week with good nutrition.'), isDark),
+              _actionChip(_QuickAction('Family of 4', Icons.family_restroom_rounded, 'Help me plan monthly groceries for a family of 4. Include variety and balanced nutrition.'), isDark),
+              _actionChip(_QuickAction('Monthly stock', Icons.inventory_rounded, 'Build a monthly grocery stock list. Split into non-perishables and weekly perishables.'), isDark),
+              _actionChip(_QuickAction('Best deals', Icons.local_offer_rounded, 'What are the best value products available right now? Show cheapest items by category.'), isDark),
             ],
           ),
 
           const SizedBox(height: 18),
 
-          // ── Shopping Section ──
+          // ── Shopping & Meals Section ──
           _sectionHeader('Shopping & Meals', Icons.shopping_basket_rounded, ts),
           const SizedBox(height: 8),
           Wrap(
             spacing: 6, runSpacing: 6,
             children: _contextualActions
                 .where((a) => a.action != '__SMART_CART__' && a.action != '__ANALYZE_CART__' 
-                    && !a.label.contains('Healthy') && !a.label.contains('Budget') && !a.label.contains('Meal prep'))
+                    && !a.label.contains('Healthy') && !a.label.contains('Budget') && !a.label.contains('Family'))
                 .take(5)
                 .map((a) => _actionChip(a, isDark))
                 .toList(),
@@ -1368,21 +1377,24 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
     final lower = text.toLowerCase();
     final chips = <_QuickAction>[];
 
-    if (lower.contains('budget') || lower.contains('save') || lower.contains('spend') || lower.contains('rwf') || lower.contains('money')) {
+    if (lower.contains('budget') || lower.contains('save') || lower.contains('spend') || lower.contains('rwf') || lower.contains('money') || lower.contains('cheap')) {
       chips.add(_QuickAction('Plan budget', Icons.psychology_rounded, '__SMART_CART__'));
       chips.add(_QuickAction('Best deals', Icons.local_offer_rounded, 'Show me the cheapest products by category'));
     }
-    if (lower.contains('cart') || lower.contains('added') || lower.contains('item')) {
+    if (lower.contains('cart') || lower.contains('added') || lower.contains('item') || lower.contains('basket')) {
       chips.add(_QuickAction('View cart', Icons.shopping_cart_rounded, 'What\'s in my cart right now?'));
     }
-    if (lower.contains('health') || lower.contains('nutrition') || lower.contains('protein') || lower.contains('vitamin') || lower.contains('calorie') || lower.contains('balanced')) {
-      chips.add(_QuickAction('More health tips', Icons.favorite_rounded, 'Give me more practical health and nutrition tips for my diet'));
+    if (lower.contains('health') || lower.contains('nutrition') || lower.contains('protein') || lower.contains('vitamin') || lower.contains('calorie') || lower.contains('balanced') || lower.contains('weight') || lower.contains('diet')) {
+      chips.add(_QuickAction('Health tips', Icons.favorite_rounded, 'Give me more practical health and nutrition tips for my diet'));
       chips.add(_QuickAction('Healthy list', Icons.health_and_safety_rounded, 'Build me a healthy shopping list focused on balanced nutrition'));
     }
-    if (lower.contains('meal') || lower.contains('cook') || lower.contains('recipe') || lower.contains('breakfast') || lower.contains('lunch') || lower.contains('dinner')) {
+    if (lower.contains('meal') || lower.contains('cook') || lower.contains('recipe') || lower.contains('breakfast') || lower.contains('lunch') || lower.contains('dinner') || lower.contains('prep')) {
       chips.add(_QuickAction('Meal ideas', Icons.restaurant_rounded, '__MEAL_IDEAS__'));
     }
-    if (lower.contains('order') || lower.contains('delivery') || lower.contains('track')) {
+    if (lower.contains('family') || lower.contains('kids') || lower.contains('people') || lower.contains('household')) {
+      chips.add(_QuickAction('Family plan', Icons.family_restroom_rounded, 'Help me plan monthly groceries for my family with variety and balanced nutrition.'));
+    }
+    if (lower.contains('order') || lower.contains('delivery') || lower.contains('track') || lower.contains('refund') || lower.contains('cancel')) {
       chips.add(_QuickAction('Contact support', Icons.support_agent_rounded, 'How do I contact support about my order?'));
     }
     if (lower.contains('product') || lower.contains('available') || lower.contains('store') || lower.contains('vendor')) {
@@ -1815,7 +1827,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
               textCapitalization: TextCapitalization.sentences,
               onSubmitted: (_) => _sendMessage(),
               decoration: InputDecoration(
-                hintText: 'Ask anything about shopping...',
+                hintText: 'Ask about health, budget, meals...',
                 hintStyle: TextStyle(color: ts.withOpacity(0.5), fontSize: 14),
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),

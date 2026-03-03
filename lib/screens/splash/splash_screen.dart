@@ -62,12 +62,8 @@ class _SplashScreenState extends State<SplashScreen>
   Future<void> _runStartupFlow() async {
     if (!mounted) return;
 
-    // Wrap entire startup in a timeout so splash never hangs
     try {
-      await Future.any([
-        _doStartupFlow(),
-        Future.delayed(const Duration(seconds: 8)),
-      ]);
+      await _doStartupFlow();
     } catch (e) {
       print('⚠️ Startup flow error: $e');
     }
@@ -79,23 +75,32 @@ class _SplashScreenState extends State<SplashScreen>
   Future<void> _doStartupFlow() async {
     if (!mounted) return;
 
-    // Check if permissions already granted (returning user)
     final prefs = await SharedPreferences.getInstance();
     final hasSeenPermissions = prefs.getBool('has_seen_permissions') ?? false;
     final locationPermission = await Geolocator.checkPermission();
     final hasLocation = locationPermission == LocationPermission.whileInUse ||
         locationPermission == LocationPermission.always;
 
+    // Wait for addressProvider to finish loading from SharedPreferences
+    final addressProvider = Provider.of<AddressProvider>(context, listen: false);
+    // Give it a moment to load (it was kicked off in main.dart)
+    for (int i = 0; i < 10; i++) {
+      if (!addressProvider.isLoading || addressProvider.hasAddresses) break;
+      await Future.delayed(const Duration(milliseconds: 100));
+    }
+
     if (hasLocation && hasSeenPermissions) {
-      // Returning user — addressProvider already initialized in main.dart
-      final addressProvider = Provider.of<AddressProvider>(context, listen: false);
-      
+      // Returning user with permission — capture location if no addresses
       if (!addressProvider.hasAddresses) {
         setState(() {
           _isRequestingPermissions = true;
           _statusText = 'Finding nearby vendors...';
         });
-        await _captureCurrentLocation();
+        // Timeout only the GPS + geocoding, not user interaction
+        await _captureCurrentLocation().timeout(
+          const Duration(seconds: 10),
+          onTimeout: () => print('⚠️ Location capture timed out'),
+        );
       }
       return;
     }
@@ -110,7 +115,7 @@ class _SplashScreenState extends State<SplashScreen>
     _requestNotifications();
     if (!mounted) return;
 
-    // 2. Request location permission (native popup)
+    // 2. Request location permission (native popup — NO timeout on this)
     setState(() => _statusText = 'Getting your location...');
     final locationGranted = await _requestLocation();
     if (!mounted) return;
@@ -118,7 +123,7 @@ class _SplashScreenState extends State<SplashScreen>
     if (!locationGranted) {
       // Try once more
       setState(() => _statusText = 'Location is needed for delivery');
-      await Future.delayed(const Duration(seconds: 1));
+      await Future.delayed(const Duration(milliseconds: 800));
       if (!mounted) return;
 
       final retryGranted = await _requestLocation();
@@ -126,13 +131,49 @@ class _SplashScreenState extends State<SplashScreen>
 
       if (!retryGranted) {
         await prefs.setBool('has_seen_permissions', true);
+        // Even without location permission, create a default Kigali address
+        // so the home screen has something to work with
+        if (!addressProvider.hasAddresses) {
+          try {
+            final kigali = DeliveryAddress(
+              id: DateTime.now().millisecondsSinceEpoch.toString(),
+              fullAddress: 'Kigali, Rwanda',
+              latitude: -1.9441,
+              longitude: 30.0619,
+              label: 'Kigali, Rwanda',
+              isDefault: true,
+              createdAt: DateTime.now(),
+            );
+            await addressProvider.addAddress(kigali);
+            addressProvider.selectAddress(kigali);
+          } catch (_) {}
+        }
         return;
       }
     }
 
-    // 3. Get and save current location
+    // 3. Get and save current location (timeout only this part)
     setState(() => _statusText = 'Finding nearby vendors...');
-    await _captureCurrentLocation();
+    await _captureCurrentLocation().timeout(
+      const Duration(seconds: 10),
+      onTimeout: () {
+        print('⚠️ Location capture timed out, using default');
+        // Create default Kigali address if nothing was saved
+        if (!addressProvider.hasAddresses) {
+          final kigali = DeliveryAddress(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            fullAddress: 'Kigali, Rwanda',
+            latitude: -1.9441,
+            longitude: 30.0619,
+            label: 'Kigali, Rwanda',
+            isDefault: true,
+            createdAt: DateTime.now(),
+          );
+          addressProvider.addAddress(kigali);
+          addressProvider.selectAddress(kigali);
+        }
+      },
+    );
     if (!mounted) return;
 
     // 4. Mark permissions seen

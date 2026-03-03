@@ -108,8 +108,8 @@ void main() async {
 
   // Initialize AddressProvider (lightweight — reads SharedPreferences)
   final addressProvider = AddressProvider();
-  // Don't block app launch — let it load while splash screen shows
-  addressProvider.initialize();
+  // Await so addresses are loaded before splash checks hasAddresses
+  await addressProvider.initialize();
 
   // Initialize API services
   final apiService = ApiService();
