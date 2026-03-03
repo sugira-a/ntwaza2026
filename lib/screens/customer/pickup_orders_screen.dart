@@ -73,7 +73,13 @@ class _PickupOrdersScreenState extends State<PickupOrdersScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            context.pop();
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            } else if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/');
+            }
           },
         ),
       ),

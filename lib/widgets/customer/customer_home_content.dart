@@ -85,6 +85,8 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
       }
       
       if (defaultAddress != null) {
+        // Ensure it's selected for this session
+        addressProvider.selectAddress(defaultAddress);
         setState(() {
           _currentAddress = defaultAddress;
           _isInitializing = false;
@@ -117,7 +119,8 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
       }
       
       final locationService = LocationService();
-      final position = await locationService.getCurrentLocation(forceRefresh: false);
+      // Use forceRefresh: true — if user granted permission, always try real GPS
+      final position = await locationService.getCurrentLocation(forceRefresh: true);
       if (position == null) return null;
 
       String addressText = 'Kigali, Rwanda';
@@ -153,6 +156,7 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
       );
 
       await addressProvider.addAddress(address);
+      addressProvider.selectAddress(address);
       return address;
     } catch (e) {
       print('Error auto-detecting location: $e');
@@ -1216,7 +1220,7 @@ void _showAddressManagementDialog(BuildContext context, bool isDarkMode, Color c
           _showLoginPrompt(context, 'Please login to create a pickup order');
           return;
         }
-        context.go('/create-pickup-order');
+        context.push('/create-pickup-order');
       },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -1261,7 +1265,7 @@ void _showAddressManagementDialog(BuildContext context, bool isDarkMode, Color c
           _showLoginPrompt(context, 'Please login to create a pickup order');
           return;
         }
-        context.go('/create-pickup-order');
+        context.push('/create-pickup-order');
       },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

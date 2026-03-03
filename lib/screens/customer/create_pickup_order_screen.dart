@@ -585,7 +585,8 @@ class _CreatePickupOrderScreenState extends State<CreatePickupOrderScreen> {
         if (!mounted) return;
         _showSnack('Pickup order created successfully');
         if (!mounted) return;
-        context.go('/pickup-orders');
+        // Navigate to My Orders (Pickup tab) — use push so back works
+        context.push('/my-orders');
       });
     } else {
       if (!mounted) return;
@@ -657,7 +658,13 @@ class _CreatePickupOrderScreenState extends State<CreatePickupOrderScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () {
-            context.pop();
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            } else if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/');
+            }
           },
         ),
         title: const Text(

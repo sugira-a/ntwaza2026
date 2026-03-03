@@ -800,7 +800,15 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
               children: [
                 IconButton(
                   icon: Icon(Icons.arrow_back_ios_new_rounded, color: tp, size: 20),
-                  onPressed: () => context.pop(),
+                  onPressed: () {
+                    if (Navigator.of(context).canPop()) {
+                      Navigator.of(context).pop();
+                    } else if (context.canPop()) {
+                      context.pop();
+                    } else {
+                      context.go('/');
+                    }
+                  },
                 ),
                 Container(
                   width: 34, height: 34,

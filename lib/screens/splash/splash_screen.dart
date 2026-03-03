@@ -70,7 +70,20 @@ class _SplashScreenState extends State<SplashScreen>
         locationPermission == LocationPermission.always;
 
     if (hasLocation && hasSeenPermissions) {
-      // Returning user with permissions - go straight to home
+      // Returning user with permissions — but ensure we have an address saved
+      final addressProvider = Provider.of<AddressProvider>(context, listen: false);
+      await addressProvider.initialize();
+      
+      if (!addressProvider.hasAddresses) {
+        // Permission granted but no saved addresses — capture location first
+        setState(() {
+          _isRequestingPermissions = true;
+          _statusText = 'Finding nearby vendors...';
+        });
+        await _captureCurrentLocation();
+        if (!mounted) return;
+      }
+      
       if (mounted) context.go('/');
       return;
     }

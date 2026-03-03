@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart';
 import '../../providers/rider_order_provider.dart';
 import '../../models/order.dart';
 import '../../utils/helpers.dart';
@@ -77,13 +78,15 @@ class _RiderDeliveryHistoryState extends State<RiderDeliveryHistory> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return WillPopScope(
-      onWillPop: () async {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
         if (Navigator.of(context).canPop()) {
           Navigator.of(context).pop();
-          return false;
+        } else {
+          context.go('/rider');
         }
-        return true;
       },
       child: Scaffold(
         backgroundColor: isDark ? Colors.black : const Color(0xFFDADDE2),
