@@ -574,23 +574,31 @@ class _CreatePickupOrderScreenState extends State<CreatePickupOrderScreen> {
             ),
           );
         } catch (e) {
-          // Silently handle dialog dismissal
+          print('⚠️ Dialog error: $e');
         }
       }
       
       if (!mounted) return;
       
-      // Use addPostFrameCallback to ensure dialog is fully closed before navigation
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        _showSnack('Pickup order created successfully');
-        if (!mounted) return;
+      // Show success snackbar first, then navigate
+      _showSnack('Pickup order created successfully');
+      
+      // Small delay to ensure dialog is fully closed, then navigate
+      await Future.delayed(const Duration(milliseconds: 200));
+      if (!mounted) return;
+      
+      try {
         // Navigate to My Orders (Pickup tab) — use push so back works
         context.push('/my-orders');
-      });
+      } catch (e) {
+        // Fallback: go to home if push fails
+        print('⚠️ Navigation error, going home: $e');
+        if (mounted) context.go('/');
+      }
     } else {
       if (!mounted) return;
-      _showSnack(provider.error ?? 'Failed to create pickup order');
+      final errorMsg = provider.error ?? 'Failed to create pickup order. Please try again.';
+      _showSnack(errorMsg);
     }
   }
 

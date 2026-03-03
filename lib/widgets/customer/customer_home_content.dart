@@ -281,11 +281,8 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
     final vendorProvider = context.read<VendorProvider>();
     
     try {
-      if (category == 'All') {
-        await vendorProvider.fetchVendors();
-      } else {
-        await vendorProvider.fetchVendorsByCategory(category);
-      }
+      // Use client-side filtering for all categories (including 'All')
+      await vendorProvider.fetchVendorsByCategory(category);
     } catch (e) {
       print('Error fetching category: $e');
     }

@@ -36,8 +36,9 @@ class VendorProvider with ChangeNotifier {
   }) : _vendorService = VendorService(api: apiService);
   
   // Getters
-  List<Vendor> get vendors => _filteredVendors.isEmpty && _searchQuery.isEmpty 
-      ? _vendors : _filteredVendors;
+  List<Vendor> get vendors => _filteredVendors.isNotEmpty 
+      ? _filteredVendors 
+      : (_searchQuery.isEmpty && _currentCategory == 'All' ? _vendors : _filteredVendors);
   bool get isLoading => _isLoading;
   String? get error => _error;
   Position? get userLocation => _userLocation;
@@ -250,6 +251,7 @@ class VendorProvider with ChangeNotifier {
   
   void clearSearch() {
     _searchQuery = '';
+    _currentCategory = 'All';
     _filteredVendors = [];
     notifyListeners();
   }
@@ -339,13 +341,34 @@ class VendorProvider with ChangeNotifier {
   
   Future<void> fetchVendorsByCategory(String category) async {
     try {
-      _isLoading = true;
-      _error = null;
       _currentCategory = category;
       _searchQuery = '';
+      
+      if (category == 'All') {
+        // Show all vendors — clear any filter
+        _filteredVendors = [];
+        notifyListeners();
+        return;
+      }
+      
+      // Client-side filter using normalized category from backend
+      // This avoids an API call and matches the backend's normalize_category() exactly
+      if (_vendors.isNotEmpty) {
+        _filteredVendors = _vendors.where((vendor) {
+          return vendor.category == category;
+        }).toList();
+        
+        print('🔍 Filtered $category: ${_filteredVendors.length}/${_vendors.length} vendors (client-side)');
+        notifyListeners();
+        return;
+      }
+      
+      // Fallback: vendors not loaded yet — fetch from API
+      _isLoading = true;
+      _error = null;
       notifyListeners();
       
-      print('🔍 Fetching $category vendors...');
+      print('🔍 Fetching $category vendors (no local cache)...');
       
       var (lat, lng) = _coordinates;
       
@@ -355,7 +378,6 @@ class VendorProvider with ChangeNotifier {
       }
       
       if (lat == null || lng == null) {
-        // Don't throw - keep existing vendors
         print('⚠️ Location not available - keeping existing vendors');
         _isLoading = false;
         notifyListeners();
@@ -363,16 +385,15 @@ class VendorProvider with ChangeNotifier {
       }
       
       final freshVendors = await _vendorService.getVendors(
-        category: category,
         latitude: lat,
         longitude: lng,
       );
-      if (freshVendors.isNotEmpty || _vendors.isEmpty) {
+      if (freshVendors.isNotEmpty) {
         _vendors = freshVendors;
+        _filteredVendors = _vendors.where((v) => v.category == category).toList();
       }
-      _filteredVendors = [];
       
-      print('✅ Found ${_vendors.length} $category vendors');
+      print('✅ Found ${_filteredVendors.length} $category vendors');
       
     } catch (e) {
       _error = 'Failed to load $category vendors: $e';

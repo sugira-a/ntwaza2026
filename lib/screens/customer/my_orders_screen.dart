@@ -456,6 +456,17 @@ class _PickupCard extends StatelessWidget {
   final PickupOrder order;
   const _PickupCard({required this.order});
 
+  String _formatPrice(double p) => p.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
+
+  String _formatDate(DateTime d) {
+    final now = DateTime.now();
+    final diff = now.difference(d);
+    if (diff.inDays == 0) return 'Today, ${DateFormat('h:mm a').format(d)}';
+    if (diff.inDays == 1) return 'Yesterday, ${DateFormat('h:mm a').format(d)}';
+    if (diff.inDays < 7) return DateFormat('EEEE, h:mm a').format(d);
+    return DateFormat('MMM d, yyyy').format(d);
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -464,6 +475,9 @@ class _PickupCard extends StatelessWidget {
     final border = isDark ? const Color(0xFF21262D) : const Color(0xFFE5E7EB);
     final pText = isDark ? Colors.white : const Color(0xFF111111);
     final sText = isDark ? Colors.white54 : const Color(0xFF6B7280);
+
+    final packageDesc = order.items.isNotEmpty ? order.items.first.description : '';
+    final totalWeight = order.items.fold<double>(0, (sum, item) => sum + (item.estimatedWeight * item.quantity));
 
     return Container(
       decoration: BoxDecoration(
@@ -476,6 +490,7 @@ class _PickupCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header: order number + status
           Row(
             children: [
               Container(width: 36, height: 36, decoration: BoxDecoration(color: st.color.withOpacity(0.12), borderRadius: BorderRadius.circular(10)), child: Icon(st.icon, size: 18, color: st.color)),
@@ -484,7 +499,7 @@ class _PickupCard extends StatelessWidget {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(order.orderNumber, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: pText)),
                   const SizedBox(height: 2),
-                  Text('Scheduled: ${order.formattedScheduledTime}', style: TextStyle(fontSize: 11, color: sText)),
+                  Text(_formatDate(order.createdAt), style: TextStyle(fontSize: 11, color: sText)),
                 ]),
               ),
               Container(
@@ -497,34 +512,154 @@ class _PickupCard extends StatelessWidget {
           const SizedBox(height: 12),
           Divider(height: 1, color: border),
           const SizedBox(height: 12),
+
+          // Package details
+          if (packageDesc.isNotEmpty) ...[
+            Row(
+              children: [
+                Icon(Icons.inventory_2_outlined, size: 16, color: isDark ? Colors.white60 : Colors.grey[600]),
+                const SizedBox(width: 8),
+                Expanded(child: Text(packageDesc, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: pText), maxLines: 2, overflow: TextOverflow.ellipsis)),
+              ],
+            ),
+            const SizedBox(height: 8),
+          ],
+
+          // Weight + Quantity
+          Row(
+            children: [
+              if (totalWeight > 0) ...[
+                Icon(Icons.scale_outlined, size: 14, color: sText),
+                const SizedBox(width: 4),
+                Text('${totalWeight.toStringAsFixed(1)} kg', style: TextStyle(fontSize: 12, color: sText)),
+                const SizedBox(width: 16),
+              ],
+              Icon(Icons.numbers_rounded, size: 14, color: sText),
+              const SizedBox(width: 4),
+              Text(order.itemCountDisplay, style: TextStyle(fontSize: 12, color: sText)),
+              const SizedBox(width: 16),
+              Icon(Icons.payment_rounded, size: 14, color: sText),
+              const SizedBox(width: 4),
+              Text(order.paymentMethod == 'cash' ? 'Cash' : order.paymentMethod.toUpperCase(), style: TextStyle(fontSize: 12, color: sText)),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // Pickup → Dropoff locations
           Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Icon(Icons.trip_origin_rounded, size: 16, color: Color(0xFF4CAF50)),
+            Column(
+              children: [
+                const Icon(Icons.trip_origin_rounded, size: 16, color: Color(0xFF4CAF50)),
+                Container(width: 1.5, height: 20, color: Colors.grey.withOpacity(0.3)),
+                const Icon(Icons.location_on_rounded, size: 16, color: Color(0xFFEF6C00)),
+              ],
+            ),
             const SizedBox(width: 8),
-            Expanded(child: Text(order.pickupLocation.address, style: TextStyle(fontSize: 12, color: pText), maxLines: 1, overflow: TextOverflow.ellipsis)),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(order.pickupLocation.address, style: TextStyle(fontSize: 12, color: pText), maxLines: 1, overflow: TextOverflow.ellipsis),
+                if (order.pickupLocation.phoneNumber != null && order.pickupLocation.phoneNumber!.isNotEmpty)
+                  Text(order.pickupLocation.phoneNumber!, style: TextStyle(fontSize: 11, color: sText)),
+                const SizedBox(height: 8),
+                Text(order.dropoffLocation.address, style: TextStyle(fontSize: 12, color: pText), maxLines: 1, overflow: TextOverflow.ellipsis),
+                if (order.dropoffLocation.phoneNumber != null && order.dropoffLocation.phoneNumber!.isNotEmpty)
+                  Text(order.dropoffLocation.phoneNumber!, style: TextStyle(fontSize: 11, color: sText)),
+              ]),
+            ),
           ]),
-          const SizedBox(height: 6),
-          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Icon(Icons.location_on_rounded, size: 16, color: Color(0xFFEF6C00)),
-            const SizedBox(width: 8),
-            Expanded(child: Text(order.dropoffLocation.address, style: TextStyle(fontSize: 12, color: pText), maxLines: 1, overflow: TextOverflow.ellipsis)),
+
+          // Scheduled time
+          const SizedBox(height: 10),
+          Row(children: [
+            Icon(Icons.schedule_rounded, size: 14, color: sText),
+            const SizedBox(width: 6),
+            Text('Scheduled: ${order.formattedScheduledTime}', style: TextStyle(fontSize: 12, color: sText)),
           ]),
+
+          // Rider info
           if (order.riderName != null && order.riderName!.isNotEmpty) ...[
             const SizedBox(height: 8),
             Row(children: [
               const Icon(Icons.two_wheeler_rounded, size: 16, color: Color(0xFF8B5CF6)),
               const SizedBox(width: 8),
-              Text(order.riderName!, style: TextStyle(fontSize: 12, color: sText)),
+              Expanded(child: Text(order.riderName!, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: pText))),
+              if (order.riderPhone != null && order.riderPhone!.isNotEmpty)
+                Text(order.riderPhone!, style: TextStyle(fontSize: 11, color: sText)),
             ]),
           ],
+
+          // Verification codes (show only for active orders)
+          if (order.status != PickupOrderStatus.delivered && order.status != PickupOrderStatus.cancelled) ...[
+            if (order.vendorPickupCode != null || order.customerDropoffCode != null) ...[
+              const SizedBox(height: 10),
+              Divider(height: 1, color: border),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  if (order.vendorPickupCode != null && order.vendorPickupCode!.isNotEmpty) ...[
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                        ),
+                        child: Column(children: [
+                          Text('PICKUP CODE', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: Colors.orange, letterSpacing: 0.5)),
+                          const SizedBox(height: 2),
+                          Text(order.vendorPickupCode!, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.orange, letterSpacing: 2)),
+                        ]),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  if (order.customerDropoffCode != null && order.customerDropoffCode!.isNotEmpty) ...[
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                        ),
+                        child: Column(children: [
+                          Text('DELIVERY CODE', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: Colors.blue, letterSpacing: 0.5)),
+                          const SizedBox(height: 2),
+                          Text(order.customerDropoffCode!, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.blue, letterSpacing: 2)),
+                        ]),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ],
+
           const SizedBox(height: 12),
+          Divider(height: 1, color: border),
+          const SizedBox(height: 12),
+
+          // Price breakdown + total
           Row(
             children: [
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    Text('Item value: ', style: TextStyle(fontSize: 11, color: sText)),
+                    Text('RWF ${_formatPrice(order.amount)}', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: pText)),
+                  ]),
+                  const SizedBox(height: 2),
+                  Row(children: [
+                    Text('Delivery: ', style: TextStyle(fontSize: 11, color: sText)),
+                    Text('RWF ${_formatPrice(order.deliveryFee)}', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: pText)),
+                  ]),
+                ]),
+              ),
+              Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
                 Text('Total', style: TextStyle(fontSize: 10, color: sText)),
-                Text('RWF ${order.totalAmount.toStringAsFixed(0)}', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: pText)),
+                Text('RWF ${_formatPrice(order.totalAmount)}', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: pText)),
               ]),
-              const Spacer(),
-              Text(order.itemCountDisplay, style: TextStyle(fontSize: 11, color: sText)),
             ],
           ),
         ],
