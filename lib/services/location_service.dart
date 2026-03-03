@@ -75,24 +75,28 @@ class LocationService {
 
       print('📡 Getting current position...');
       
-      // Get multiple readings and use the most accurate one
+      // Get a single reading with a reasonable timeout
       Position? bestPosition;
-      for (int attempt = 0; attempt < 2; attempt++) {
+      try {
+        bestPosition = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+          forceAndroidLocationManager: false,
+          timeLimit: const Duration(seconds: 6),
+        );
+      } catch (e) {
+        // If high accuracy fails, try with lower accuracy as fallback
+        print('⚠️ High accuracy failed, trying low accuracy: $e');
         try {
-          final pos = await Geolocator.getCurrentPosition(
-            desiredAccuracy: LocationAccuracy.best,
-            forceAndroidLocationManager: false,
-            timeLimit: Duration(seconds: 12),
+          bestPosition = await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.low,
+            forceAndroidLocationManager: true,
+            timeLimit: const Duration(seconds: 4),
           );
-          if (bestPosition == null || pos.accuracy < bestPosition.accuracy) {
-            bestPosition = pos;
-          }
-          // If accuracy is good enough, stop trying
-          if (pos.accuracy <= 20) break;
-          // Short delay before retry
-          if (attempt < 1) await Future.delayed(Duration(seconds: 1));
-        } catch (e) {
-          if (attempt == 0 && bestPosition == null) rethrow;
+        } catch (e2) {
+          // Try last known position as final fallback
+          print('⚠️ Low accuracy also failed, using last known: $e2');
+          bestPosition = await Geolocator.getLastKnownPosition();
+          if (bestPosition == null) rethrow;
         }
       }
       

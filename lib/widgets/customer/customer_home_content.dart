@@ -60,10 +60,13 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
       final vendorProvider = context.read<VendorProvider>();
       final addressProvider = context.read<AddressProvider>();
       
-      // Initialize push notifications for customers too
+      // Initialize push notifications in the background (don't block UI)
       try {
         final notificationProvider = context.read<NotificationProvider>();
-        await notificationProvider.initialize(pollingInterval: 60);
+        // Fire-and-forget: don't await, let it run in background
+        notificationProvider.initialize(pollingInterval: 60).catchError((e) {
+          print('⚠️ Customer notification init: $e');
+        });
       } catch (e) {
         print('⚠️ Customer notification init: $e');
       }
@@ -71,8 +74,7 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
       // First, try to load cached vendors (instant, no API call)
       await vendorProvider.loadCachedVendors();
       
-      // Load saved addresses
-      await addressProvider.initialize();
+      // addressProvider was already initialized in main.dart — no need to call again
       
       // Prefer the address selected during splash, then default, then first saved
       var defaultAddress = addressProvider.selectedAddress 
@@ -119,15 +121,15 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
       }
       
       final locationService = LocationService();
-      // Use forceRefresh: true — if user granted permission, always try real GPS
-      final position = await locationService.getCurrentLocation(forceRefresh: true);
+      // Use cached location if available to avoid another long GPS wait
+      final position = await locationService.getCurrentLocation(forceRefresh: !locationService.hasLocation);
       if (position == null) return null;
 
       String addressText = 'Kigali, Rwanda';
       try {
         final placemarks = await placemarkFromCoordinates(
           position.latitude, position.longitude,
-        );
+        ).timeout(const Duration(seconds: 3), onTimeout: () => []);
         if (placemarks.isNotEmpty) {
           final p = placemarks.first;
           final street = p.street ?? '';

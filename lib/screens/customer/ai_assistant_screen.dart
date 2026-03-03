@@ -196,27 +196,31 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
     // Smart Cart — always first, it's the flagship feature
     actions.add(_QuickAction('\uD83D\uDED2 Plan my groceries', Icons.psychology_rounded, '__SMART_CART__'));
 
-    // Time-based suggestion
+    // Time-based meal suggestion
     if (h >= 6 && h < 10) {
-      actions.add(_QuickAction('Breakfast ideas', Icons.egg_alt_rounded, 'What quick breakfast can I make?'));
+      actions.add(_QuickAction('Breakfast ideas', Icons.egg_alt_rounded, 'What quick healthy breakfast can I make? Include nutrition info.'));
     } else if (h >= 11 && h < 14) {
-      actions.add(_QuickAction('Lunch ideas', Icons.lunch_dining_rounded, 'Suggest a healthy lunch'));
+      actions.add(_QuickAction('Lunch ideas', Icons.lunch_dining_rounded, 'Suggest a healthy balanced lunch with protein and vegetables'));
     } else if (h >= 17 && h < 21) {
-      actions.add(_QuickAction('Dinner ideas', Icons.dinner_dining_rounded, 'What should I cook for dinner?'));
+      actions.add(_QuickAction('Dinner ideas', Icons.dinner_dining_rounded, 'What should I cook for a healthy dinner? Consider nutrition balance.'));
     }
 
     // Budget — always available
-    actions.add(_QuickAction('Budget advice', Icons.savings_rounded, 'How can I save money on groceries this week? Give me specific tips based on my spending.'));
+    actions.add(_QuickAction('Budget advice', Icons.savings_rounded, 'How can I save money on groceries this week? Give me specific budget tips based on what\'s available.'));
 
     // Cart actions
     if (hasCart) {
       actions.add(_QuickAction('Analyze my cart', Icons.analytics_rounded, '__ANALYZE_CART__'));
-      actions.add(_QuickAction('Complete my cart', Icons.add_shopping_cart_rounded, 'What am I missing in my cart? Suggest items to complete my shopping.'));
+      actions.add(_QuickAction('Complete my cart', Icons.add_shopping_cart_rounded, 'What am I missing in my cart? Suggest items for balanced nutrition and complete meals.'));
     }
 
+    // Health-focused actions
+    actions.add(_QuickAction('Healthy shopping', Icons.health_and_safety_rounded, 'Build me a healthy shopping list with high protein, vegetables, and whole grains. Focus on nutrition.'));
+    actions.add(_QuickAction('Meal prep guide', Icons.restaurant_menu_rounded, 'Help me plan affordable meal prep for the week. Include nutrition tips and budget breakdown.'));
+
     // Core actions
-    actions.add(_QuickAction('What\'s available?', Icons.inventory_2_rounded, 'What products are available right now? Show me the best deals.'));
-    actions.add(_QuickAction('Health tips', Icons.favorite_rounded, 'Give me a practical healthy eating tip based on products you sell'));
+    actions.add(_QuickAction('What\'s available?', Icons.inventory_2_rounded, 'What products are available right now? Show me the best deals by category.'));
+    actions.add(_QuickAction('Health tips', Icons.favorite_rounded, 'Give me practical healthy eating tips for balanced nutrition based on local food. Include protein and vitamin sources.'));
     actions.add(_QuickAction('Help with order', Icons.support_agent_rounded, 'I need help with my order'));
 
     return actions;
@@ -428,7 +432,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
                         const SizedBox(height: 8),
                         Wrap(
                           spacing: 6, runSpacing: 6,
-                          children: ['High protein', 'Vegetarian', 'No beef', 'Low carb', 'Family meals'].map((p) =>
+                          children: ['High protein', 'Vegetarian', 'No beef', 'Low carb', 'Family meals', 'Low budget', 'Balanced nutrition', 'Weight loss'].map((p) =>
                             _prefChip(p, prefsCtrl, isDark),
                           ).toList(),
                         ),
@@ -624,32 +628,57 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
 
   // ─── Add AI-suggested items to cart ───
 
-  /// Find a matching Product from vendor data by name (fuzzy match).
+  /// Score how well two names match (higher = better)
+  int _scoreMatch(String query, String candidate) {
+    final q = query.toLowerCase().trim();
+    final c = candidate.toLowerCase().trim();
+    if (q == c) return 100;
+    if (c.contains(q) || q.contains(c)) return 80;
+    // Word overlap scoring
+    final qWords = q.split(RegExp(r'\s+')).toSet();
+    final cWords = c.split(RegExp(r'\s+')).toSet();
+    final overlap = qWords.intersection(cWords).length;
+    if (overlap > 0) return (overlap / qWords.length * 70).round();
+    return 0;
+  }
+
+  /// Find a matching Product from all loaded products by name (scored fuzzy match).
   Product? _findProduct(String name) {
-    final vendorProvider = context.read<VendorProvider>();
     final productProvider = context.read<ProductProvider>();
+    final allProducts = productProvider.allProducts;
     final lower = name.toLowerCase().trim();
 
-    // Search across all vendor products
+    // 1. Exact match in allProducts (most reliable source)
+    for (final p in allProducts) {
+      if (p.name.toLowerCase().trim() == lower) return p;
+    }
+
+    // 2. Scored fuzzy match across allProducts
+    Product? bestMatch;
+    int bestScore = 0;
+    for (final p in allProducts) {
+      final score = _scoreMatch(name, p.name);
+      if (score > bestScore) {
+        bestScore = score;
+        bestMatch = p;
+      }
+    }
+    if (bestScore >= 50) return bestMatch;
+
+    // 3. Also search vendor products as fallback
+    final vendorProvider = context.read<VendorProvider>();
     for (final vendor in vendorProvider.vendors) {
       final products = productProvider.getProductsByVendor(vendor.id);
       for (final p in products) {
-        if (p.name.toLowerCase() == lower) return p;
+        if (p.name.toLowerCase().trim() == lower) return p;
+        final score = _scoreMatch(name, p.name);
+        if (score > bestScore) {
+          bestScore = score;
+          bestMatch = p;
+        }
       }
     }
-    // Fuzzy: substring match
-    for (final vendor in vendorProvider.vendors) {
-      final products = productProvider.getProductsByVendor(vendor.id);
-      for (final p in products) {
-        if (p.name.toLowerCase().contains(lower) || lower.contains(p.name.toLowerCase())) return p;
-      }
-    }
-    // Also check allProducts fallback
-    for (final p in productProvider.allProducts) {
-      if (p.name.toLowerCase() == lower) return p;
-      if (p.name.toLowerCase().contains(lower) || lower.contains(p.name.toLowerCase())) return p;
-    }
-    return null;
+    return bestScore >= 40 ? bestMatch : null;
   }
 
   /// Add a single AI item to cart
@@ -723,6 +752,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
     final cart = context.read<CartProvider>();
     int added = 0;
     int notFound = 0;
+    final notFoundNames = <String>[];
 
     for (final scItem in items) {
       if (scItem.quantity <= 0) continue;
@@ -735,24 +765,30 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
         added++;
       } else {
         notFound++;
+        notFoundNames.add(scItem.name);
       }
     }
 
     HapticFeedback.mediumImpact();
-    final msg = notFound > 0
-        ? '$added added, $notFound not found'
-        : '$added items added to cart';
+    String msg;
+    if (notFound > 0 && added > 0) {
+      msg = '$added added to cart. $notFound unavailable: ${notFoundNames.take(2).join(", ")}';
+    } else if (added > 0) {
+      msg = '$added items added to cart!';
+    } else {
+      msg = 'No matching products found. Try browsing vendors first.';
+    }
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor: _brand,
+      backgroundColor: added > 0 ? _brand : Colors.red[700],
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       duration: const Duration(seconds: 3),
-      action: SnackBarAction(
+      action: added > 0 ? SnackBarAction(
         label: 'VIEW CART',
         textColor: Colors.white,
         onPressed: () => context.push('/cart'),
-      ),
+      ) : null,
     ));
   }
 
@@ -862,16 +898,16 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Greeting — left aligned, minimal
+          // Greeting
           Center(child: Text(_greeting, style: TextStyle(
             color: tp, fontSize: 22, fontWeight: FontWeight.w600,
           ))),
           const SizedBox(height: 4),
-          Center(child: Text('How can I help you today?', style: TextStyle(color: ts, fontSize: 13))),
+          Center(child: Text('Your smart shopping assistant', style: TextStyle(color: ts, fontSize: 13))),
 
-          const SizedBox(height: 28),
+          const SizedBox(height: 24),
 
-          // Action row — text only, no icons
+          // Primary action row
           Row(children: [
             Expanded(child: _welcomeButton(
               label: 'Plan Groceries',
@@ -881,7 +917,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
             const SizedBox(width: 10),
             Expanded(child: _welcomeButton(
               label: 'Budget Tips',
-              onTap: () => _sendMessage('How can I save money on my groceries? Give me specific tips.'),
+              onTap: () => _sendMessage('How can I save money on my groceries? Give me specific budget tips based on available products.'),
               isDark: isDark, tp: tp,
             )),
           ]),
@@ -889,7 +925,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
           if (hasCart) ...[
             const SizedBox(height: 8),
             _welcomeButton(
-              label: 'Analyze Cart  \u2022  ${cartProvider.itemCount} items',
+              label: 'Analyze Cart  \u2022  ${cartProvider.itemCount} items  \u2022  ${_fmt.format(cartProvider.totalPrice)} RWF',
               onTap: () => _handleAction('__ANALYZE_CART__'),
               isDark: isDark, tp: tp, full: true,
             ),
@@ -898,21 +934,59 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
           // Recent searches
           ..._buildRecentSearches(isDark, tp, ts),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
 
-          // Suggestions — simple chips
-          Text('Suggestions', style: TextStyle(color: ts, fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 0.3)),
+          // ── Health Section ──
+          _sectionHeader('Health & Nutrition', Icons.favorite_rounded, ts),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6, runSpacing: 6,
+            children: [
+              _actionChip(_QuickAction('Healthy shopping list', Icons.health_and_safety_rounded, 'Build me a healthy shopping list with high protein, vegetables, and whole grains. Include nutrition info.'), isDark),
+              _actionChip(_QuickAction('Nutrition tips', Icons.monitor_heart_outlined, 'Give me practical nutrition tips for balanced meals using locally available food'), isDark),
+              _actionChip(_QuickAction('High protein meals', Icons.fitness_center_rounded, 'Suggest affordable high protein meals I can make from available products'), isDark),
+            ],
+          ),
+
+          const SizedBox(height: 18),
+
+          // ── Budget Section ──
+          _sectionHeader('Budget & Savings', Icons.savings_rounded, ts),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6, runSpacing: 6,
+            children: [
+              _actionChip(_QuickAction('Weekly budget plan', Icons.calendar_month_rounded, '__SMART_CART__'), isDark),
+              _actionChip(_QuickAction('Best deals now', Icons.local_offer_rounded, 'What are the best value products available right now? Show cheapest items by category.'), isDark),
+              _actionChip(_QuickAction('Save on groceries', Icons.trending_down_rounded, 'How can I reduce my grocery spending? Give practical tips with specific products.'), isDark),
+            ],
+          ),
+
+          const SizedBox(height: 18),
+
+          // ── Shopping Section ──
+          _sectionHeader('Shopping & Meals', Icons.shopping_basket_rounded, ts),
           const SizedBox(height: 8),
           Wrap(
             spacing: 6, runSpacing: 6,
             children: _contextualActions
-                .where((a) => a.action != '__SMART_CART__' && a.action != '__ANALYZE_CART__')
+                .where((a) => a.action != '__SMART_CART__' && a.action != '__ANALYZE_CART__' 
+                    && !a.label.contains('Healthy') && !a.label.contains('Budget') && !a.label.contains('Meal prep'))
+                .take(5)
                 .map((a) => _actionChip(a, isDark))
                 .toList(),
           ),
         ],
       ),
     );
+  }
+
+  Widget _sectionHeader(String title, IconData icon, Color ts) {
+    return Row(children: [
+      Icon(icon, size: 13, color: ts),
+      const SizedBox(width: 5),
+      Text(title, style: TextStyle(color: ts, fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 0.3)),
+    ]);
   }
 
   // ── Clean welcome button (replaces heavy feature tiles) ──
@@ -1294,20 +1368,25 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
     final lower = text.toLowerCase();
     final chips = <_QuickAction>[];
 
-    if (lower.contains('budget') || lower.contains('save') || lower.contains('spend')) {
+    if (lower.contains('budget') || lower.contains('save') || lower.contains('spend') || lower.contains('rwf') || lower.contains('money')) {
       chips.add(_QuickAction('Plan budget', Icons.psychology_rounded, '__SMART_CART__'));
+      chips.add(_QuickAction('Best deals', Icons.local_offer_rounded, 'Show me the cheapest products by category'));
     }
     if (lower.contains('cart') || lower.contains('added') || lower.contains('item')) {
       chips.add(_QuickAction('View cart', Icons.shopping_cart_rounded, 'What\'s in my cart right now?'));
     }
-    if (lower.contains('health') || lower.contains('nutrition') || lower.contains('protein') || lower.contains('vitamin')) {
-      chips.add(_QuickAction('More health tips', Icons.favorite_rounded, 'Give me more practical health tips'));
+    if (lower.contains('health') || lower.contains('nutrition') || lower.contains('protein') || lower.contains('vitamin') || lower.contains('calorie') || lower.contains('balanced')) {
+      chips.add(_QuickAction('More health tips', Icons.favorite_rounded, 'Give me more practical health and nutrition tips for my diet'));
+      chips.add(_QuickAction('Healthy list', Icons.health_and_safety_rounded, 'Build me a healthy shopping list focused on balanced nutrition'));
     }
     if (lower.contains('meal') || lower.contains('cook') || lower.contains('recipe') || lower.contains('breakfast') || lower.contains('lunch') || lower.contains('dinner')) {
       chips.add(_QuickAction('Meal ideas', Icons.restaurant_rounded, '__MEAL_IDEAS__'));
     }
     if (lower.contains('order') || lower.contains('delivery') || lower.contains('track')) {
       chips.add(_QuickAction('Contact support', Icons.support_agent_rounded, 'How do I contact support about my order?'));
+    }
+    if (lower.contains('product') || lower.contains('available') || lower.contains('store') || lower.contains('vendor')) {
+      chips.add(_QuickAction('Browse products', Icons.store_rounded, 'Show me all available products organized by category'));
     }
 
     if (chips.isEmpty) return const SizedBox.shrink();
@@ -1492,6 +1571,49 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
                   ),
                 ),
               ]),
+
+              // ── Nutrition breakdown (Health) ──
+              if (n != null) ...[
+                const SizedBox(height: 14),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1A2A1A) : const Color(0xFFF0F8F0),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: _brandLight.withOpacity(0.15)),
+                  ),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Row(children: [
+                      Icon(Icons.monitor_heart_outlined, size: 14, color: _brandLight),
+                      const SizedBox(width: 5),
+                      Text('Nutrition Estimate', style: TextStyle(color: _brandLight, fontSize: 11, fontWeight: FontWeight.w700)),
+                      const Spacer(),
+                      if (n.balanceRating.isNotEmpty) _ratingBadge(n.balanceRating),
+                    ]),
+                    const SizedBox(height: 8),
+                    // Macro bars
+                    Row(children: [
+                      _macroBar('Protein', n.proteinPercent, const Color(0xFF2196F3), isDark),
+                      const SizedBox(width: 4),
+                      _macroBar('Carbs', n.carbsPercent, const Color(0xFFFFA726), isDark),
+                      const SizedBox(width: 4),
+                      _macroBar('Veg', n.fatsPercent, const Color(0xFF66BB6A), isDark),
+                      const SizedBox(width: 4),
+                      _macroBar('Fats', n.fiberPercent, const Color(0xFFEF5350), isDark),
+                    ]),
+                    const SizedBox(height: 6),
+                    if (n.dailyCalories > 0)
+                      Text(
+                        '~${_fmt.format(n.dailyCalories)} kcal/day per person \u2022 ${n.durationDays}d \u2022 ${n.householdSize} person${n.householdSize > 1 ? 's' : ''}',
+                        style: TextStyle(color: ts, fontSize: 10),
+                      ),
+                    if (n.summary != null && n.summary!.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(n.summary!, style: TextStyle(color: ts, fontSize: 10, height: 1.3)),
+                    ],
+                  ]),
+                ),
+              ],
             ]),
           )),
         ],

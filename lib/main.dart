@@ -106,17 +106,18 @@ void main() async {
   final authProvider = AuthProvider();
   await authProvider.initialize();
 
-  // Initialize AddressProvider
+  // Initialize AddressProvider (lightweight — reads SharedPreferences)
   final addressProvider = AddressProvider();
-  await addressProvider.initialize();
+  // Don't block app launch — let it load while splash screen shows
+  addressProvider.initialize();
 
   // Initialize API services
   final apiService = ApiService();
   final locationService = LocationService();
 
-  // Initialize notification service
+  // Initialize notification service in background (don't block app launch)
   final notificationService = NotificationService();
-  await notificationService.initialize();
+  notificationService.initialize();
 
   runApp(
     MultiProvider(

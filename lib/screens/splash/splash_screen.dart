@@ -54,12 +54,29 @@ class _SplashScreenState extends State<SplashScreen>
     _scaleController.forward();
 
     // Start permission flow after splash animation plays
-    Future.delayed(const Duration(seconds: 2), () {
+    Future.delayed(const Duration(milliseconds: 1200), () {
       if (mounted) _runStartupFlow();
     });
   }
 
   Future<void> _runStartupFlow() async {
+    if (!mounted) return;
+
+    // Wrap entire startup in a timeout so splash never hangs
+    try {
+      await Future.any([
+        _doStartupFlow(),
+        Future.delayed(const Duration(seconds: 8)),
+      ]);
+    } catch (e) {
+      print('⚠️ Startup flow error: $e');
+    }
+
+    // Always navigate to home, even if something failed/timed out
+    if (mounted) context.go('/');
+  }
+
+  Future<void> _doStartupFlow() async {
     if (!mounted) return;
 
     // Check if permissions already granted (returning user)
@@ -70,21 +87,16 @@ class _SplashScreenState extends State<SplashScreen>
         locationPermission == LocationPermission.always;
 
     if (hasLocation && hasSeenPermissions) {
-      // Returning user with permissions — but ensure we have an address saved
+      // Returning user — addressProvider already initialized in main.dart
       final addressProvider = Provider.of<AddressProvider>(context, listen: false);
-      await addressProvider.initialize();
       
       if (!addressProvider.hasAddresses) {
-        // Permission granted but no saved addresses — capture location first
         setState(() {
           _isRequestingPermissions = true;
           _statusText = 'Finding nearby vendors...';
         });
         await _captureCurrentLocation();
-        if (!mounted) return;
       }
-      
-      if (mounted) context.go('/');
       return;
     }
 
@@ -94,8 +106,8 @@ class _SplashScreenState extends State<SplashScreen>
       _statusText = 'Setting up...';
     });
 
-    // 1. Request notification permission (native popup)
-    await _requestNotifications();
+    // 1. Request notification permission (fire-and-forget, don't block)
+    _requestNotifications();
     if (!mounted) return;
 
     // 2. Request location permission (native popup)
@@ -113,12 +125,7 @@ class _SplashScreenState extends State<SplashScreen>
       if (!mounted) return;
 
       if (!retryGranted) {
-        setState(() => _statusText = '');
-        await Future.delayed(const Duration(milliseconds: 300));
-        if (mounted) {
-          await prefs.setBool('has_seen_permissions', true);
-          context.go('/');
-        }
+        await prefs.setBool('has_seen_permissions', true);
         return;
       }
     }
@@ -128,11 +135,8 @@ class _SplashScreenState extends State<SplashScreen>
     await _captureCurrentLocation();
     if (!mounted) return;
 
-    // 4. Mark permissions seen and go to home
+    // 4. Mark permissions seen
     await prefs.setBool('has_seen_permissions', true);
-    setState(() => _statusText = '');
-    await Future.delayed(const Duration(milliseconds: 200));
-    if (mounted) context.go('/');
   }
 
   Future<void> _requestNotifications() async {
@@ -168,16 +172,18 @@ class _SplashScreenState extends State<SplashScreen>
   Future<void> _captureCurrentLocation() async {
     try {
       final locationService = LocationService();
+      // Use cached location if available, only force refresh if no location at all
       final position =
-          await locationService.getCurrentLocation(forceRefresh: true);
+          await locationService.getCurrentLocation(forceRefresh: !locationService.hasLocation);
 
       if (position != null && mounted) {
         String addressText = 'Kigali, Rwanda';
         try {
+          // Add timeout to reverse geocoding — it can hang indefinitely
           final placemarks = await placemarkFromCoordinates(
             position.latitude,
             position.longitude,
-          );
+          ).timeout(const Duration(seconds: 3), onTimeout: () => []);
           if (placemarks.isNotEmpty) {
             final p = placemarks.first;
             final street = p.street ?? '';
