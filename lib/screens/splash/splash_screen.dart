@@ -96,11 +96,8 @@ class _SplashScreenState extends State<SplashScreen>
           _isRequestingPermissions = true;
           _statusText = 'Finding nearby vendors...';
         });
-        // Timeout only the GPS + geocoding, not user interaction
-        await _captureCurrentLocation().timeout(
-          const Duration(seconds: 10),
-          onTimeout: () => print('⚠️ Location capture timed out'),
-        );
+        // Let GPS resolve with its own internal timeouts (15s high + 8s low)
+        await _captureCurrentLocation();
       }
       return;
     }
@@ -131,49 +128,15 @@ class _SplashScreenState extends State<SplashScreen>
 
       if (!retryGranted) {
         await prefs.setBool('has_seen_permissions', true);
-        // Even without location permission, create a default Kigali address
-        // so the home screen has something to work with
-        if (!addressProvider.hasAddresses) {
-          try {
-            final kigali = DeliveryAddress(
-              id: DateTime.now().millisecondsSinceEpoch.toString(),
-              fullAddress: 'Kigali, Rwanda',
-              latitude: -1.9441,
-              longitude: 30.0619,
-              label: 'Kigali, Rwanda',
-              isDefault: true,
-              createdAt: DateTime.now(),
-            );
-            await addressProvider.addAddress(kigali);
-            addressProvider.selectAddress(kigali);
-          } catch (_) {}
-        }
+        // Permission denied — don't create a fake Kigali address.
+        // The home screen will prompt the user to add their real location.
         return;
       }
     }
 
-    // 3. Get and save current location (timeout only this part)
+    // 3. Get and save current location — GPS has its own internal timeouts
     setState(() => _statusText = 'Finding nearby vendors...');
-    await _captureCurrentLocation().timeout(
-      const Duration(seconds: 10),
-      onTimeout: () {
-        print('⚠️ Location capture timed out, using default');
-        // Create default Kigali address if nothing was saved
-        if (!addressProvider.hasAddresses) {
-          final kigali = DeliveryAddress(
-            id: DateTime.now().millisecondsSinceEpoch.toString(),
-            fullAddress: 'Kigali, Rwanda',
-            latitude: -1.9441,
-            longitude: 30.0619,
-            label: 'Kigali, Rwanda',
-            isDefault: true,
-            createdAt: DateTime.now(),
-          );
-          addressProvider.addAddress(kigali);
-          addressProvider.selectAddress(kigali);
-        }
-      },
-    );
+    await _captureCurrentLocation();
     if (!mounted) return;
 
     // 4. Mark permissions seen
@@ -258,22 +221,9 @@ class _SplashScreenState extends State<SplashScreen>
         await addressProvider.addAddress(address);
         addressProvider.selectAddress(address);
       }
-    } catch (_) {
-      try {
-        final addressProvider =
-            Provider.of<AddressProvider>(context, listen: false);
-        final kigali = DeliveryAddress(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          fullAddress: 'Kigali, Rwanda',
-          latitude: -1.9441,
-          longitude: 30.0619,
-          label: 'Kigali, Rwanda',
-          isDefault: true,
-          createdAt: DateTime.now(),
-        );
-        await addressProvider.addAddress(kigali);
-        addressProvider.selectAddress(kigali);
-      } catch (_) {}
+    } catch (e) {
+      print('⚠️ Location capture failed: $e');
+      // Don't create a fake Kigali address — let the user set their real location
     }
   }
 

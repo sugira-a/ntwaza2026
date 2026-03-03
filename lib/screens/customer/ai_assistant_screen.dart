@@ -205,29 +205,15 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
       actions.add(_QuickAction('Dinner ideas', Icons.dinner_dining_rounded, 'What should I cook for a healthy dinner? Consider nutrition balance.'));
     }
 
+    // Cart analysis (only if has cart)
+    if (hasCart) {
+      actions.add(_QuickAction('Analyze my cart', Icons.analytics_rounded, '__ANALYZE_CART__'));
+    }
+
     // Budget
     actions.add(_QuickAction('Budget plan', Icons.savings_rounded, 'I\'m on a tight budget. Help me plan affordable groceries for the week with good nutrition.'));
 
-    // Cart actions
-    if (hasCart) {
-      actions.add(_QuickAction('Analyze my cart', Icons.analytics_rounded, '__ANALYZE_CART__'));
-      actions.add(_QuickAction('Complete my cart', Icons.add_shopping_cart_rounded, 'What am I missing in my cart? Suggest items for balanced nutrition and complete meals.'));
-    }
-
-    // Health
-    actions.add(_QuickAction('Healthy shopping', Icons.health_and_safety_rounded, 'Build me a healthy shopping list with high protein, vegetables, and whole grains. Focus on nutrition.'));
-
-    // Family mode
-    actions.add(_QuickAction('Family groceries', Icons.family_restroom_rounded, 'Help me plan groceries for my family of 4 for a month. Include variety and balanced nutrition.'));
-
-    // Quick order
-    actions.add(_QuickAction('Quick basket', Icons.flash_on_rounded, 'Just give me a balanced grocery basket. Add the essentials to my cart now.'));
-
-    // Meal prep
-    actions.add(_QuickAction('Meal prep guide', Icons.restaurant_menu_rounded, 'Help me plan affordable meal prep for the week. Include nutrition tips and budget breakdown.'));
-
-    // Core actions
-    actions.add(_QuickAction('What\'s available?', Icons.inventory_2_rounded, 'What products are available right now? Show me the best deals by category.'));
+    // Help
     actions.add(_QuickAction('Help & support', Icons.support_agent_rounded, 'I need help with my order or delivery'));
 
     return actions;
@@ -688,6 +674,15 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
     return bestScore >= 40 ? bestMatch : null;
   }
 
+  /// Check if the vendor for a product is currently open
+  bool _isVendorOpen(String vendorId) {
+    final vendorProvider = context.read<VendorProvider>();
+    for (final v in vendorProvider.vendors) {
+      if (v.id == vendorId) return v.isOpen;
+    }
+    return true; // If vendor not found, assume open
+  }
+
   /// Add a single AI item to cart
   void _addSingleItemToCart(AiReplyItem aiItem) {
     final product = _findProduct(aiItem.name);
@@ -702,8 +697,19 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
       return;
     }
 
-    final cart = context.read<CartProvider>();
     final vid = aiItem.vendorId ?? product.vendorId;
+    if (!_isVendorOpen(vid)) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('"${aiItem.name}" — vendor is currently closed'),
+        backgroundColor: Colors.orange[800],
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        duration: const Duration(seconds: 2),
+      ));
+      return;
+    }
+
+    final cart = context.read<CartProvider>();
     for (int i = 0; i < aiItem.qty; i++) {
       cart.addToCart(product, vendorId: vid);
     }
@@ -722,11 +728,16 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
     final cart = context.read<CartProvider>();
     int added = 0;
     int notFound = 0;
+    int closed = 0;
 
     for (final aiItem in items) {
       final product = _findProduct(aiItem.name);
       if (product != null) {
         final vid = aiItem.vendorId ?? product.vendorId;
+        if (!_isVendorOpen(vid)) {
+          closed++;
+          continue;
+        }
         for (int i = 0; i < aiItem.qty; i++) {
           cart.addToCart(product, vendorId: vid);
         }
@@ -737,9 +748,16 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
     }
 
     HapticFeedback.mediumImpact();
-    final msg = notFound > 0
-        ? '$added added, $notFound not found'
-        : '$added items added to cart';
+    String msg;
+    if (closed > 0 && added > 0) {
+      msg = '$added added, $closed skipped (vendor closed)';
+    } else if (closed > 0 && added == 0) {
+      msg = 'All vendors are currently closed';
+    } else if (notFound > 0) {
+      msg = '$added added, $notFound not found';
+    } else {
+      msg = '$added items added to cart';
+    }
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
       backgroundColor: _brand,
@@ -759,6 +777,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
     final cart = context.read<CartProvider>();
     int added = 0;
     int notFound = 0;
+    int closed = 0;
     final notFoundNames = <String>[];
 
     for (final scItem in items) {
@@ -766,6 +785,10 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
       final product = _findProduct(scItem.name);
       if (product != null) {
         final vid = scItem.vendorId ?? product.vendorId;
+        if (!_isVendorOpen(vid)) {
+          closed++;
+          continue;
+        }
         for (int i = 0; i < scItem.quantity; i++) {
           cart.addToCart(product, vendorId: vid);
         }
@@ -778,7 +801,11 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
 
     HapticFeedback.mediumImpact();
     String msg;
-    if (notFound > 0 && added > 0) {
+    if (closed > 0 && added > 0) {
+      msg = '$added added. $closed skipped (vendor closed)';
+    } else if (closed > 0 && added == 0 && notFound == 0) {
+      msg = 'All vendors are currently closed. Try again later.';
+    } else if (notFound > 0 && added > 0) {
       msg = '$added added to cart. $notFound unavailable: ${notFoundNames.take(2).join(", ")}';
     } else if (added > 0) {
       msg = '$added items added to cart!';
@@ -943,45 +970,14 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
 
           const SizedBox(height: 20),
 
-          // ── Health & Nutrition Section ──
-          _sectionHeader('Health & Nutrition', Icons.favorite_rounded, ts),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 6, runSpacing: 6,
-            children: [
-              _actionChip(_QuickAction('Healthy shopping list', Icons.health_and_safety_rounded, 'Build me a healthy shopping list with high protein, vegetables, and whole grains. Include nutrition info.'), isDark),
-              _actionChip(_QuickAction('Weight loss plan', Icons.monitor_weight_rounded, 'I want to lose weight. Help me plan healthy groceries that are low calorie but filling.'), isDark),
-              _actionChip(_QuickAction('High protein meals', Icons.fitness_center_rounded, 'Suggest affordable high protein meals I can make from available products'), isDark),
-              _actionChip(_QuickAction('Energy boost', Icons.bolt_rounded, 'I feel tired often. What foods give me more energy? Suggest iron and vitamin rich items.'), isDark),
-            ],
-          ),
-
-          const SizedBox(height: 18),
-
-          // ── Budget & Family Section ──
-          _sectionHeader('Budget & Family', Icons.savings_rounded, ts),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 6, runSpacing: 6,
-            children: [
-              _actionChip(_QuickAction('Student budget', Icons.school_rounded, 'I\'m a student with 10,000 RWF. Plan my groceries for a week with good nutrition.'), isDark),
-              _actionChip(_QuickAction('Family of 4', Icons.family_restroom_rounded, 'Help me plan monthly groceries for a family of 4. Include variety and balanced nutrition.'), isDark),
-              _actionChip(_QuickAction('Monthly stock', Icons.inventory_rounded, 'Build a monthly grocery stock list. Split into non-perishables and weekly perishables.'), isDark),
-              _actionChip(_QuickAction('Best deals', Icons.local_offer_rounded, 'What are the best value products available right now? Show cheapest items by category.'), isDark),
-            ],
-          ),
-
-          const SizedBox(height: 18),
-
-          // ── Shopping & Meals Section ──
-          _sectionHeader('Shopping & Meals', Icons.shopping_basket_rounded, ts),
+          // ── Quick suggestions (compact) ──
+          _sectionHeader('Suggestions', Icons.lightbulb_outline_rounded, ts),
           const SizedBox(height: 8),
           Wrap(
             spacing: 6, runSpacing: 6,
             children: _contextualActions
-                .where((a) => a.action != '__SMART_CART__' && a.action != '__ANALYZE_CART__' 
-                    && !a.label.contains('Healthy') && !a.label.contains('Budget') && !a.label.contains('Family'))
-                .take(5)
+                .where((a) => a.action != '__SMART_CART__' && a.action != '__ANALYZE_CART__')
+                .take(4)
                 .map((a) => _actionChip(a, isDark))
                 .toList(),
           ),

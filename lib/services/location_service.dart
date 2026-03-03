@@ -75,13 +75,13 @@ class LocationService {
 
       print('📡 Getting current position...');
       
-      // Get a single reading with a reasonable timeout
+      // Get a single reading — generous timeout for cold GPS start on first install
       Position? bestPosition;
       try {
         bestPosition = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high,
           forceAndroidLocationManager: false,
-          timeLimit: const Duration(seconds: 6),
+          timeLimit: const Duration(seconds: 15),
         );
       } catch (e) {
         // If high accuracy fails, try with lower accuracy as fallback
@@ -90,7 +90,7 @@ class LocationService {
           bestPosition = await Geolocator.getCurrentPosition(
             desiredAccuracy: LocationAccuracy.low,
             forceAndroidLocationManager: true,
-            timeLimit: const Duration(seconds: 4),
+            timeLimit: const Duration(seconds: 8),
           );
         } catch (e2) {
           // Try last known position as final fallback
