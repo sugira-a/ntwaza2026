@@ -301,6 +301,230 @@ class MealIdea {
   }
 }
 
+/// Order tracking result
+class OrderTracking {
+  final String note;
+  final List<TrackedOrder> orders;
+  final bool hasActive;
+
+  OrderTracking({required this.note, this.orders = const [], this.hasActive = false});
+
+  factory OrderTracking.fromJson(Map<String, dynamic> json) {
+    return OrderTracking(
+      note: json['note'] as String? ?? '',
+      orders: (json['orders'] as List?)
+              ?.map((e) => TrackedOrder.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+      hasActive: json['has_active'] == true,
+    );
+  }
+}
+
+class TrackedOrder {
+  final String orderNumber;
+  final String status;
+  final String statusLabel;
+  final String eta;
+  final String emoji;
+  final double total;
+
+  TrackedOrder({
+    required this.orderNumber,
+    required this.status,
+    required this.statusLabel,
+    this.eta = '',
+    this.emoji = '📋',
+    this.total = 0,
+  });
+
+  factory TrackedOrder.fromJson(Map<String, dynamic> json) {
+    return TrackedOrder(
+      orderNumber: json['order_number'] as String? ?? '',
+      status: json['status'] as String? ?? '',
+      statusLabel: json['status_label'] as String? ?? '',
+      eta: json['eta'] as String? ?? '',
+      emoji: json['emoji'] as String? ?? '📋',
+      total: (json['total'] as num?)?.toDouble() ?? 0,
+    );
+  }
+}
+
+/// Recommendations result
+class Recommendations {
+  final String note;
+  final List<RecommendedItem> items;
+  final List<RecommendedItem> reorderList;
+  final List<RecommendedItem> complementary;
+  final String basedOn;
+  final double avgSpend;
+
+  Recommendations({
+    required this.note,
+    this.items = const [],
+    this.reorderList = const [],
+    this.complementary = const [],
+    this.basedOn = '',
+    this.avgSpend = 0,
+  });
+
+  factory Recommendations.fromJson(Map<String, dynamic> json) {
+    return Recommendations(
+      note: json['note'] as String? ?? '',
+      items: (json['items'] as List?)
+              ?.map((e) => RecommendedItem.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+      reorderList: (json['reorder_list'] as List?)
+              ?.map((e) => RecommendedItem.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+      complementary: (json['complementary'] as List?)
+              ?.map((e) => RecommendedItem.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+      basedOn: json['based_on'] as String? ?? '',
+      avgSpend: (json['avg_spend'] as num?)?.toDouble() ?? 0,
+    );
+  }
+}
+
+class RecommendedItem {
+  final String name;
+  final double price;
+  final String category;
+  final int timesBought;
+  final String reason;
+
+  RecommendedItem({
+    required this.name,
+    this.price = 0,
+    this.category = '',
+    this.timesBought = 0,
+    this.reason = '',
+  });
+
+  factory RecommendedItem.fromJson(Map<String, dynamic> json) {
+    return RecommendedItem(
+      name: json['name'] as String? ?? '',
+      price: (json['price'] as num?)?.toDouble() ?? 0,
+      category: json['category'] as String? ?? '',
+      timesBought: json['times_bought'] as int? ?? 0,
+      reason: json['reason'] as String? ?? '',
+    );
+  }
+}
+
+/// Cook-with-ingredients result
+class CookWithResult {
+  final String note;
+  final List<CookWithMeal> meals;
+  final List<AiReplyItem> buyItems;
+  final double buyTotal;
+
+  CookWithResult({this.note = '', this.meals = const [], this.buyItems = const [], this.buyTotal = 0});
+
+  factory CookWithResult.fromJson(Map<String, dynamic> json) {
+    return CookWithResult(
+      note: json['note'] as String? ?? '',
+      meals: (json['meals'] as List?)
+              ?.map((e) => CookWithMeal.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+      buyItems: (json['buy_items'] as List?)
+              ?.map((e) => AiReplyItem.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+      buyTotal: (json['buy_total'] as num?)?.toDouble() ?? 0,
+    );
+  }
+}
+
+class CookWithMeal {
+  final String name;
+  final String steps;
+  final String time;
+  final String uses;
+  final List<String> missing;
+
+  CookWithMeal({this.name = '', this.steps = '', this.time = '', this.uses = '', this.missing = const []});
+
+  factory CookWithMeal.fromJson(Map<String, dynamic> json) {
+    return CookWithMeal(
+      name: json['name'] as String? ?? '',
+      steps: json['steps'] as String? ?? '',
+      time: json['time'] as String? ?? '',
+      uses: json['uses'] as String? ?? '',
+      missing: (json['missing'] as List?)?.map((e) => e.toString()).toList() ?? [],
+    );
+  }
+}
+
+/// Price check result
+class PriceCheckResult {
+  final String note;
+  final List<PriceItem> items;
+  final String query;
+
+  PriceCheckResult({this.note = '', this.items = const [], this.query = ''});
+
+  factory PriceCheckResult.fromJson(Map<String, dynamic> json) {
+    return PriceCheckResult(
+      note: json['note'] as String? ?? '',
+      items: (json['items'] as List?)
+              ?.map((e) => PriceItem.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+      query: json['query'] as String? ?? '',
+    );
+  }
+}
+
+class PriceItem {
+  final String name;
+  final double price;
+  final String category;
+  final String unit;
+
+  PriceItem({required this.name, this.price = 0, this.category = '', this.unit = ''});
+
+  factory PriceItem.fromJson(Map<String, dynamic> json) {
+    return PriceItem(
+      name: json['name'] as String? ?? '',
+      price: (json['price'] as num?)?.toDouble() ?? 0,
+      category: json['category'] as String? ?? '',
+      unit: json['unit'] as String? ?? '',
+    );
+  }
+}
+
+/// Proactive notification from order-pattern analysis
+class ProactiveNotification {
+  final String type;
+  final String title;
+  final String body;
+  final String action;
+  final String priority;
+
+  ProactiveNotification({
+    required this.type,
+    required this.title,
+    required this.body,
+    this.action = '',
+    this.priority = 'low',
+  });
+
+  factory ProactiveNotification.fromJson(Map<String, dynamic> json) {
+    return ProactiveNotification(
+      type: json['type'] as String? ?? '',
+      title: json['title'] as String? ?? '',
+      body: json['body'] as String? ?? '',
+      action: json['action'] as String? ?? '',
+      priority: json['priority'] as String? ?? 'low',
+    );
+  }
+}
+
 
 // ═══════════ Service ═══════════
 
@@ -454,5 +678,77 @@ class AiAssistantService {
     } catch (_) {
       return false;
     }
+  }
+
+  /// Track order status via AI
+  Future<OrderTracking> trackOrder({String? orderId}) async {
+    final response = await _apiService.post('/api/ai/track-order', {
+      if (orderId != null) 'order_id': orderId,
+    });
+
+    if (response is Map<String, dynamic> && response['success'] == true) {
+      final tracking = response['tracking'] as Map<String, dynamic>? ?? {};
+      return OrderTracking.fromJson(tracking);
+    }
+    throw Exception(response is Map<String, dynamic>
+        ? (response['error'] ?? 'Tracking unavailable')
+        : 'Tracking unavailable');
+  }
+
+  /// Purchase-history-based recommendations
+  Future<Recommendations> getRecommendations() async {
+    final response = await _apiService.post('/api/ai/recommendations', {});
+
+    if (response is Map<String, dynamic> && response['success'] == true) {
+      final recs = response['recommendations'] as Map<String, dynamic>? ?? {};
+      return Recommendations.fromJson(recs);
+    }
+    throw Exception(response is Map<String, dynamic>
+        ? (response['error'] ?? 'Recommendations unavailable')
+        : 'Recommendations unavailable');
+  }
+
+  /// Cook with ingredients — text-based
+  Future<CookWithResult> cookWithIngredients({required String ingredients}) async {
+    final response = await _apiService.post('/api/ai/cook-with', {
+      'ingredients': ingredients,
+    });
+
+    if (response is Map<String, dynamic> && response['success'] == true) {
+      final data = response['cook_with'] as Map<String, dynamic>? ?? {};
+      return CookWithResult.fromJson(data);
+    }
+    throw Exception(response is Map<String, dynamic>
+        ? (response['error'] ?? 'Recipe suggestions unavailable')
+        : 'Recipe suggestions unavailable');
+  }
+
+  /// Price check — no AI call, instant
+  Future<PriceCheckResult> checkPrices({required String items}) async {
+    final response = await _apiService.post('/api/ai/price-check', {
+      'items': items,
+    });
+
+    if (response is Map<String, dynamic> && response['success'] == true) {
+      final data = response['prices'] as Map<String, dynamic>? ?? {};
+      return PriceCheckResult.fromJson(data);
+    }
+    throw Exception(response is Map<String, dynamic>
+        ? (response['error'] ?? 'Price check unavailable')
+        : 'Price check unavailable');
+  }
+
+  /// Proactive check — returns notifications the user should see
+  Future<List<ProactiveNotification>> proactiveCheck() async {
+    try {
+      final response = await _apiService.post('/api/ai/proactive-check', {});
+      if (response is Map<String, dynamic> && response['success'] == true) {
+        final items = response['notifications'] as List? ?? [];
+        return items
+            .map((e) => ProactiveNotification.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+    } catch (_) {}
+    return [];
   }
 }

@@ -13,6 +13,7 @@ import '../../providers/vendor_provider.dart';
 import '../../providers/product_provider.dart';
 import '../../models/product.dart';
 import '../../services/ai_assistant_service.dart';
+import '../../services/shopping_list_service.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Ntwaza AI — Professional Smart Shopping Assistant
@@ -70,8 +71,31 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
     // Pre-load all products so AI cart integration works
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ProductProvider>().fetchAllProducts();
+      _checkProactiveNotifications();
     });
     _loadRecentSearches();
+  }
+
+  // ─── Proactive notifications ───
+
+  Future<void> _checkProactiveNotifications() async {
+    try {
+      final notifications = await _aiService.proactiveCheck();
+      if (!mounted || notifications.isEmpty) return;
+
+      // Show most important notification as a banner message
+      final top = notifications.first;
+      setState(() {
+        _messages.add(_ChatMessage(
+          text: '${top.title}\n${top.body}',
+          isUser: false,
+        ));
+        _showWelcome = false;
+      });
+      _scrollToBottom();
+    } catch (_) {
+      // Silent fail — proactive is optional
+    }
   }
 
   @override
@@ -88,10 +112,20 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
 
   String get _greeting {
     final h = DateTime.now().hour;
-    if (h >= 5 && h < 12) return 'Good morning';
-    if (h >= 12 && h < 17) return 'Good afternoon';
-    if (h >= 17 && h < 21) return 'Good evening';
-    return 'Hi there';
+    if (h >= 5 && h < 12) return 'Good morning \u2615';
+    if (h >= 12 && h < 17) return 'Good afternoon \u2600\uFE0F';
+    if (h >= 17 && h < 21) return 'Good evening \uD83C\uDF19';
+    return 'Hi there \uD83D\uDC4B';
+  }
+
+  String get _timeContext {
+    final h = DateTime.now().hour;
+    if (h >= 5 && h < 10) return 'What would you like for breakfast?';
+    if (h >= 10 && h < 12) return 'Planning lunch already?';
+    if (h >= 12 && h < 14) return 'Lunchtime! Need meal ideas?';
+    if (h >= 14 && h < 17) return 'Snack time or planning dinner?';
+    if (h >= 17 && h < 21) return 'What\'s for dinner tonight?';
+    return 'Late night shopping?';
   }
 
   // ─── Recent searches cache ───
@@ -196,6 +230,9 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
     // Smart Cart — always first, flagship feature
     actions.add(_QuickAction('\uD83D\uDED2 Plan my groceries', Icons.psychology_rounded, '__SMART_CART__'));
 
+    // Order tracking
+    actions.add(_QuickAction('\uD83D\uDCE6 Track my order', Icons.local_shipping_rounded, '__TRACK_ORDER__'));
+
     // Time-based meal suggestion
     if (h >= 6 && h < 10) {
       actions.add(_QuickAction('Breakfast ideas', Icons.egg_alt_rounded, 'What quick healthy breakfast can I make? Include nutrition info.'));
@@ -209,6 +246,15 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
     if (hasCart) {
       actions.add(_QuickAction('Analyze my cart', Icons.analytics_rounded, '__ANALYZE_CART__'));
     }
+
+    // Reorder favorites
+    actions.add(_QuickAction('\uD83D\uDD04 Reorder favorites', Icons.replay_rounded, '__RECOMMENDATIONS__'));
+
+    // Cook with what I have
+    actions.add(_QuickAction('\uD83C\uDF73 Cook with what I have', Icons.kitchen_rounded, '__COOK_WITH__'));
+
+    // Price check
+    actions.add(_QuickAction('\uD83D\uDCB0 Check prices', Icons.price_check_rounded, '__PRICE_CHECK__'));
 
     // Budget
     actions.add(_QuickAction('Budget plan', Icons.savings_rounded, 'I\'m on a tight budget. Help me plan affordable groceries for the week with good nutrition.'));
@@ -588,9 +634,271 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
       _analyzeCart();
     } else if (action == '__MEAL_IDEAS__') {
       _getMealIdeas();
+    } else if (action == '__TRACK_ORDER__') {
+      _trackOrder();
+    } else if (action == '__RECOMMENDATIONS__') {
+      _getRecommendations();
+    } else if (action == '__COOK_WITH__') {
+      _showCookWithDialog();
+    } else if (action == '__PRICE_CHECK__') {
+      _showPriceCheckDialog();
     } else {
       _sendMessage(action);
     }
+  }
+
+  // ─── Track Order ───
+
+  Future<void> _trackOrder() async {
+    setState(() {
+      _showWelcome = false;
+      _messages.add(_ChatMessage(text: '📦 Track my order', isUser: true));
+      _isSending = true;
+    });
+    _scrollToBottom();
+
+    try {
+      final tracking = await _aiService.trackOrder();
+      if (!mounted) return;
+
+      // Build rich response
+      final buf = StringBuffer(tracking.note);
+      if (tracking.orders.isNotEmpty) {
+        buf.writeln('\n');
+        for (final o in tracking.orders) {
+          buf.writeln('${o.emoji} #${o.orderNumber} — ${o.statusLabel}');
+          if (o.eta.isNotEmpty) buf.writeln('   ETA: ${o.eta}');
+          if (o.total > 0) buf.writeln('   Total: ${_fmt.format(o.total)} RWF');
+        }
+      }
+
+      setState(() {
+        _isSending = false;
+        _messages.add(_ChatMessage(text: buf.toString().trim(), isUser: false));
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isSending = false;
+        _messages.add(_ChatMessage(
+          text: '• Could not fetch order status\n• ${e.toString().replaceAll('Exception: ', '')}',
+          isUser: false,
+          isError: true,
+        ));
+      });
+    }
+    _scrollToBottom();
+  }
+
+  // ─── Recommendations ───
+
+  Future<void> _getRecommendations() async {
+    setState(() {
+      _showWelcome = false;
+      _messages.add(_ChatMessage(text: '🔄 Reorder my favorites', isUser: true));
+      _isSending = true;
+    });
+    _scrollToBottom();
+
+    try {
+      final recs = await _aiService.getRecommendations();
+      if (!mounted) return;
+
+      final buf = StringBuffer(recs.note);
+      if (recs.reorderList.isNotEmpty) {
+        buf.writeln('\n\n📋 Your usual items:');
+        for (final item in recs.reorderList) {
+          buf.writeln('• ${item.name} — ${_fmt.format(item.price)} RWF (bought ${item.timesBought}x)');
+        }
+      }
+      if (recs.complementary.isNotEmpty) {
+        buf.writeln('\n✨ You might also like:');
+        for (final item in recs.complementary) {
+          buf.writeln('• ${item.name} — ${_fmt.format(item.price)} RWF');
+          if (item.reason.isNotEmpty) buf.writeln('  ${item.reason}');
+        }
+      }
+
+      setState(() {
+        _isSending = false;
+        _messages.add(_ChatMessage(text: buf.toString().trim(), isUser: false));
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isSending = false;
+        _messages.add(_ChatMessage(
+          text: '• Could not load recommendations\n• ${e.toString().replaceAll('Exception: ', '')}',
+          isUser: false,
+          isError: true,
+        ));
+      });
+    }
+    _scrollToBottom();
+  }
+
+  // ─── Cook With Ingredients ───
+
+  void _showCookWithDialog() {
+    final ingredientController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('🍳 What do you have?'),
+        content: TextField(
+          controller: ingredientController,
+          maxLines: 3,
+          decoration: const InputDecoration(
+            hintText: 'e.g. rice, beans, onions, tomatoes...',
+            border: OutlineInputBorder(),
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final text = ingredientController.text.trim();
+              Navigator.pop(ctx);
+              if (text.isNotEmpty) _cookWithIngredients(text);
+            },
+            child: const Text('Find recipes'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _cookWithIngredients(String ingredients) async {
+    setState(() {
+      _showWelcome = false;
+      _messages.add(_ChatMessage(text: '🍳 Cook with: $ingredients', isUser: true));
+      _isSending = true;
+    });
+    _scrollToBottom();
+
+    try {
+      final result = await _aiService.cookWithIngredients(ingredients: ingredients);
+      if (!mounted) return;
+
+      final buf = StringBuffer();
+      if (result.note.isNotEmpty) buf.writeln(result.note);
+
+      if (result.meals.isNotEmpty) {
+        for (final meal in result.meals) {
+          buf.writeln('\n🍽️ ${meal.name}');
+          if (meal.time.isNotEmpty) buf.writeln('   ⏱️ ${meal.time}');
+          if (meal.steps.isNotEmpty) buf.writeln('   ${meal.steps}');
+          if (meal.missing.isNotEmpty) {
+            buf.writeln('   🛒 Need to buy: ${meal.missing.join(', ')}');
+          }
+        }
+      }
+
+      if (result.buyItems.isNotEmpty) {
+        buf.writeln('\n💰 Items to buy:');
+        for (final item in result.buyItems) {
+          buf.writeln('• ${item.name} x${item.qty} — ${_fmt.format(item.subtotal)} RWF');
+        }
+        buf.writeln('Total: ${_fmt.format(result.buyTotal)} RWF');
+      }
+
+      setState(() {
+        _isSending = false;
+        _messages.add(_ChatMessage(
+          text: buf.toString().trim().isEmpty ? '• No recipes found for those ingredients' : buf.toString().trim(),
+          isUser: false,
+        ));
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isSending = false;
+        _messages.add(_ChatMessage(
+          text: '• Could not find recipes\n• ${e.toString().replaceAll('Exception: ', '')}',
+          isUser: false,
+          isError: true,
+        ));
+      });
+    }
+    _scrollToBottom();
+  }
+
+  // ─── Price Check ───
+
+  void _showPriceCheckDialog() {
+    final priceController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('💰 Check prices'),
+        content: TextField(
+          controller: priceController,
+          decoration: const InputDecoration(
+            hintText: 'e.g. rice, milk, eggs, bread...',
+            border: OutlineInputBorder(),
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final text = priceController.text.trim();
+              Navigator.pop(ctx);
+              if (text.isNotEmpty) _checkPrices(text);
+            },
+            child: const Text('Check'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _checkPrices(String items) async {
+    setState(() {
+      _showWelcome = false;
+      _messages.add(_ChatMessage(text: '💰 Price check: $items', isUser: true));
+      _isSending = true;
+    });
+    _scrollToBottom();
+
+    try {
+      final result = await _aiService.checkPrices(items: items);
+      if (!mounted) return;
+
+      final buf = StringBuffer(result.note);
+      if (result.items.isNotEmpty) {
+        buf.writeln('\n');
+        for (final item in result.items) {
+          buf.write('• ${item.name} — ${_fmt.format(item.price)} RWF');
+          if (item.unit.isNotEmpty) buf.write(' / ${item.unit}');
+          buf.writeln();
+        }
+      }
+
+      setState(() {
+        _isSending = false;
+        _messages.add(_ChatMessage(text: buf.toString().trim(), isUser: false));
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isSending = false;
+        _messages.add(_ChatMessage(
+          text: '• Could not check prices\n• ${e.toString().replaceAll('Exception: ', '')}',
+          isUser: false,
+          isError: true,
+        ));
+      });
+    }
+    _scrollToBottom();
   }
 
   void _scrollToBottom() {
@@ -826,6 +1134,60 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
     ));
   }
 
+  // ─── Save as Shopping List ───
+
+  final ShoppingListService _shoppingListService = ShoppingListService();
+
+  void _saveAsShoppingList(List<AiReplyItem> items) async {
+    final nameController = TextEditingController(
+      text: 'Shopping list ${DateFormat('MMM d').format(DateTime.now())}',
+    );
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Save shopping list'),
+        content: TextField(
+          controller: nameController,
+          decoration: const InputDecoration(
+            labelText: 'List name',
+            border: OutlineInputBorder(),
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Save')),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    final list = ShoppingListService.fromAiItems(
+      nameController.text.trim().isEmpty ? 'My list' : nameController.text.trim(),
+      items.map((i) => {'name': i.name, 'qty': i.qty, 'price': i.price}).toList(),
+    );
+
+    await _shoppingListService.saveList(list);
+
+    if (!mounted) return;
+    HapticFeedback.mediumImpact();
+
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('\u2705 Saved "${list.name}" (${list.items.length} items)'),
+      backgroundColor: _brand,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      duration: const Duration(seconds: 3),
+      action: SnackBarAction(
+        label: 'SHARE',
+        textColor: Colors.white,
+        onPressed: () => _shoppingListService.shareList(list),
+      ),
+    ));
+  }
+
   // ═══════════ BUILD ═══════════
 
   @override
@@ -894,11 +1256,11 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('NtWaza AI', style: TextStyle(
-                        color: tp, fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: -0.3,
+                      Text('NTWAZA', style: TextStyle(
+                        color: tp, fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: 1.0,
                       )),
                       Text(
-                        _isSending ? 'Thinking...' : 'Shop smart. Eat well. Save more.',
+                        _isSending ? 'Thinking...' : _timeContext,
                         style: TextStyle(color: _isSending ? Colors.orange : ts, fontSize: 11.5, fontWeight: FontWeight.w500),
                       ),
                     ],
@@ -937,7 +1299,9 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
             color: tp, fontSize: 22, fontWeight: FontWeight.w600,
           ))),
           const SizedBox(height: 4),
-          Center(child: Text('Shop smart. Eat well. Save more.', style: TextStyle(color: ts, fontSize: 13))),
+          Center(child: Text('I\'m NTWAZA — your smart shopping assistant', style: TextStyle(color: ts, fontSize: 13))),
+          const SizedBox(height: 2),
+          Center(child: Text(_timeContext, style: TextStyle(color: _brandLight, fontSize: 12, fontWeight: FontWeight.w500))),
 
           const SizedBox(height: 24),
 
@@ -1237,18 +1601,39 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
                           ),
                         Padding(
                           padding: const EdgeInsets.fromLTRB(14, 8, 14, 4),
-                          child: SizedBox(
-                            width: double.infinity, height: 36,
-                            child: ElevatedButton(
-                              onPressed: () => _addAllItemsToCart(reply.items),
-                              child: Text('Add ${reply.items.length} to cart', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: _brand,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                elevation: 0,
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: SizedBox(
+                                  height: 36,
+                                  child: ElevatedButton(
+                                    onPressed: () => _addAllItemsToCart(reply.items),
+                                    child: Text('Add ${reply.items.length} to cart', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: _brand,
+                                      foregroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                      elevation: 0,
+                                    ),
+                                  ),
+                                ),
                               ),
-                            ),
+                              const SizedBox(width: 8),
+                              SizedBox(
+                                height: 36,
+                                child: OutlinedButton.icon(
+                                  onPressed: () => _saveAsShoppingList(reply.items),
+                                  icon: const Icon(Icons.bookmark_add_outlined, size: 16),
+                                  label: const Text('Save', style: TextStyle(fontSize: 12)),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: _brand,
+                                    side: const BorderSide(color: _brand, width: 1),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],

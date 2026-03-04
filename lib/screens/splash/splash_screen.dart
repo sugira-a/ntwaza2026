@@ -108,13 +108,13 @@ class _SplashScreenState extends State<SplashScreen>
       _statusText = 'Setting up...';
     });
 
-    // 1. Request notification permission (fire-and-forget, don't block)
-    _requestNotifications();
+    // 1. Request location permission FIRST (required, shows native popup)
+    setState(() => _statusText = 'Requesting location access...');
+    final locationGranted = await _requestLocation();
     if (!mounted) return;
 
-    // 2. Request location permission (native popup — NO timeout on this)
-    setState(() => _statusText = 'Getting your location...');
-    final locationGranted = await _requestLocation();
+    // 2. Request notification permission (fire-and-forget, don't block)
+    _requestNotifications();
     if (!mounted) return;
 
     if (!locationGranted) {

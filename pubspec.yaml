@@ -28,6 +28,7 @@ dependencies:
   
   # Storage
   shared_preferences: ^2.3.3
+  share_plus: ^10.1.4
   
   # Location & Maps
   geolocator: ^13.0.2

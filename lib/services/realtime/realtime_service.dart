@@ -25,9 +25,12 @@ class RealtimeService {
       StreamController<Map<String, dynamic>>.broadcast();
   final StreamController<Map<String, dynamic>> _notificationsController =
       StreamController<Map<String, dynamic>>.broadcast();
+  final StreamController<Map<String, dynamic>> _contentUpdatesController =
+      StreamController<Map<String, dynamic>>.broadcast();
 
   Stream<Map<String, dynamic>> get orderUpdates => _orderUpdatesController.stream;
   Stream<Map<String, dynamic>> get notifications => _notificationsController.stream;
+  Stream<Map<String, dynamic>> get contentUpdates => _contentUpdatesController.stream;
 
   bool get isConnected => _socket?.connected == true;
 
@@ -109,6 +112,11 @@ class RealtimeService {
     socket.on('notification', (data) {
       final payload = _asMap(data);
       if (payload != null) _notificationsController.add(payload);
+    });
+
+    socket.on('content_update', (data) {
+      final payload = _asMap(data);
+      if (payload != null) _contentUpdatesController.add(payload);
     });
 
     _isConnecting = true;

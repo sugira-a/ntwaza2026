@@ -25,6 +25,7 @@ import '../../screens/map/location_picker_screen.dart';
 import '../../screens/vendor/widgets/product_detail_modal.dart';
 import '../../services/api/api_service.dart';
 import '../../services/location_service.dart';
+import '../../services/realtime/realtime_service.dart';
 import '../loading/shimmer_loading.dart';
 import 'draggable_ai_assistant.dart';
 
@@ -46,13 +47,78 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
   bool _isInitializing = true;
   DeliveryAddress? _currentAddress;
   final Map<String, Future<Uint8List?>> _vendorImageFutureCache = {};
+
+  // Real-time listeners for auto-refresh (WhatsApp-style)
+  StreamSubscription<Map<String, dynamic>>? _orderUpdatesSub;
+  StreamSubscription<Map<String, dynamic>>? _notificationsSub;
+  StreamSubscription<Map<String, dynamic>>? _contentUpdatesSub;
+  DateTime? _lastAutoRefresh;
   
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeApp();
+      _setupRealtimeListeners();
     });
+  }
+
+  /// Listen to real-time socket events and auto-refresh data when changes occur
+  void _setupRealtimeListeners() {
+    final realtime = RealtimeService();
+
+    // Listen for order updates (e.g. order status changes)
+    _orderUpdatesSub = realtime.orderUpdates.listen((payload) {
+      if (!mounted) return;
+      // Auto-refresh offers & vendors when order-related events arrive
+      _throttledAutoRefresh();
+    });
+
+    // Listen for push notifications (new offers, vendor changes, etc.)
+    _notificationsSub = realtime.notifications.listen((payload) {
+      if (!mounted) return;
+      final type = payload['type'] as String? ?? '';
+      // Auto-refresh on content-relevant notifications
+      if (type.contains('offer') || type.contains('vendor') || type.contains('promo') || type.contains('update')) {
+        _throttledAutoRefresh();
+      }
+      // Always refresh notification badge count
+      try {
+        context.read<NotificationProvider>().fetchUnreadCount();
+      } catch (_) {}
+    });
+
+    // Listen for content updates (offers changed, vendor status changed, etc.)
+    _contentUpdatesSub = realtime.contentUpdates.listen((payload) {
+      if (!mounted) return;
+      _throttledAutoRefresh();
+    });
+  }
+
+  /// Throttle auto-refresh to at most once every 15 seconds to avoid spamming
+  void _throttledAutoRefresh() {
+    final now = DateTime.now();
+    if (_lastAutoRefresh != null && now.difference(_lastAutoRefresh!).inSeconds < 15) {
+      return;
+    }
+    _lastAutoRefresh = now;
+    _autoRefreshContent();
+  }
+
+  /// Silently refresh offers and vendor data in the background (no loading indicator)
+  Future<void> _autoRefreshContent() async {
+    if (!mounted) return;
+    try {
+      // Refresh special offers
+      await context.read<SpecialOfferProvider>().fetchHomepageOffers();
+    } catch (_) {}
+    try {
+      // Refresh vendors
+      final address = _currentAddress;
+      if (address != null) {
+        await context.read<VendorProvider>().fetchVendors(forceRefresh: true);
+      }
+    } catch (_) {}
   }
 
   Future<void> _initializeApp() async {
@@ -219,6 +285,9 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
 
   @override
   void dispose() {
+    _orderUpdatesSub?.cancel();
+    _notificationsSub?.cancel();
+    _contentUpdatesSub?.cancel();
     _scrollController.dispose();
     _searchController.dispose();
     _searchDebounce?.cancel();
@@ -1109,14 +1178,14 @@ void _showAddressManagementDialog(BuildContext context, bool isDarkMode, Color c
     return GestureDetector(
       onTap: () => _handleCategoryTap(category),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        margin: const EdgeInsets.only(right: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        margin: const EdgeInsets.only(right: 6),
         decoration: BoxDecoration(
           color: isSelected ? Colors.black : chipColor,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: isSelected ? Colors.black : (isDarkMode ? Colors.grey[800]! : Colors.grey[300]!), width: 1.5),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: isSelected ? Colors.black : (isDarkMode ? Colors.grey[800]! : Colors.grey[300]!), width: 1),
         ),
-        child: Text(category, style: TextStyle(color: isSelected ? Colors.white : textColor, fontWeight: FontWeight.w600, fontSize: 13)),
+        child: Text(category, style: TextStyle(color: isSelected ? Colors.white : textColor, fontWeight: FontWeight.w600, fontSize: 12)),
       ),
     );
   }
@@ -1222,30 +1291,30 @@ void _showAddressManagementDialog(BuildContext context, bool isDarkMode, Color c
         context.push('/create-pickup-order');
       },
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        padding: const EdgeInsets.all(20),
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
           gradient: LinearGradient(colors: [Colors.black, Colors.grey[900]!], begin: Alignment.topLeft, end: Alignment.bottomRight),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 20, offset: const Offset(0, 8), spreadRadius: 2)],
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 12, offset: const Offset(0, 4), spreadRadius: 1)],
         ),
         child: Row(children: [
           Container(
-            width: 64, height: 64,
-            decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withOpacity(0.15), border: Border.all(color: Colors.white.withOpacity(0.3), width: 2)),
-            child: const Icon(Icons.local_shipping, color: Colors.white, size: 32),
+            width: 48, height: 48,
+            decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withOpacity(0.15), border: Border.all(color: Colors.white.withOpacity(0.3), width: 1.5)),
+            child: const Icon(Icons.local_shipping, color: Colors.white, size: 24),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-              Text('Send a Package', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
-              const SizedBox(height: 6),
-              Text('Fast pickup & delivery anywhere', style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 13)),
-              const SizedBox(height: 12),
+              Text('Send a Package', style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 3),
+              Text('Fast pickup & delivery anywhere', style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 12)),
+              const SizedBox(height: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), 
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
-                child: const Text('Ntwaza Now →', style: TextStyle(color: Colors.black, fontSize: 13, fontWeight: FontWeight.w700)),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6), 
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(7)),
+                child: const Text('Ntwaza Now →', style: TextStyle(color: Colors.black, fontSize: 12, fontWeight: FontWeight.w700)),
               ),
             ])
           ),
@@ -1267,44 +1336,44 @@ void _showAddressManagementDialog(BuildContext context, bool isDarkMode, Color c
         context.push('/create-pickup-order');
       },
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [Colors.orangeAccent, Colors.deepOrange],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: Colors.deepOrange.withOpacity(0.4),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
-              spreadRadius: 2,
+              color: Colors.deepOrange.withOpacity(0.3),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+              spreadRadius: 1,
             ),
           ],
         ),
         child: Row(
           children: [
             Container(
-              width: 60,
-              height: 60,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: Colors.white.withOpacity(0.2),
                 border: Border.all(
                   color: Colors.white.withOpacity(0.5),
-                  width: 2,
+                  width: 1.5,
                 ),
               ),
               child: const Icon(
                 Icons.local_shipping,
                 color: Colors.white,
-                size: 32,
+                size: 24,
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1314,23 +1383,23 @@ void _showAddressManagementDialog(BuildContext context, bool isDarkMode, Color c
                     'Ntwaza Now',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 18,
+                      fontSize: 16,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0.5,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 3),
                   Text(
                     'Send packages anywhere fast',
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.95),
-                      fontSize: 13,
+                      fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(6),
@@ -1339,7 +1408,7 @@ void _showAddressManagementDialog(BuildContext context, bool isDarkMode, Color c
                       'Start Order →',
                       style: TextStyle(
                         color: Colors.deepOrange,
-                        fontSize: 12,
+                        fontSize: 11,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -1350,7 +1419,7 @@ void _showAddressManagementDialog(BuildContext context, bool isDarkMode, Color c
             const Icon(
               Icons.arrow_forward_ios,
               color: Colors.white,
-              size: 20,
+              size: 18,
             ),
           ],
         ),
@@ -2712,14 +2781,14 @@ Widget _buildNoVendorsOverlay(bool isDarkMode, Color cardColor, Color textColor,
     child: ListView(
       controller: _scrollController,
       children: [
-        const SizedBox(height: 12),
+        const SizedBox(height: 4),
         _buildPackageDeliveryBanner(),
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
-          child: Text('Browse Categories', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: textColor)),
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+          child: Text('Browse Categories', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: textColor)),
         ),
         SizedBox(
-          height: 50,
+          height: 40,
           child: ListView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -2727,15 +2796,15 @@ Widget _buildNoVendorsOverlay(bool isDarkMode, Color cardColor, Color textColor,
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 _selectedCategory == 'All' ? 'Featured Vendors' : _selectedCategory,
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: textColor),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: textColor),
               ),
-              Text('(${displayVendors.length} found)', style: TextStyle(fontSize: 14, color: subtextColor)),
+              Text('(${displayVendors.length} found)', style: TextStyle(fontSize: 13, color: subtextColor)),
             ],
           ),
         ),
