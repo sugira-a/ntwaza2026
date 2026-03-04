@@ -3,8 +3,10 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import '../../models/order.dart';
+import '../../models/product.dart';
 import '../../models/pickup_order.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/cart_provider.dart';
 import '../../providers/pickup_order_provider.dart';
 import '../../services/api/api_service.dart';
 
@@ -208,6 +210,35 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
     );
   }
 
+  void _reorderItems(Order order) {
+    final cart = context.read<CartProvider>();
+    int added = 0;
+    for (final item in order.items) {
+      final product = Product(
+        id: item.productId,
+        name: item.productName,
+        description: '',
+        price: item.price,
+        imageUrl: item.imageUrl ?? '',
+        category: '',
+        isAvailable: true,
+        vendorId: order.vendorId,
+        vendorName: order.vendorName,
+      );
+      cart.addItem(product, quantity: item.quantity, vendorId: order.vendorId);
+      added++;
+    }
+    if (added > 0 && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$added item${added > 1 ? 's' : ''} added to cart'),
+          action: SnackBarAction(label: 'VIEW CART', onPressed: () => context.push('/cart')),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
   Widget _buildOrderTab(String filter) {
     if (_isLoading) return _buildShimmer();
     if (_error != null) return _buildError(_error!);
@@ -222,7 +253,11 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
         separatorBuilder: (_, __) => const SizedBox(height: 12),
         itemBuilder: (_, i) {
           final o = list[i];
-          return _OrderCard(order: o, onTap: () => context.push('/order/${o.id}', extra: o));
+          return _OrderCard(
+            order: o,
+            onTap: () => context.push('/order/${o.id}', extra: o),
+            onReorder: (o.status == OrderStatus.completed) ? () => _reorderItems(o) : null,
+          );
         },
       ),
     );
@@ -328,7 +363,8 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
 class _OrderCard extends StatelessWidget {
   final Order order;
   final VoidCallback onTap;
-  const _OrderCard({required this.order, required this.onTap});
+  final VoidCallback? onReorder;
+  const _OrderCard({required this.order, required this.onTap, this.onReorder});
 
   @override
   Widget build(BuildContext context) {
@@ -400,6 +436,22 @@ class _OrderCard extends StatelessWidget {
                       Text('RWF ${_price(order.total)}', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: pText)),
                     ]),
                     const Spacer(),
+                    if (onReorder != null)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: OutlinedButton.icon(
+                          onPressed: onReorder,
+                          icon: const Icon(Icons.replay_rounded, size: 14),
+                          label: const Text('Reorder'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF4CAF50),
+                            side: const BorderSide(color: Color(0xFF4CAF50)),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ),
                     _actionButton(order.status, onTap, isDark),
                   ],
                 ),

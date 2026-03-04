@@ -10,6 +10,7 @@ import '../../providers/cart_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/review_provider.dart';
+import '../../providers/wishlist_provider.dart';
 import '../../utils/helpers.dart';
 import 'widgets/product_detail_modal.dart';
 
@@ -714,30 +715,74 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
               borderRadius: BorderRadius.only(topLeft: Radius.circular(12), bottomLeft: Radius.circular(12)),
               child: Stack(
                 children: [
-                  Image.network(
-                    product.imageUrl.isNotEmpty ? product.imageUrl : 'https://picsum.photos/seed/${product.id}/200/200',
-                    width: 100,
-                    height: 100,
-                    fit: BoxFit.cover,
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return Container(
-                        width: 100,
-                        height: 100,
-                        color: isDarkMode ? Colors.grey[900] : Colors.grey[200],
-                        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                      );
-                    },
-                    errorBuilder: (context, error, stackTrace) {
-                      print('❌ Product image error: $error for ${product.imageUrl}');
-                      return Container(
-                        width: 100,
-                        height: 100,
-                        color: isDarkMode ? Colors.grey[900] : Colors.grey[200],
-                        child: Icon(Icons.fastfood, color: isDarkMode ? Colors.grey[700] : Colors.grey[400], size: 32),
-                      );
-                    },
+                  ColorFiltered(
+                    colorFilter: product.isAvailable
+                        ? const ColorFilter.mode(Colors.transparent, BlendMode.multiply)
+                        : const ColorFilter.matrix(<double>[
+                            0.2126, 0.7152, 0.0722, 0, 0,
+                            0.2126, 0.7152, 0.0722, 0, 0,
+                            0.2126, 0.7152, 0.0722, 0, 0,
+                            0, 0, 0, 1, 0,
+                          ]),
+                    child: Image.network(
+                      product.imageUrl.isNotEmpty ? product.imageUrl : 'https://picsum.photos/seed/${product.id}/200/200',
+                      width: 100,
+                      height: 100,
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Container(
+                          width: 100,
+                          height: 100,
+                          color: isDarkMode ? Colors.grey[900] : Colors.grey[200],
+                          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        print('❌ Product image error: $error for ${product.imageUrl}');
+                        return Container(
+                          width: 100,
+                          height: 100,
+                          color: isDarkMode ? Colors.grey[900] : Colors.grey[200],
+                          child: Icon(Icons.fastfood, color: isDarkMode ? Colors.grey[700] : Colors.grey[400], size: 32),
+                        );
+                      },
+                    ),
                   ),
+                  // Out-of-stock overlay
+                  if (!product.isAvailable)
+                    Positioned.fill(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.4),
+                          borderRadius: BorderRadius.only(topLeft: Radius.circular(12), bottomLeft: Radius.circular(12)),
+                        ),
+                        child: Center(
+                          child: Container(
+                            padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withOpacity(0.85),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text('OUT OF STOCK', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w800, letterSpacing: 0.5)),
+                          ),
+                        ),
+                      ),
+                    ),
+                  // Low stock indicator
+                  if (product.isAvailable && product.stockQuantity != null && product.stockQuantity! > 0 && product.stockQuantity! <= 5)
+                    Positioned(
+                      top: 4,
+                      left: 4,
+                      child: Container(
+                        padding: EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withOpacity(0.9),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text('${product.stockQuantity} left', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700)),
+                      ),
+                    ),
                   // Watermark
                   Positioned(
                     bottom: 4,
@@ -774,7 +819,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
-                        color: textColor,
+                        color: product.isAvailable ? textColor : subtextColor,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -790,17 +835,68 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     SizedBox(height: 8),
-                    Text(
-                      'RWF ${product.price.toStringAsFixed(0)}',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green[600],
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          'RWF ${product.price.toStringAsFixed(0)}',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: product.isAvailable ? Colors.green[600] : subtextColor,
+                          ),
+                        ),
+                        if (product.originalPrice != null && product.originalPrice! > product.price) ...[
+                          SizedBox(width: 6),
+                          Text(
+                            'RWF ${product.originalPrice!.toStringAsFixed(0)}',
+                            style: TextStyle(fontSize: 11, color: subtextColor, decoration: TextDecoration.lineThrough),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),
               ),
+            ),
+            // Wishlist + Quick add column
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Consumer<WishlistProvider>(
+                  builder: (ctx, wishlist, _) {
+                    final isFav = wishlist.isWishlisted(product.id);
+                    return GestureDetector(
+                      onTap: () => wishlist.toggleWishlist(product),
+                      child: Padding(
+                        padding: EdgeInsets.all(6),
+                        child: Icon(
+                          isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                          size: 20,
+                          color: isFav ? Colors.redAccent : subtextColor,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                if (product.isAvailable)
+                  GestureDetector(
+                    onTap: () {
+                      context.read<CartProvider>().addToCart(product, vendorId: widget.vendor.id);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('${product.name} added to cart'), duration: Duration(seconds: 1)),
+                      );
+                    },
+                    child: Container(
+                      margin: EdgeInsets.only(top: 4, right: 8),
+                      padding: EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(Icons.add_shopping_cart_rounded, size: 18, color: Colors.green[600]),
+                    ),
+                  ),
+              ],
             ),
           ],
         ),
@@ -950,6 +1046,17 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
                                     Text(widget.vendor.formattedDistance, style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w600)),
                                   ],
                                 ),
+                                if (widget.vendor.estimatedDeliveryDisplay != null) ...[
+                                  SizedBox(width: 12),
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.schedule_rounded, size: 16, color: Colors.white70),
+                                      SizedBox(width: 4),
+                                      Text(widget.vendor.estimatedDeliveryDisplay!, style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w600)),
+                                    ],
+                                  ),
+                                ],
                               ],
                             ),
                           ],

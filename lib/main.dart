@@ -27,6 +27,7 @@ import 'providers/rider_provider.dart';
 import 'providers/rider_order_provider.dart';
 import 'providers/pickup_order_provider.dart';
 import 'providers/review_provider.dart';
+import 'providers/wishlist_provider.dart';
 
 // Services
 import 'services/product_service.dart';
@@ -119,6 +120,10 @@ void main() async {
   final notificationService = NotificationService();
   notificationService.initialize();
 
+  // Initialize wishlist provider
+  final wishlistProvider = WishlistProvider();
+  await wishlistProvider.initialize();
+
   runApp(
     MultiProvider(
       providers: [
@@ -140,6 +145,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => RiderOrderProvider(apiService: apiService)),
         ChangeNotifierProvider(create: (_) => PickupOrderProvider(apiService: apiService)),
         ChangeNotifierProvider(create: (_) => ReviewProvider()),
+        ChangeNotifierProvider.value(value: wishlistProvider),
       ],
       child: MyApp(router: AppRouter.router),
     ),

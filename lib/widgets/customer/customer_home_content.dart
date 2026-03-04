@@ -578,6 +578,20 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
                       const SizedBox(height: 16),
 
                       _buildMenuItemWithIcon(
+                        icon: Icons.favorite_rounded,
+                        iconColor: Colors.redAccent,
+                        title: 'My Wishlist',
+                        onTap: () {
+                          Navigator.pop(context);
+                          context.push('/wishlist');
+                        },
+                        textColor: textColor,
+                        subtextColor: subtextColor,
+                        isDarkMode: isDarkMode,
+                      ),
+                      const SizedBox(height: 16),
+
+                      _buildMenuItemWithIcon(
                         icon: Icons.settings,
                         iconColor: Colors.grey[700]!,
                         title: 'Settings',
@@ -2178,15 +2192,48 @@ void _showAddressManagementDialog(BuildContext context, bool isDarkMode, Color c
     }
 
     if (!searchProvider.hasResults) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.search_off, size: 64, color: subtextColor),
+      return ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // Show search history suggestions
+          if (searchProvider.searchHistory.isNotEmpty) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Recent Searches', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: textColor)),
+                GestureDetector(
+                  onTap: () => searchProvider.clearHistory(),
+                  child: Text('Clear all', style: TextStyle(fontSize: 12, color: subtextColor)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ...searchProvider.searchHistory.map((q) => ListTile(
+              dense: true,
+              leading: Icon(Icons.history_rounded, size: 18, color: subtextColor),
+              title: Text(q, style: TextStyle(color: textColor, fontSize: 14)),
+              trailing: GestureDetector(
+                onTap: () => searchProvider.removeHistoryItem(q),
+                child: Icon(Icons.close, size: 16, color: subtextColor),
+              ),
+              onTap: () {
+                _searchController.text = q;
+                searchProvider.unifiedSearch(q);
+              },
+              contentPadding: EdgeInsets.zero,
+            )),
             const SizedBox(height: 16),
-            Text('No results for "${searchProvider.searchQuery}"', style: TextStyle(color: textColor, fontSize: 16)),
           ],
-        ),
+          Center(
+            child: Column(
+              children: [
+                Icon(Icons.search_off, size: 64, color: subtextColor),
+                const SizedBox(height: 16),
+                Text('No results for "${searchProvider.searchQuery}"', style: TextStyle(color: textColor, fontSize: 16)),
+              ],
+            ),
+          ),
+        ],
       );
     }
 

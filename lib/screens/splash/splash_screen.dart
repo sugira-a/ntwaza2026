@@ -75,11 +75,19 @@ class _SplashScreenState extends State<SplashScreen>
   Future<void> _doStartupFlow() async {
     if (!mounted) return;
 
+    print('\n' + '='*60);
+    print('🚀 STARTUP FLOW: Initializing permissions and location');
+    print('='*60);
+
     final prefs = await SharedPreferences.getInstance();
     final hasSeenPermissions = prefs.getBool('has_seen_permissions') ?? false;
     final locationPermission = await Geolocator.checkPermission();
     final hasLocation = locationPermission == LocationPermission.whileInUse ||
         locationPermission == LocationPermission.always;
+
+    print('\n📊 Initial State:');
+    print('   - Has seen permissions: $hasSeenPermissions');
+    print('   - Has location permission: $hasLocation');
 
     // Wait for addressProvider to finish loading from SharedPreferences
     final addressProvider = Provider.of<AddressProvider>(context, listen: false);
@@ -89,86 +97,160 @@ class _SplashScreenState extends State<SplashScreen>
       await Future.delayed(const Duration(milliseconds: 100));
     }
 
+    print('   - Has saved addresses: ${addressProvider.hasAddresses}');
+
     if (hasLocation && hasSeenPermissions) {
-      // Returning user with permission — capture location if no addresses
+      // Returning user with permission
+      print('\n→ Returning user with location permission');
       if (!addressProvider.hasAddresses) {
+        print('  → Capturing current location...');
         setState(() {
           _isRequestingPermissions = true;
           _statusText = 'Finding nearby vendors...';
         });
-        // Let GPS resolve with its own internal timeouts (15s high + 8s low)
         await _captureCurrentLocation();
+      } else {
+        print('  ✅ Using saved addresses');
       }
+      print('✅ STARTUP: Complete (returning user)');
       return;
     }
 
     // New user or missing permissions - request them
+    print('\n→ New user or permissions needed');
     setState(() {
       _isRequestingPermissions = true;
       _statusText = 'Setting up...';
     });
 
-    // 1. Request location permission FIRST (required, shows native popup)
+    // 1. Request location permission FIRST (required for delivery)
+    print('\n📍 STEP 1: Location Permission');
     setState(() => _statusText = 'Requesting location access...');
-    final locationGranted = await _requestLocation();
-    if (!mounted) return;
-
-    // 2. Request notification permission (fire-and-forget, don't block)
-    _requestNotifications();
+    bool locationGranted = await _requestLocation();
     if (!mounted) return;
 
     if (!locationGranted) {
+      print('  ⚠️ Location denied, retrying...');
       // Try once more
       setState(() => _statusText = 'Location is needed for delivery');
       await Future.delayed(const Duration(milliseconds: 800));
       if (!mounted) return;
 
-      final retryGranted = await _requestLocation();
+      locationGranted = await _requestLocation();
       if (!mounted) return;
 
-      if (!retryGranted) {
+      if (!locationGranted) {
+        print('  ❌ Location permission permanently denied');
         await prefs.setBool('has_seen_permissions', true);
-        // Permission denied — don't create a fake Kigali address.
-        // The home screen will prompt the user to add their real location.
+        print('✅ STARTUP: Complete (no location - user will need to add manually)');
         return;
       }
     }
 
-    // 3. Get and save current location — GPS has its own internal timeouts
+    // 2. Request notification permission (background, don't block main flow)
+    print('\n📲 STEP 2: Notification Permission');
+    setState(() => _statusText = 'Setting up notifications...');
+    // Run async without awaiting - don't block startup
+    _requestNotifications().then((_) {
+      print('  ✅ Notification setup complete');
+    }).catchError((e) {
+      print('  ⚠️ Notification setup failed: $e');
+    });
+    // Give it a brief moment but don't wait indefinitely
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    // 3. Get and save current location
+    print('\n📍 STEP 3: Capture Current Location');
     setState(() => _statusText = 'Finding nearby vendors...');
     await _captureCurrentLocation();
     if (!mounted) return;
 
     // 4. Mark permissions seen
+    print('\n✅ STEP 4: Mark Setup Complete');
     await prefs.setBool('has_seen_permissions', true);
+    
+    print('\n' + '='*60);
+    print('✅ STARTUP FLOW: All steps completed successfully');
+    print('='*60 + '\n');
   }
 
+  /// Request notifications permission with proper sequencing
   Future<void> _requestNotifications() async {
     try {
+      print('\n📲 Requesting notification permissions...');
+      
+      // Initialize notification service (handles Firebase messaging internally)
       final notificationService = NotificationService();
       await notificationService.initialize();
+      print('  ✅ Notification service initialized');
 
-      final plugin = FlutterLocalNotificationsPlugin();
-      final androidPlugin = plugin.resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>();
-      if (androidPlugin != null) {
-        await androidPlugin.requestNotificationsPermission();
+      // Local notification permission request (Android 13+)
+      try {
+        final plugin = FlutterLocalNotificationsPlugin();
+        final androidPlugin = plugin.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+        
+        if (androidPlugin != null) {
+          final granted = await androidPlugin.requestNotificationsPermission();
+          print('  Android local notification: ${granted == true ? "granted" : "denied"}');
+        }
+      } catch (e) {
+        print('  ⚠️ Android notification request failed: $e');
       }
-    } catch (_) {}
+
+      print('✅ Notification permission request completed');
+    } catch (e) {
+      print('❌ Notification request error: $e');
+    }
   }
 
+  /// Request location permission with detailed error handling
   Future<bool> _requestLocation() async {
     try {
+      print('\n📍 Requesting location permissions...');
+      
+      // Check if location services are enabled
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        print('  ❌ Location services disabled');
+        print('  → Opening location settings...');
+        await Geolocator.openLocationSettings();
+        return false;
+      }
+
       var permission = await Geolocator.checkPermission();
+      print('  Current permission: $permission');
+
       if (permission == LocationPermission.whileInUse ||
           permission == LocationPermission.always) {
+        print('✅ Location permission already granted');
         return true;
       }
-      // Shows native OS popup
+
+      if (permission == LocationPermission.deniedForever) {
+        print('  ❌ Permission permanently denied');
+        print('  → Opening app settings...');
+        await Geolocator.openAppSettings();
+        return false;
+      }
+
+      // Request permission - shows native OS dialog
+      print('  → Showing permission dialog...');
       permission = await Geolocator.requestPermission();
-      return permission == LocationPermission.whileInUse ||
+      print('  User response: $permission');
+
+      final granted = permission == LocationPermission.whileInUse ||
           permission == LocationPermission.always;
-    } catch (_) {
+      
+      if (granted) {
+        print('✅ Location permission granted');
+      } else {
+        print('❌ Location permission denied');
+      }
+
+      return granted;
+    } catch (e) {
+      print('❌ Location request error: $e');
       return false;
     }
   }

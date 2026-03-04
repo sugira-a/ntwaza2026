@@ -16,6 +16,7 @@ import '../screens/customer/help_support_screen.dart';
 import '../screens/customer/ai_assistant_screen.dart';
 import '../screens/customer/my_orders_screen.dart';
 // pickup_orders_screen removed — merged into my_orders_screen
+import '../screens/customer/wishlist_screen.dart';
 import '../screens/customer/privacy_policy_screen.dart';
 import '../screens/customer/terms_of_service_screen.dart';
 import '../screens/customer/create_pickup_order_screen.dart';
@@ -156,6 +157,13 @@ class AppRouter {
         path: '/my-orders',
         name: 'my-orders',
         builder: (context, state) => const MyOrdersScreen(),
+      ),
+
+      // Wishlist
+      GoRoute(
+        path: '/wishlist',
+        name: 'wishlist',
+        builder: (context, state) => const WishlistScreen(),
       ),
       
       // Help & Support

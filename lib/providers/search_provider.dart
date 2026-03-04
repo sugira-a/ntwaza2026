@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:logger/logger.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/vendor.dart';
 import '../models/product.dart';
 import '../services/api/api_service.dart';
@@ -10,6 +11,8 @@ enum SearchFilter { all, vendors, products }
 class SearchProvider with ChangeNotifier {
   final ApiService _apiService;
   final _logger = Logger();
+  static const _historyKey = 'search_history';
+  static const _maxHistory = 10;
 
   List<Vendor> _vendors = [];
   List<Product> _products = [];
@@ -18,9 +21,12 @@ class SearchProvider with ChangeNotifier {
   String _searchQuery = '';
   SearchFilter _filter = SearchFilter.all;
   Position? _userLocation;
+  List<String> _searchHistory = [];
 
   SearchProvider({ApiService? apiService})
-      : _apiService = apiService ?? ApiService();
+      : _apiService = apiService ?? ApiService() {
+    _loadHistory();
+  }
 
   // GETTERS
   List<Vendor> get vendors => _vendors;
@@ -31,6 +37,7 @@ class SearchProvider with ChangeNotifier {
   SearchFilter get filter => _filter;
   bool get hasResults => _vendors.isNotEmpty || _products.isNotEmpty;
   int get totalResults => _vendors.length + _products.length;
+  List<String> get searchHistory => List.unmodifiable(_searchHistory);
 
   List<Vendor> get filteredVendors {
     if (_filter == SearchFilter.products) return [];
@@ -92,6 +99,9 @@ class SearchProvider with ChangeNotifier {
 
       print('✅ Found ${_vendors.length} vendors and ${_products.length} products');
       print('✅ All distances already calculated by backend');
+
+      // Save to search history
+      _saveToHistory(trimmedQuery);
 
       // ✅ REMOVED: Google Maps distance calculation
       // Backend provides: distance_km, distance_display, delivery_fee, delivery_time, etc.
@@ -194,5 +204,47 @@ class SearchProvider with ChangeNotifier {
     if (_searchQuery.isNotEmpty) {
       await unifiedSearch(_searchQuery);
     }
+  }
+
+  // ── Search History ──────────────────────────────────
+
+  Future<void> _loadHistory() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _searchHistory = prefs.getStringList(_historyKey) ?? [];
+    } catch (_) {}
+  }
+
+  Future<void> _saveToHistory(String query) async {
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) return;
+    _searchHistory.remove(trimmed);
+    _searchHistory.insert(0, trimmed);
+    if (_searchHistory.length > _maxHistory) {
+      _searchHistory = _searchHistory.sublist(0, _maxHistory);
+    }
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(_historyKey, _searchHistory);
+    } catch (_) {}
+  }
+
+  Future<void> removeHistoryItem(String query) async {
+    _searchHistory.remove(query);
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(_historyKey, _searchHistory);
+    } catch (_) {}
+  }
+
+  Future<void> clearHistory() async {
+    _searchHistory.clear();
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_historyKey);
+    } catch (_) {}
   }
 }
