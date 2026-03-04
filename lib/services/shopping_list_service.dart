@@ -65,7 +65,7 @@ class ShoppingListService {
     buf.writeln('💰 Total: ${total.toStringAsFixed(0)} RWF');
     buf.writeln('\nShared via Ntwaza App');
 
-    await SharePlus.instance.share(ShareParams(text: buf.toString()));
+    await Share.share(buf.toString());
   }
 
   /// Create a shopping list from AI reply items
