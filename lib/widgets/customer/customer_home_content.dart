@@ -169,7 +169,22 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
           await _loadVendorsForAddress(defaultAddress, forceRefresh: false);
         }
       } else {
+        // No address found — first-time user: go straight to the map picker
         setState(() => _isInitializing = false);
+        if (mounted) {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const LocationPickerScreen()),
+          );
+          if (result != null && result is DeliveryAddress) {
+            if (!_isLocationOutOfKigali(result.latitude, result.longitude)) {
+              await addressProvider.addAddress(result);
+              addressProvider.selectAddress(result);
+              setState(() => _currentAddress = result);
+              await _loadVendorsForAddress(result);
+            }
+          }
+        }
       }
     } catch (e) {
       print('Error initializing app: $e');

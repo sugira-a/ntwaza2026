@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'api/api_service.dart';
 import '../providers/cart_provider.dart';
 import '../providers/vendor_provider.dart';
@@ -525,17 +527,159 @@ class ProactiveNotification {
   }
 }
 
+/// Health goal option from the backend
+class HealthGoal {
+  final String id;
+  final String label;
+  final String icon;
+
+  HealthGoal({required this.id, required this.label, required this.icon});
+
+  factory HealthGoal.fromJson(Map<String, dynamic> json) {
+    return HealthGoal(
+      id: json['id'] as String? ?? '',
+      label: json['label'] as String? ?? '',
+      icon: json['icon'] as String? ?? 'health',
+    );
+  }
+}
+
+/// Health guidance result — Rwandan-specific advice
+class HealthGuidance {
+  final String goal;
+  final String advice;
+  final List<String> foodsToIncrease;
+  final List<String> foodsToReduce;
+  final String rwandanTip;
+  final String seasonTip;
+  final List<String> proteinCombos;
+
+  HealthGuidance({
+    required this.goal,
+    required this.advice,
+    this.foodsToIncrease = const [],
+    this.foodsToReduce = const [],
+    this.rwandanTip = '',
+    this.seasonTip = '',
+    this.proteinCombos = const [],
+  });
+
+  factory HealthGuidance.fromJson(Map<String, dynamic> json) {
+    return HealthGuidance(
+      goal: json['goal'] as String? ?? '',
+      advice: json['advice'] as String? ?? '',
+      foodsToIncrease: (json['foods_to_increase'] as List?)?.map((e) => e.toString()).toList() ?? [],
+      foodsToReduce: (json['foods_to_reduce'] as List?)?.map((e) => e.toString()).toList() ?? [],
+      rwandanTip: json['rwandan_tip'] as String? ?? '',
+      seasonTip: json['season_tip'] as String? ?? '',
+      proteinCombos: (json['protein_combos'] as List?)?.map((e) => e.toString()).toList() ?? [],
+    );
+  }
+}
+
+/// Nutrition tip for daily display
+class NutritionTip {
+  final String type;
+  final String title;
+  final String text;
+
+  NutritionTip({required this.type, required this.title, required this.text});
+
+  factory NutritionTip.fromJson(Map<String, dynamic> json) {
+    return NutritionTip(
+      type: json['type'] as String? ?? '',
+      title: json['title'] as String? ?? '',
+      text: json['text'] as String? ?? '',
+    );
+  }
+}
+
+/// Traditional meal data
+class TraditionalMeal {
+  final String name;
+  final List<String> ingredients;
+  final String highlight;
+
+  TraditionalMeal({required this.name, this.ingredients = const [], this.highlight = ''});
+
+  factory TraditionalMeal.fromJson(Map<String, dynamic> json) {
+    return TraditionalMeal(
+      name: json['name'] as String? ?? '',
+      ingredients: (json['ingredients'] as List?)?.map((e) => e.toString()).toList() ?? [],
+      highlight: json['highlight'] as String? ?? '',
+    );
+  }
+}
+
+/// User health profile — stored locally
+class HealthProfile {
+  final String? healthGoal;
+  final int familySize;
+  final double monthlyBudget;
+  final List<String> allergies;
+  final List<String> conditions;
+
+  HealthProfile({
+    this.healthGoal,
+    this.familySize = 1,
+    this.monthlyBudget = 0,
+    this.allergies = const [],
+    this.conditions = const [],
+  });
+
+  Map<String, dynamic> toJson() => {
+    'health_goal': healthGoal,
+    'family_size': familySize,
+    'monthly_budget': monthlyBudget,
+    'allergies': allergies,
+    'conditions': conditions,
+  };
+
+  factory HealthProfile.fromJson(Map<String, dynamic> json) {
+    return HealthProfile(
+      healthGoal: json['health_goal'] as String?,
+      familySize: json['family_size'] as int? ?? 1,
+      monthlyBudget: (json['monthly_budget'] as num?)?.toDouble() ?? 0,
+      allergies: (json['allergies'] as List?)?.map((e) => e.toString()).toList() ?? [],
+      conditions: (json['conditions'] as List?)?.map((e) => e.toString()).toList() ?? [],
+    );
+  }
+}
+
 
 // ═══════════ Service ═══════════
 
 class AiAssistantService {
   final ApiService _apiService = ApiService();
+  static const String _healthProfileKey = 'ntwaza_health_profile';
 
-  /// Build context from current app state
-  Map<String, dynamic> buildContext({
+  // ── Health profile (local storage) ──
+
+  /// Save health profile to local storage
+  Future<void> saveHealthProfile(HealthProfile profile) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_healthProfileKey, jsonEncode(profile.toJson()));
+  }
+
+  /// Load health profile from local storage
+  Future<HealthProfile?> loadHealthProfile() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_healthProfileKey);
+    if (raw == null) return null;
+    return HealthProfile.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+  }
+
+  /// Clear health profile
+  Future<void> clearHealthProfile() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_healthProfileKey);
+  }
+
+  /// Build context from current app state (now includes health profile)
+  Future<Map<String, dynamic>> buildContext({
     CartProvider? cartProvider,
     VendorProvider? vendorProvider,
-  }) {
+  }) async {
     final ctx = <String, dynamic>{};
 
     if (cartProvider != null && cartProvider.items.isNotEmpty) {
@@ -558,6 +702,12 @@ class AiAssistantService {
         'rating': v.rating,
         'delivery_fee': v.deliveryFee,
       }).toList();
+    }
+
+    // Attach health profile if available
+    final hp = await loadHealthProfile();
+    if (hp != null) {
+      ctx['health_profile'] = hp.toJson();
     }
 
     return ctx;
@@ -750,5 +900,48 @@ class AiAssistantService {
       }
     } catch (_) {}
     return [];
+  }
+
+  // ── Health & Nutrition endpoints (no AI call, instant) ──
+
+  /// Get available health goals or guidance for a specific goal
+  Future<HealthGuidance?> getHealthGuidance(String goal) async {
+    final response = await _apiService.post('/api/ai/health-guide', {
+      'goal': goal,
+    });
+
+    if (response is Map<String, dynamic> && response['success'] == true) {
+      final guidance = response['guidance'] as Map<String, dynamic>?;
+      if (guidance != null) {
+        return HealthGuidance.fromJson(guidance);
+      }
+    }
+    return null;
+  }
+
+  /// Get list of available health goals
+  Future<List<HealthGoal>> getHealthGoals() async {
+    final response = await _apiService.post('/api/ai/health-guide', {});
+
+    if (response is Map<String, dynamic> && response['success'] == true) {
+      final goals = response['goals'] as List? ?? [];
+      return goals.map((g) => HealthGoal.fromJson(g as Map<String, dynamic>)).toList();
+    }
+    return [];
+  }
+
+  /// Get daily nutrition tips — no AI call, instant response
+  Future<({List<NutritionTip> tips, TraditionalMeal? meal})> getNutritionTips() async {
+    final response = await _apiService.get('/api/ai/nutrition-tips');
+
+    if (response is Map<String, dynamic> && response['success'] == true) {
+      final tipsList = response['tips'] as List? ?? [];
+      final mealData = response['traditional_meal'] as Map<String, dynamic>?;
+      return (
+        tips: tipsList.map((t) => NutritionTip.fromJson(t as Map<String, dynamic>)).toList(),
+        meal: mealData != null ? TraditionalMeal.fromJson(mealData) : null,
+      );
+    }
+    return (tips: <NutritionTip>[], meal: null);
   }
 }

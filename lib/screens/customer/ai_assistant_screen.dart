@@ -54,6 +54,11 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
   static const _cacheHours = 24;
   List<String> _recentSearches = [];
 
+  // Chat history
+  static const _historyKey = 'ai_chat_history';
+  static const _maxHistorySessions = 30;
+  List<Map<String, dynamic>> _history = [];
+
   // ─── Lifecycle ───
 
   @override
@@ -74,6 +79,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
       _checkProactiveNotifications();
     });
     _loadRecentSearches();
+    _loadHistory();
   }
 
   // ─── Proactive notifications ───
@@ -176,6 +182,79 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
     if (mounted) setState(() => _recentSearches.clear());
   }
 
+  // ─── Chat history persistence ───
+
+  Future<void> _loadHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_historyKey);
+    if (raw == null) return;
+    try {
+      final list = (jsonDecode(raw) as List).cast<Map<String, dynamic>>();
+      if (mounted) setState(() => _history = list);
+    } catch (_) {}
+  }
+
+  Future<void> _saveCurrentChat() async {
+    // Only save if we have real messages
+    final textMessages = _messages.where((m) => m.text.trim().isNotEmpty).toList();
+    if (textMessages.length < 2) return;
+
+    // Derive title from first user message
+    final firstUser = textMessages.firstWhere((m) => m.isUser, orElse: () => textMessages.first);
+    String title = firstUser.text.trim();
+    if (title.length > 50) title = '${title.substring(0, 47)}...';
+
+    final session = {
+      'id': DateTime.now().millisecondsSinceEpoch.toString(),
+      'title': title,
+      'ts': DateTime.now().toIso8601String(),
+      'messages': textMessages.map((m) => {
+        'text': m.text,
+        'isUser': m.isUser,
+        'isError': m.isError,
+        'ts': m.timestamp.toIso8601String(),
+      }).toList(),
+    };
+
+    _history.insert(0, session);
+    if (_history.length > _maxHistorySessions) {
+      _history = _history.sublist(0, _maxHistorySessions);
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_historyKey, jsonEncode(_history));
+  }
+
+  Future<void> _deleteHistorySession(String id) async {
+    _history.removeWhere((s) => s['id'] == id);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_historyKey, jsonEncode(_history));
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _clearAllHistory() async {
+    _history.clear();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_historyKey);
+    if (mounted) setState(() {});
+  }
+
+  void _restoreSession(Map<String, dynamic> session) {
+    final msgs = (session['messages'] as List?) ?? [];
+    setState(() {
+      _messages.clear();
+      for (final m in msgs) {
+        _messages.add(_ChatMessage(
+          text: m['text'] as String? ?? '',
+          isUser: m['isUser'] == true,
+          isError: m['isError'] == true,
+        ));
+      }
+      _showWelcome = false;
+    });
+    Future.delayed(const Duration(milliseconds: 100), _scrollToBottom);
+  }
+
   // ─── Recent searches UI section for welcome screen ───
 
   List<Widget> _buildRecentSearches(bool isDark, Color tp, Color ts) {
@@ -227,49 +306,37 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
 
     final actions = <_QuickAction>[];
 
-    // Smart Cart — always first, flagship feature
-    actions.add(_QuickAction('\uD83D\uDED2 Plan my groceries', Icons.psychology_rounded, '__SMART_CART__'));
+    // 1. Smart Cart — flagship feature
+    actions.add(_QuickAction('Plan groceries', Icons.psychology_rounded, '__SMART_CART__'));
 
-    // Order tracking
-    actions.add(_QuickAction('\uD83D\uDCE6 Track my order', Icons.local_shipping_rounded, '__TRACK_ORDER__'));
+    // 2. Track order — always useful
+    actions.add(_QuickAction('Track order', Icons.local_shipping_rounded, '__TRACK_ORDER__'));
 
-    // Time-based meal suggestion
-    if (h >= 6 && h < 10) {
-      actions.add(_QuickAction('Breakfast ideas', Icons.egg_alt_rounded, 'What quick healthy breakfast can I make? Include nutrition info.'));
-    } else if (h >= 11 && h < 14) {
-      actions.add(_QuickAction('Lunch ideas', Icons.lunch_dining_rounded, 'Suggest a healthy balanced lunch with protein and vegetables'));
-    } else if (h >= 17 && h < 21) {
-      actions.add(_QuickAction('Dinner ideas', Icons.dinner_dining_rounded, 'What should I cook for a healthy dinner? Consider nutrition balance.'));
+    // 3. Time-aware meal idea (contextual — only 1 shown)
+    if (h >= 5 && h < 11) {
+      actions.add(_QuickAction('Breakfast ideas', Icons.egg_alt_rounded, '__MEAL_IDEAS__'));
+    } else if (h >= 11 && h < 15) {
+      actions.add(_QuickAction('Lunch ideas', Icons.lunch_dining_rounded, '__MEAL_IDEAS__'));
+    } else {
+      actions.add(_QuickAction('Dinner ideas', Icons.dinner_dining_rounded, '__MEAL_IDEAS__'));
     }
 
-    // Cart analysis (only if has cart)
+    // 4. Cart analysis — only when cart has items
     if (hasCart) {
-      actions.add(_QuickAction('Analyze my cart', Icons.analytics_rounded, '__ANALYZE_CART__'));
+      actions.add(_QuickAction('Analyze cart', Icons.analytics_rounded, '__ANALYZE_CART__'));
     }
 
-    // Reorder favorites
-    actions.add(_QuickAction('\uD83D\uDD04 Reorder favorites', Icons.replay_rounded, '__RECOMMENDATIONS__'));
-
-    // Cook with what I have
-    actions.add(_QuickAction('\uD83C\uDF73 Cook with what I have', Icons.kitchen_rounded, '__COOK_WITH__'));
-
-    // Price check
-    actions.add(_QuickAction('\uD83D\uDCB0 Check prices', Icons.price_check_rounded, '__PRICE_CHECK__'));
-
-    // Budget
-    actions.add(_QuickAction('Budget plan', Icons.savings_rounded, 'I\'m on a tight budget. Help me plan affordable groceries for the week with good nutrition.'));
-
-    // Help
-    actions.add(_QuickAction('Help & support', Icons.support_agent_rounded, 'I need help with my order or delivery'));
+    // 5. Reorder past items
+    actions.add(_QuickAction('Reorder favorites', Icons.replay_rounded, '__RECOMMENDATIONS__'));
 
     return actions;
   }
 
   // ─── Context builder ───
 
-  Map<String, dynamic> _buildAppContext() {
+  Future<Map<String, dynamic>> _buildAppContext() async {
     try {
-      return _aiService.buildContext(
+      return await _aiService.buildContext(
         cartProvider: context.read<CartProvider>(),
         vendorProvider: context.read<VendorProvider>(),
       );
@@ -294,7 +361,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
     _scrollToBottom();
 
     try {
-      final appContext = _buildAppContext();
+      final appContext = await _buildAppContext();
       final history = _messages
           .where((m) => m.text.isNotEmpty && m.smartCartResult == null && m.cartAnalysis == null && m.mealIdeas == null)
           .toList()
@@ -573,7 +640,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
     _scrollToBottom();
 
     try {
-      final appContext = _buildAppContext();
+      final appContext = await _buildAppContext();
       final analysis = await _aiService.analyzeCart(context: appContext);
       if (!mounted) return;
       setState(() {
@@ -604,7 +671,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
     _scrollToBottom();
 
     try {
-      final appContext = _buildAppContext();
+      final appContext = await _buildAppContext();
       final meals = await _aiService.getMealIdeas(context: appContext, mealType: mealType);
       if (!mounted) return;
       setState(() {
@@ -625,6 +692,127 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
     _scrollToBottom();
   }
 
+  // ─── Chat History Sheet ───
+
+  void _showHistorySheet(bool isDark, Color surface, Color tp, Color ts) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.7),
+        decoration: BoxDecoration(
+          color: surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle
+            Container(
+              margin: const EdgeInsets.only(top: 10, bottom: 6),
+              width: 36, height: 4,
+              decoration: BoxDecoration(color: ts.withOpacity(0.3), borderRadius: BorderRadius.circular(2)),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              child: Row(children: [
+                Icon(Icons.history_rounded, color: tp, size: 20),
+                const SizedBox(width: 10),
+                Expanded(child: Text('Chat History', style: TextStyle(color: tp, fontSize: 17, fontWeight: FontWeight.w700))),
+                if (_history.isNotEmpty)
+                  TextButton(
+                    onPressed: () async {
+                      await _clearAllHistory();
+                      if (ctx.mounted) Navigator.of(ctx).pop();
+                    },
+                    child: Text('Clear all', style: TextStyle(color: ts, fontSize: 12)),
+                  ),
+              ]),
+            ),
+            const Divider(height: 1),
+            Flexible(
+              child: _history.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.all(40),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.chat_bubble_outline_rounded, size: 40, color: ts.withOpacity(0.3)),
+                          const SizedBox(height: 12),
+                          Text('No conversations yet', style: TextStyle(color: ts, fontSize: 14)),
+                          const SizedBox(height: 4),
+                          Text('Your chats will appear here', style: TextStyle(color: ts.withOpacity(0.5), fontSize: 12)),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      shrinkWrap: true,
+                      itemCount: _history.length,
+                      itemBuilder: (_, i) {
+                        final session = _history[i];
+                        final title = session['title'] as String? ?? 'Chat';
+                        final ts2 = DateTime.tryParse(session['ts'] ?? '');
+                        final msgCount = (session['messages'] as List?)?.length ?? 0;
+                        final timeStr = ts2 != null ? _formatHistoryTime(ts2) : '';
+
+                        return Dismissible(
+                          key: Key(session['id'] ?? '$i'),
+                          direction: DismissDirection.endToStart,
+                          background: Container(
+                            alignment: Alignment.centerRight,
+                            padding: const EdgeInsets.only(right: 20),
+                            color: Colors.red.shade400,
+                            child: const Icon(Icons.delete_outline, color: Colors.white, size: 20),
+                          ),
+                          onDismissed: (_) => _deleteHistorySession(session['id'] ?? ''),
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
+                            leading: Container(
+                              width: 36, height: 36,
+                              decoration: BoxDecoration(
+                                color: _brand.withOpacity(isDark ? 0.2 : 0.08),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(Icons.chat_rounded, size: 16, color: _brandLight),
+                            ),
+                            title: Text(
+                              title,
+                              style: TextStyle(color: tp, fontSize: 14, fontWeight: FontWeight.w500),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            subtitle: Text(
+                              '$msgCount messages  \u2022  $timeStr',
+                              style: TextStyle(color: ts, fontSize: 11.5),
+                            ),
+                            trailing: Icon(Icons.chevron_right_rounded, color: ts, size: 18),
+                            onTap: () {
+                              Navigator.of(ctx).pop();
+                              _restoreSession(session);
+                            },
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatHistoryTime(DateTime dt) {
+    final now = DateTime.now();
+    final diff = now.difference(dt);
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
+    return DateFormat('MMM d').format(dt);
+  }
+
   // ─── Handle quick action taps ───
 
   void _handleAction(String action) {
@@ -642,9 +830,110 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
       _showCookWithDialog();
     } else if (action == '__PRICE_CHECK__') {
       _showPriceCheckDialog();
+    } else if (action == '__HEALTH_GUIDE__') {
+      _showHealthGuideSheet();
     } else {
       _sendMessage(action);
     }
+  }
+
+  // ─── Health Guide Bottom Sheet ───
+
+  Future<void> _showHealthGuideSheet() async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surface = isDark ? const Color(0xFF1A1A1A) : Colors.white;
+    final tp = isDark ? Colors.white : const Color(0xFF1A1A1A);
+    final ts = isDark ? Colors.white60 : const Color(0xFF888888);
+
+    // Load existing profile
+    final existingProfile = await _aiService.loadHealthProfile();
+
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _HealthGuideSheet(
+        isDark: isDark,
+        surface: surface,
+        tp: tp,
+        ts: ts,
+        existingProfile: existingProfile,
+        onGoalSelected: (goal) async {
+          Navigator.of(ctx).pop();
+          await _fetchHealthGuidance(goal);
+        },
+        onProfileSaved: (profile) async {
+          await _aiService.saveHealthProfile(profile);
+          if (!mounted) return;
+          Navigator.of(ctx).pop();
+          _sendMessage('I have ${profile.healthGoal?.replaceAll('_', ' ') ?? 'general health'} goals. '
+              'My family size is ${profile.familySize} and monthly food budget is ${_fmt.format(profile.monthlyBudget)} RWF. '
+              '${profile.conditions.isNotEmpty ? 'Health conditions: ${profile.conditions.join(', ')}. ' : ''}'
+              '${profile.allergies.isNotEmpty ? 'Allergies: ${profile.allergies.join(', ')}. ' : ''}'
+              'Give me personalized nutrition guidance and smart shopping advice.');
+        },
+      ),
+    );
+  }
+
+  Future<void> _fetchHealthGuidance(String goal) async {
+    setState(() {
+      _showWelcome = false;
+      _messages.add(_ChatMessage(text: '🌿 Health guide: ${goal.replaceAll('_', ' ')}', isUser: true));
+      _isSending = true;
+    });
+    _scrollToBottom();
+
+    try {
+      final guidance = await _aiService.getHealthGuidance(goal);
+      if (!mounted) return;
+
+      if (guidance == null) {
+        setState(() {
+          _isSending = false;
+          _messages.add(_ChatMessage(text: 'Health guidance not available for that goal.', isUser: false));
+        });
+        return;
+      }
+
+      final buf = StringBuffer();
+      buf.writeln('🎯 **${guidance.goal}**\n');
+      buf.writeln(guidance.advice);
+      buf.writeln();
+      if (guidance.foodsToIncrease.isNotEmpty) {
+        buf.writeln('✅ Eat more: ${guidance.foodsToIncrease.join(', ')}');
+      }
+      if (guidance.foodsToReduce.isNotEmpty) {
+        buf.writeln('⚠️ Eat less: ${guidance.foodsToReduce.join(', ')}');
+      }
+      if (guidance.rwandanTip.isNotEmpty) {
+        buf.writeln('\n🇷🇼 ${guidance.rwandanTip}');
+      }
+      if (guidance.seasonTip.isNotEmpty) {
+        buf.writeln('\n🌦️ ${guidance.seasonTip}');
+      }
+      if (guidance.proteinCombos.isNotEmpty) {
+        buf.writeln('\n💪 Power combos: ${guidance.proteinCombos.join(' | ')}');
+      }
+
+      setState(() {
+        _isSending = false;
+        _messages.add(_ChatMessage(text: buf.toString().trim(), isUser: false));
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isSending = false;
+        _messages.add(_ChatMessage(
+          text: 'Could not load health guidance. ${e.toString().replaceAll('Exception: ', '')}',
+          isUser: false,
+          isError: true,
+        ));
+      });
+    }
+    _scrollToBottom();
   }
 
   // ─── Track Order ───
@@ -1260,17 +1549,23 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
                         color: tp, fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: 1.0,
                       )),
                       Text(
-                        _isSending ? 'Thinking...' : _timeContext,
+                        _isSending ? 'Thinking...' : 'Smart Food & Health Guide',
                         style: TextStyle(color: _isSending ? Colors.orange : ts, fontSize: 11.5, fontWeight: FontWeight.w500),
                       ),
                     ],
                   ),
                 ),
+                IconButton(
+                  icon: Icon(Icons.history_rounded, color: ts, size: 20),
+                  tooltip: 'Chat history',
+                  onPressed: () => _showHistorySheet(isDark, surface, tp, ts),
+                ),
                 if (_messages.isNotEmpty)
                   IconButton(
                     icon: Icon(Icons.refresh_rounded, color: ts, size: 20),
                     tooltip: 'New chat',
-                    onPressed: () {
+                    onPressed: () async {
+                      await _saveCurrentChat();
                       setState(() { _messages.clear(); _showWelcome = true; });
                       _loadRecentSearches();
                     },
@@ -1290,7 +1585,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
     final hasCart = cartProvider.items.isNotEmpty;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 40, 20, 16),
+      padding: const EdgeInsets.fromLTRB(20, 32, 20, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1299,13 +1594,11 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
             color: tp, fontSize: 22, fontWeight: FontWeight.w600,
           ))),
           const SizedBox(height: 4),
-          Center(child: Text('I\'m NTWAZA — your smart shopping assistant', style: TextStyle(color: ts, fontSize: 13))),
-          const SizedBox(height: 2),
-          Center(child: Text(_timeContext, style: TextStyle(color: _brandLight, fontSize: 12, fontWeight: FontWeight.w500))),
+          Center(child: Text(_timeContext, style: TextStyle(color: ts, fontSize: 13))),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
 
-          // Primary action row
+          // Two primary buttons
           Row(children: [
             Expanded(child: _welcomeButton(
               label: 'Plan Groceries',
@@ -1314,8 +1607,8 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
             )),
             const SizedBox(width: 10),
             Expanded(child: _welcomeButton(
-              label: 'Quick Basket',
-              onTap: () => _sendMessage('Just give me a balanced grocery basket with essentials. Add items to my cart.'),
+              label: 'Health Guide',
+              onTap: () => _handleAction('__HEALTH_GUIDE__'),
               isDark: isDark, tp: tp,
             )),
           ]),
@@ -1329,19 +1622,19 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
             ),
           ],
 
+          // Nutrition tip of the day
+          _buildNutritionTipCard(isDark, tp, ts),
+
           // Recent searches
           ..._buildRecentSearches(isDark, tp, ts),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 18),
 
-          // ── Quick suggestions (compact) ──
-          _sectionHeader('Suggestions', Icons.lightbulb_outline_rounded, ts),
-          const SizedBox(height: 8),
+          // Quick actions — compact row
           Wrap(
             spacing: 6, runSpacing: 6,
             children: _contextualActions
                 .where((a) => a.action != '__SMART_CART__' && a.action != '__ANALYZE_CART__')
-                .take(4)
                 .map((a) => _actionChip(a, isDark))
                 .toList(),
           ),
@@ -1350,12 +1643,48 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
     );
   }
 
-  Widget _sectionHeader(String title, IconData icon, Color ts) {
-    return Row(children: [
-      Icon(icon, size: 13, color: ts),
-      const SizedBox(width: 5),
-      Text(title, style: TextStyle(color: ts, fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 0.3)),
-    ]);
+  // ── Nutrition tip card on welcome screen ──
+
+  Widget _buildNutritionTipCard(bool isDark, Color tp, Color ts) {
+    // Rotate tips daily without a network call
+    final day = DateTime.now().weekday;
+    final tips = [
+      ('💪', 'Complete Protein', 'Rice + Beans = complete protein with all essential amino acids. The ultimate Rwandan health combo.'),
+      ('🩸', 'Iron Booster', 'Isombe (cassava leaves) is the best affordable iron source. Eat 3x/week to prevent anemia.'),
+      ('💰', 'Smart Shopping', 'With 3,000 RWF you can buy rice + beans + tomatoes + onions = 3 balanced meals.'),
+      ('🦴', 'Bone Builder', 'Sambaza (dried fish) is a calcium powerhouse — you eat the bones! Best for growing kids.'),
+      ('🥬', 'Green Power', 'Dodo (amaranth greens) is extremely rich in iron and folate. Essential for pregnant women.'),
+      ('🥗', 'Daily Balance', 'A healthy Rwandan plate: ½ vegetables, ¼ starch (rice/potatoes), ¼ protein (beans/fish).'),
+      ('💧', 'Hydration Tip', 'Replace 1 soda per day with water. Saves money and reduces sugar intake significantly.'),
+    ];
+    final (emoji, title, text) = tips[day % tips.length];
+
+    return Container(
+      margin: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: isDark ? const Color(0xFF1B3320) : const Color(0xFFF0F8F0),
+        border: Border.all(color: _brandLight.withOpacity(0.2)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(emoji, style: const TextStyle(fontSize: 20)),
+          const SizedBox(width: 10),
+          Expanded(child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Daily Tip: $title', style: TextStyle(
+                color: _brandLight, fontSize: 12, fontWeight: FontWeight.w700,
+              )),
+              const SizedBox(height: 3),
+              Text(text, style: TextStyle(color: tp, fontSize: 12.5, height: 1.4)),
+            ],
+          )),
+        ],
+      ),
+    );
   }
 
   // ── Clean welcome button (replaces heavy feature tiles) ──
@@ -1758,28 +2087,20 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
     final lower = text.toLowerCase();
     final chips = <_QuickAction>[];
 
-    if (lower.contains('budget') || lower.contains('save') || lower.contains('spend') || lower.contains('rwf') || lower.contains('money') || lower.contains('cheap')) {
+    if (lower.contains('budget') || lower.contains('save') || lower.contains('spend') || lower.contains('rwf') || lower.contains('cheap')) {
       chips.add(_QuickAction('Plan budget', Icons.psychology_rounded, '__SMART_CART__'));
-      chips.add(_QuickAction('Best deals', Icons.local_offer_rounded, 'Show me the cheapest products by category'));
     }
-    if (lower.contains('cart') || lower.contains('added') || lower.contains('item') || lower.contains('basket')) {
-      chips.add(_QuickAction('View cart', Icons.shopping_cart_rounded, 'What\'s in my cart right now?'));
+    if (lower.contains('cart') || lower.contains('added') || lower.contains('basket')) {
+      chips.add(_QuickAction('View cart', Icons.shopping_cart_rounded, '__ANALYZE_CART__'));
     }
-    if (lower.contains('health') || lower.contains('nutrition') || lower.contains('protein') || lower.contains('vitamin') || lower.contains('calorie') || lower.contains('balanced') || lower.contains('weight') || lower.contains('diet')) {
-      chips.add(_QuickAction('Health tips', Icons.favorite_rounded, 'Give me more practical health and nutrition tips for my diet'));
-      chips.add(_QuickAction('Healthy list', Icons.health_and_safety_rounded, 'Build me a healthy shopping list focused on balanced nutrition'));
+    if (lower.contains('health') || lower.contains('nutrition') || lower.contains('diet') || lower.contains('weight')) {
+      chips.add(_QuickAction('Health guide', Icons.health_and_safety_rounded, '__HEALTH_GUIDE__'));
     }
-    if (lower.contains('meal') || lower.contains('cook') || lower.contains('recipe') || lower.contains('breakfast') || lower.contains('lunch') || lower.contains('dinner') || lower.contains('prep')) {
+    if (lower.contains('meal') || lower.contains('cook') || lower.contains('recipe') || lower.contains('breakfast') || lower.contains('lunch') || lower.contains('dinner')) {
       chips.add(_QuickAction('Meal ideas', Icons.restaurant_rounded, '__MEAL_IDEAS__'));
     }
-    if (lower.contains('family') || lower.contains('kids') || lower.contains('people') || lower.contains('household')) {
-      chips.add(_QuickAction('Family plan', Icons.family_restroom_rounded, 'Help me plan monthly groceries for my family with variety and balanced nutrition.'));
-    }
-    if (lower.contains('order') || lower.contains('delivery') || lower.contains('track') || lower.contains('refund') || lower.contains('cancel')) {
-      chips.add(_QuickAction('Contact support', Icons.support_agent_rounded, 'How do I contact support about my order?'));
-    }
-    if (lower.contains('product') || lower.contains('available') || lower.contains('store') || lower.contains('vendor')) {
-      chips.add(_QuickAction('Browse products', Icons.store_rounded, 'Show me all available products organized by category'));
+    if (lower.contains('order') || lower.contains('delivery') || lower.contains('track')) {
+      chips.add(_QuickAction('Track order', Icons.local_shipping_rounded, '__TRACK_ORDER__'));
     }
 
     if (chips.isEmpty) return const SizedBox.shrink();
@@ -1788,7 +2109,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
       padding: const EdgeInsets.only(top: 6),
       child: Wrap(
         spacing: 6,
-        children: chips.take(3).map((c) => _miniChip(c, isDark)).toList(),
+        children: chips.take(2).map((c) => _miniChip(c, isDark)).toList(),
       ),
     );
   }
@@ -2385,4 +2706,350 @@ class _QuickAction {
   final IconData icon;
   final String action;
   const _QuickAction(this.label, this.icon, this.action);
+}
+
+// ═══════════ Health Guide Bottom Sheet ═══════════
+
+class _HealthGuideSheet extends StatefulWidget {
+  final bool isDark;
+  final Color surface;
+  final Color tp;
+  final Color ts;
+  final HealthProfile? existingProfile;
+  final Future<void> Function(String goal) onGoalSelected;
+  final Future<void> Function(HealthProfile profile) onProfileSaved;
+
+  const _HealthGuideSheet({
+    required this.isDark,
+    required this.surface,
+    required this.tp,
+    required this.ts,
+    this.existingProfile,
+    required this.onGoalSelected,
+    required this.onProfileSaved,
+  });
+
+  @override
+  State<_HealthGuideSheet> createState() => _HealthGuideSheetState();
+}
+
+class _HealthGuideSheetState extends State<_HealthGuideSheet> {
+  static const _brand = Color(0xFF1B5E20);
+  static const _brandLight = Color(0xFF4CAF50);
+
+  bool _showSetup = false;
+  String? _selectedGoal;
+  int _familySize = 1;
+  double _monthlyBudget = 50000;
+  final List<String> _selectedConditions = [];
+  final List<String> _selectedAllergies = [];
+
+  static const _healthGoals = [
+    ('weight_loss', 'Lose Weight', '🏃', 'Healthy weight management with local foods'),
+    ('weight_gain', 'Gain Weight', '💪', 'Build mass with protein-rich Rwandan meals'),
+    ('diabetes', 'Manage Diabetes', '🩺', 'Blood sugar control with smart food choices'),
+    ('anemia', 'Fight Anemia', '🩸', 'Iron-rich foods to boost your energy'),
+    ('child_nutrition', 'Child Nutrition', '👶', 'Healthy meals for growing children'),
+    ('pregnancy', 'Pregnancy Diet', '🤰', 'Nutrition for mom and baby'),
+    ('student_budget', 'Student Budget', '🎓', 'Balanced meals on a tight budget'),
+    ('gym_fitness', 'Gym & Fitness', '🏋️', 'Fuel your workouts properly'),
+  ];
+
+  static const _conditionOptions = [
+    'Diabetes', 'High blood pressure', 'Anemia', 'High cholesterol',
+    'Lactose intolerant', 'Celiac disease', 'Kidney disease',
+  ];
+
+  static const _allergyOptions = [
+    'Peanuts', 'Tree nuts', 'Dairy', 'Eggs', 'Fish', 'Shellfish', 'Soy', 'Wheat',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    final p = widget.existingProfile;
+    if (p != null) {
+      _selectedGoal = p.healthGoal;
+      _familySize = p.familySize;
+      _monthlyBudget = p.monthlyBudget > 0 ? p.monthlyBudget : 50000;
+      _selectedConditions.addAll(p.conditions);
+      _selectedAllergies.addAll(p.allergies);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
+      decoration: BoxDecoration(
+        color: widget.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Handle
+          Container(
+            margin: const EdgeInsets.only(top: 10, bottom: 6),
+            width: 36, height: 4,
+            decoration: BoxDecoration(
+              color: widget.ts.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            child: Row(
+              children: [
+                const Text('🌿', style: TextStyle(fontSize: 22)),
+                const SizedBox(width: 10),
+                Expanded(child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(_showSetup ? 'Set Up Health Profile' : 'Health & Nutrition Guide',
+                      style: TextStyle(color: widget.tp, fontSize: 17, fontWeight: FontWeight.w700)),
+                    Text(_showSetup ? 'Personalize your nutrition advice' : 'Rwandan-focused health guidance',
+                      style: TextStyle(color: widget.ts, fontSize: 12)),
+                  ],
+                )),
+                if (!_showSetup)
+                  TextButton(
+                    onPressed: () => setState(() => _showSetup = true),
+                    child: Text('Set up profile', style: TextStyle(color: _brandLight, fontSize: 12, fontWeight: FontWeight.w600)),
+                  ),
+                if (_showSetup)
+                  TextButton(
+                    onPressed: () => setState(() => _showSetup = false),
+                    child: Text('Quick guide', style: TextStyle(color: _brandLight, fontSize: 12, fontWeight: FontWeight.w600)),
+                  ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          Flexible(
+            child: _showSetup ? _buildProfileSetup() : _buildGoalList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGoalList() {
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+      shrinkWrap: true,
+      itemCount: _healthGoals.length,
+      itemBuilder: (ctx, i) {
+        final (id, label, emoji, desc) = _healthGoals[i];
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => widget.onGoalSelected(id),
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.all(14),
+              margin: const EdgeInsets.only(bottom: 6),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: widget.isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF8F8F8),
+              ),
+              child: Row(children: [
+                Text(emoji, style: const TextStyle(fontSize: 26)),
+                const SizedBox(width: 14),
+                Expanded(child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(label, style: TextStyle(color: widget.tp, fontSize: 14, fontWeight: FontWeight.w600)),
+                    Text(desc, style: TextStyle(color: widget.ts, fontSize: 12)),
+                  ],
+                )),
+                Icon(Icons.chevron_right_rounded, color: widget.ts, size: 20),
+              ]),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildProfileSetup() {
+    final fmt = NumberFormat('#,###', 'en');
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Health goal selection
+          Text('Health Goal', style: TextStyle(color: widget.tp, fontSize: 13, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8, runSpacing: 8,
+            children: _healthGoals.map((g) {
+              final (id, label, emoji, _) = g;
+              final selected = _selectedGoal == id;
+              return GestureDetector(
+                onTap: () => setState(() => _selectedGoal = id),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    color: selected
+                        ? _brand.withOpacity(0.15)
+                        : (widget.isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF2F2F2)),
+                    border: selected ? Border.all(color: _brandLight, width: 1.5) : null,
+                  ),
+                  child: Text('$emoji $label', style: TextStyle(
+                    fontSize: 12.5,
+                    color: selected ? _brandLight : widget.tp,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                  )),
+                ),
+              );
+            }).toList(),
+          ),
+
+          const SizedBox(height: 22),
+
+          // Family size
+          Text('Family Size', style: TextStyle(color: widget.tp, fontSize: 13, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          Row(children: [
+            _counterBtn(Icons.remove, () { if (_familySize > 1) setState(() => _familySize--); }),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Text('$_familySize', style: TextStyle(color: widget.tp, fontSize: 20, fontWeight: FontWeight.w700)),
+            ),
+            _counterBtn(Icons.add, () { if (_familySize < 15) setState(() => _familySize++); }),
+            const SizedBox(width: 12),
+            Text(_familySize == 1 ? 'person' : 'people', style: TextStyle(color: widget.ts, fontSize: 13)),
+          ]),
+
+          const SizedBox(height: 22),
+
+          // Monthly budget
+          Text('Monthly Food Budget', style: TextStyle(color: widget.tp, fontSize: 13, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 4),
+          Text('${fmt.format(_monthlyBudget.round())} RWF/month', style: TextStyle(color: _brandLight, fontSize: 15, fontWeight: FontWeight.w700)),
+          Slider(
+            value: _monthlyBudget,
+            min: 20000,
+            max: 300000,
+            divisions: 28,
+            activeColor: _brand,
+            inactiveColor: widget.isDark ? const Color(0xFF333333) : const Color(0xFFE0E0E0),
+            onChanged: (v) => setState(() => _monthlyBudget = v),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('20k', style: TextStyle(color: widget.ts, fontSize: 10)),
+              Text('300k', style: TextStyle(color: widget.ts, fontSize: 10)),
+            ],
+          ),
+
+          const SizedBox(height: 18),
+
+          // Conditions
+          Text('Health Conditions (optional)', style: TextStyle(color: widget.tp, fontSize: 13, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6, runSpacing: 6,
+            children: _conditionOptions.map((c) {
+              final selected = _selectedConditions.contains(c);
+              return GestureDetector(
+                onTap: () => setState(() {
+                  selected ? _selectedConditions.remove(c) : _selectedConditions.add(c);
+                }),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    color: selected
+                        ? Colors.orange.withOpacity(0.15)
+                        : (widget.isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF2F2F2)),
+                    border: selected ? Border.all(color: Colors.orange, width: 1) : null,
+                  ),
+                  child: Text(c, style: TextStyle(
+                    fontSize: 12, color: selected ? Colors.orange : widget.ts,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                  )),
+                ),
+              );
+            }).toList(),
+          ),
+
+          const SizedBox(height: 18),
+
+          // Allergies
+          Text('Allergies (optional)', style: TextStyle(color: widget.tp, fontSize: 13, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6, runSpacing: 6,
+            children: _allergyOptions.map((a) {
+              final selected = _selectedAllergies.contains(a);
+              return GestureDetector(
+                onTap: () => setState(() {
+                  selected ? _selectedAllergies.remove(a) : _selectedAllergies.add(a);
+                }),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    color: selected
+                        ? Colors.red.withOpacity(0.12)
+                        : (widget.isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF2F2F2)),
+                    border: selected ? Border.all(color: Colors.red.shade300, width: 1) : null,
+                  ),
+                  child: Text(a, style: TextStyle(
+                    fontSize: 12, color: selected ? Colors.red.shade300 : widget.ts,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                  )),
+                ),
+              );
+            }).toList(),
+          ),
+
+          const SizedBox(height: 28),
+
+          // Save button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                final profile = HealthProfile(
+                  healthGoal: _selectedGoal,
+                  familySize: _familySize,
+                  monthlyBudget: _monthlyBudget,
+                  allergies: List.from(_selectedAllergies),
+                  conditions: List.from(_selectedConditions),
+                );
+                widget.onProfileSaved(profile);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _brand,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text('Save & Get Personalized Advice', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _counterBtn(IconData icon, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 36, height: 36,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: widget.isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF0F0F0),
+        ),
+        child: Icon(icon, size: 18, color: widget.tp),
+      ),
+    );
+  }
 }
