@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_maps_flutter_android/google_maps_flutter_android.dart';
 import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platform_interface.dart';
 
@@ -116,9 +117,14 @@ void main() async {
   final apiService = ApiService();
   final locationService = LocationService();
 
-  // Initialize notification service in background (don't block app launch)
+  // Initialize notification service - ONLY for returning users who already granted permissions.
+  // For first-time users, the splash screen handles permission flow (location FIRST, then notifications)
+  // to avoid the notification dialog blocking the location dialog.
   final notificationService = NotificationService();
-  notificationService.initialize();
+  final hasSeenPermissions = (await SharedPreferences.getInstance()).getBool('has_seen_permissions') ?? false;
+  if (hasSeenPermissions) {
+    notificationService.initialize();
+  }
 
   // Initialize wishlist provider
   final wishlistProvider = WishlistProvider();

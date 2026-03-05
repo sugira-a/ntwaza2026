@@ -150,12 +150,14 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
     );
   }
 
-  int get estimatedDeliveryTime {
-    // Only add prep time for restaurants, not product vendors (supermarkets/shops)
-    final prepTime = widget.vendor.isRestaurant 
-        ? (widget.product.preparationTime ?? 15) 
-        : 0;
+  String get estimatedDeliveryTimeDisplay {
+    // For non-restaurants (supermarkets/shops): show a range like 30-45 mins
+    if (!widget.vendor.isRestaurant) {
+      return widget.vendor.formattedDeliveryTime;
+    }
     
+    // For restaurants: prep time + delivery time + buffer
+    final prepTime = widget.product.preparationTime ?? 15;
     int deliveryTime = 25;
     try {
       final deliveryTimeStr = widget.vendor.formattedDeliveryTime;
@@ -170,12 +172,8 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
     } catch (e) {
       deliveryTime = 25;
     }
-    
-    // For product vendors (supermarkets/shops): just delivery time
-    // For restaurants: prep time + delivery time + buffer
-    return widget.vendor.isRestaurant 
-        ? prepTime + deliveryTime + 5 
-        : deliveryTime;
+    final total = prepTime + deliveryTime + 5;
+    return '$total min';
   }
 
   double get totalPrice => (widget.product.price + additionalPrice) * quantity;
@@ -285,7 +283,7 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
           children: [
             // App Bar
             SizedBox(
-              height: 250 + MediaQuery.of(context).padding.top,
+              height: 300 + MediaQuery.of(context).padding.top,
               child: Stack(
                 children: [
                   _buildStaticAppBar(isDarkMode, textColor, themeProvider, cardColor),
@@ -453,7 +451,7 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
               Icon(Icons.access_time, size: 16, color: Colors.green),
               SizedBox(width: 6),
               Text(
-                '$estimatedDeliveryTime min',
+                estimatedDeliveryTimeDisplay,
                 style: TextStyle(
                   fontSize: 13,
                   color: Colors.green,

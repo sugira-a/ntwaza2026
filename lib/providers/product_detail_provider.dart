@@ -5,6 +5,17 @@ import '../models/product.dart';
 import '../models/product_category.dart';
 import '../services/product_service.dart';
 
+class _VendorCache {
+  final List<ProductCategory> categories;
+  final List<Product> products;
+  final DateTime timestamp;
+
+  _VendorCache({required this.categories, required this.products})
+      : timestamp = DateTime.now();
+
+  bool get isExpired => DateTime.now().difference(timestamp) > const Duration(minutes: 5);
+}
+
 class ProductDetailProvider with ChangeNotifier {
   final ProductService _productService;
   
@@ -16,6 +27,10 @@ class ProductDetailProvider with ChangeNotifier {
   String? _error;
   String _searchQuery = '';
   String? _selectedCategoryId;
+
+  // Cache: vendorId → (categories, products, timestamp)
+  final Map<String, _VendorCache> _cache = {};
+  static const _cacheDuration = Duration(minutes: 5);
 
   ProductDetailProvider({required ProductService productService})
       : _productService = productService;
@@ -33,27 +48,35 @@ class ProductDetailProvider with ChangeNotifier {
   /// Initialize vendor and load products
   Future<void> initialize(Vendor vendor) async {
     _vendor = vendor;
-    _isLoading = true;
+    _searchQuery = '';
+    _filteredProducts = [];
+    _selectedCategoryId = null;
     _error = null;
+
+    // Check cache first — show instantly if available
+    final cached = _cache[vendor.id];
+    if (cached != null && !cached.isExpired) {
+      _categories = cached.categories;
+      _allProducts = cached.products;
+      _isLoading = false;
+      notifyListeners();
+      // Refresh in background silently
+      _refreshInBackground(vendor);
+      return;
+    }
+
+    _isLoading = true;
     notifyListeners();
 
     try {
-      // DEBUG: Check vendor type
-      print('🔍 DEBUG: Vendor ${vendor.name} - isRestaurant: ${vendor.isRestaurant}, vendorType: ${vendor.vendorType}');
-      
-      // Load categories/menus with products - PASS THE VENDOR OBJECT
       _categories = await _productService.getVendorCategories(
         vendor.id,
-        vendor: vendor, // ← Pass the vendor object here
+        vendor: vendor,
       );
-      
-      // Flatten all products
       _allProducts = _categories.expand((cat) => cat.products).toList();
       
-      // Don't select any category - show all by default
-      _selectedCategoryId = null;
-      
-      print('✅ Loaded ${_categories.length} ${isRestaurant ? "menus" : "categories"}, ${_allProducts.length} total products');
+      // Store in cache
+      _cache[vendor.id] = _VendorCache(categories: _categories, products: _allProducts);
     } catch (e) {
       _error = 'Failed to load products: $e';
       print('❌ Error: $e');
@@ -61,6 +84,21 @@ class ProductDetailProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  /// Silently refresh cached data in background
+  Future<void> _refreshInBackground(Vendor vendor) async {
+    try {
+      final categories = await _productService.getVendorCategories(vendor.id, vendor: vendor);
+      final products = categories.expand((cat) => cat.products).toList();
+      _cache[vendor.id] = _VendorCache(categories: categories, products: products);
+      // Only update UI if this vendor is still being viewed
+      if (_vendor?.id == vendor.id) {
+        _categories = categories;
+        _allProducts = products;
+        notifyListeners();
+      }
+    } catch (_) {}
   }
 
   /// Search products (local filtering for instant results)

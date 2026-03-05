@@ -4,11 +4,40 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Privacy Policy | NTWAZA Delivery</title>
-    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png" />
+    <link rel="icon" type="image/x-icon" href="/static/icon/favicon.ico" />
     <link rel="stylesheet" href="landing.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+    <style>
+      .legal-hero { padding: 120px 0 40px; background: #0b0b0b; }
+      .legal-hero h1 { font-family: "Space Grotesk", sans-serif; font-size: clamp(1.8rem, 3vw, 2.4rem); font-weight: 700; color: #fff; margin: 0 0 10px; }
+      .legal-hero .legal-date { font-size: 13px; color: rgba(255,255,255,0.45); }
+      .legal-hero .legal-intro { font-size: 15px; line-height: 1.7; color: rgba(255,255,255,0.6); margin: 20px 0 0; max-width: 700px; }
+
+      .legal-body { background: #fff; padding: 48px 0 60px; }
+      .legal-section { margin-bottom: 32px; padding-bottom: 32px; border-bottom: 1px solid #eee; }
+      .legal-section:last-of-type { border-bottom: none; }
+      .legal-section h2 { font-family: "Space Grotesk", sans-serif; font-size: 17px; font-weight: 600; color: #1a1a1a; margin: 0 0 12px; }
+      .legal-section .num { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 8px; background: #edf7ee; color: #2e7d32; font-family: "Space Grotesk", sans-serif; font-weight: 700; font-size: 13px; margin-right: 10px; flex-shrink: 0; }
+      .legal-section .section-head { display: flex; align-items: center; margin-bottom: 12px; }
+      .legal-section p { font-family: "Work Sans", sans-serif; font-size: 14px; line-height: 1.8; color: #555; margin: 0 0 8px; }
+      .legal-section ul { padding-left: 0; margin: 8px 0 0; list-style: none; }
+      .legal-section li { font-family: "Work Sans", sans-serif; font-size: 14px; line-height: 1.8; color: #555; margin-bottom: 8px; padding-left: 18px; position: relative; }
+      .legal-section li::before { content: ""; position: absolute; left: 0; top: 10px; width: 6px; height: 6px; border-radius: 50%; background: #2e7d32; }
+
+      .legal-contact { background: #f8faf8; border: 1px solid #e8efe8; border-radius: 12px; padding: 28px 32px; margin-top: 40px; }
+      .legal-contact h3 { font-family: "Space Grotesk", sans-serif; font-size: 16px; font-weight: 600; color: #1a1a1a; margin: 0 0 14px; }
+      .legal-contact p { font-family: "Work Sans", sans-serif; font-size: 13.5px; color: #666; line-height: 1.8; margin: 0 0 4px; }
+      .legal-contact a { color: #2e7d32; text-decoration: none; font-weight: 500; }
+      .legal-contact a:hover { text-decoration: underline; }
+
+      @media (max-width: 768px) {
+        .legal-hero { padding: 100px 0 32px; }
+        .legal-body { padding: 32px 0 40px; }
+        .legal-contact { padding: 20px 16px; }
+      }
+    </style>
   </head>
   <body>
     <div class="page">
@@ -16,14 +45,11 @@
         <div class="container nav">
           <a href="/" class="logo">NTWAZA</a>
           <button class="hamburger" id="hamburger" aria-label="Menu">
-            <span></span>
-            <span></span>
-            <span></span>
+            <span></span><span></span><span></span>
           </button>
           <nav class="nav-links" id="nav-links">
             <button class="close-menu" id="close-menu" aria-label="Close menu">
-              <span></span>
-              <span></span>
+              <span></span><span></span>
             </button>
             <a href="/">Home</a>
             <a href="/#how">How it works</a>
@@ -33,111 +59,169 @@
           </nav>
         </div>
       </header>
-      <main>
-        <section class="section light">
-          <div class="container">
-            <h1 class="section-title">Privacy policy</h1>
-            <p class="section-subtitle">
-              Your privacy matters to us. This policy explains how NTWAZA
-              collects, uses, and protects information when you use our delivery
-              services in Rwanda.
-            </p>
-          </div>
-        </section>
-        <section class="section">
-          <div class="container">
-            <h2 class="section-title">Information we collect</h2>
-            <p class="section-subtitle">
-              We collect information needed to deliver your orders and provide
-              support, such as your name, phone number, email, delivery
-              addresses, and order details. We also collect location data when
-              you enable tracking so you can see progress in real time.
-            </p>
-            <h2 class="section-title">How we use information</h2>
-            <p class="section-subtitle">
-              We use your information to confirm orders, coordinate pickup and
-              delivery, send status updates, and improve service quality. We may
-              use aggregated data to understand demand patterns across Kigali
-              and other service areas in Rwanda.
-            </p>
-            <h2 class="section-title">Sharing and retention</h2>
-            <p class="section-subtitle">
-              We share only what is necessary with merchants and delivery
-              partners to complete your order. We keep information for as long
-              as needed to provide services, resolve disputes, and meet legal or
-              operational requirements.
-            </p>
-            <h2 class="section-title">Security and your choices</h2>
-            <p class="section-subtitle">
-              We apply security practices designed to protect data against
-              unauthorized access. You can request access, correction, or
-              deletion of your information by contacting us.
-            </p>
-            <h2 class="section-title">Contact</h2>
-            <p class="section-subtitle">
-              For privacy questions, email hello@ntwaza.com or visit our contact
-              section. We respond quickly during business hours in Rwanda.
-            </p>
-          </div>
-        </section>
-      </main>
-      <footer class="site-footer">
-        <div class="container footer-top">
-          <div class="footer-brand">
-            <div class="logo">NTWAZA</div>
-            <p>Premium delivery for food, groceries, and essentials in Kigali.</p>
-          </div>
+
+      <section class="legal-hero">
+        <div class="container">
+          <h1>Privacy Policy</h1>
+          <span class="legal-date">Effective: March 1, 2026 &nbsp;&bull;&nbsp; Last Updated: March 1, 2026</span>
+          <p class="legal-intro">
+            NTWAZA Ltd. ("Company", "we", "us", "our") is committed to protecting your personal information and your right to privacy. This Privacy Policy describes what information we collect, how we use it, and your rights in relation to it. By using the Ntwaza platform, you consent to the practices described in this policy.
+          </p>
         </div>
-        <div class="container footer-grid">
-          <div>
-            <h5>Company</h5>
-            <a href="/about">About us</a>
-            <a href="/faq">FAQ</a>
+      </section>
+
+      <main class="legal-body">
+        <div class="container">
+
+          <div class="legal-section">
+            <div class="section-head"><span class="num">1</span><h2>Information We Collect</h2></div>
+            <p>We collect the following categories of information to operate, maintain, and improve our Service:</p>
+            <ul>
+              <li><strong>Personal Information:</strong> Full name, email address, phone number, delivery address(es), and profile photo (if provided).</li>
+              <li><strong>Account Credentials:</strong> Encrypted password and authentication tokens.</li>
+              <li><strong>Payment Information:</strong> Mobile Money number, card details (processed and stored securely by our PCI-compliant payment partners — we do not store full card numbers).</li>
+              <li><strong>Location Data:</strong> Real-time GPS coordinates when you use delivery tracking features (with your explicit consent).</li>
+              <li><strong>Device Information:</strong> Device model, operating system, unique device identifiers, app version, and push notification tokens.</li>
+              <li><strong>Usage Data:</strong> Pages viewed, searches performed, order history, interaction patterns, and session duration.</li>
+            </ul>
           </div>
-          <div>
-            <h5>Policies</h5>
-            <a href="/terms">Terms &amp; conditions</a>
-            <a href="/privacy">Privacy policy</a>
+
+          <div class="legal-section">
+            <div class="section-head"><span class="num">2</span><h2>How We Use Your Information</h2></div>
+            <ul>
+              <li>Process and fulfil your delivery orders.</li>
+              <li>Communicate order status, receipts, promotions, and service updates.</li>
+              <li>Improve and personalise your experience on the Platform.</li>
+              <li>Detect, prevent, and investigate fraud, abuse, or security incidents.</li>
+              <li>Comply with legal obligations and enforce our Terms of Service.</li>
+              <li>Train and improve our AI-powered features including product recommendations and search relevance.</li>
+              <li>Conduct analytics and research to improve Platform performance and user satisfaction.</li>
+            </ul>
           </div>
-          <div>
-            <h5>Contact center</h5>
-            <a href="mailto:hello@ntwaza.com">hello@ntwaza.com</a>
-            <a href="mailto:partners@ntwaza.com">partners@ntwaza.com</a>
-            <a href="tel:+250785119320">+250 785 119 320</a>
+
+          <div class="legal-section">
+            <div class="section-head"><span class="num">3</span><h2>Information Sharing &amp; Disclosure</h2></div>
+            <p>We do not sell your personal data. We may share information only in the following circumstances:</p>
+            <ul>
+              <li><strong>With Vendors &amp; Riders:</strong> Your name, delivery address, and phone number are shared with Vendors and Riders solely to fulfil your order.</li>
+              <li><strong>With Payment Processors:</strong> Transaction data is shared with our PCI-compliant payment partners (e.g. Flutterwave, Stripe) to process payments.</li>
+              <li><strong>With Service Providers:</strong> We use trusted third-party services for hosting, analytics, push notifications, and customer support.</li>
+              <li><strong>For Legal Compliance:</strong> We may disclose information if required by law, regulation, or valid legal process (e.g. court order or subpoena).</li>
+              <li><strong>Business Transfer:</strong> In the event of a merger, acquisition, or sale of assets, your data may be transferred as part of the transaction.</li>
+            </ul>
           </div>
+
+          <div class="legal-section">
+            <div class="section-head"><span class="num">4</span><h2>Data Retention</h2></div>
+            <ul>
+              <li>We retain your personal data only for as long as necessary to fulfil the purposes described in this policy, or as required by law.</li>
+              <li>Active account data is retained for the duration of your account and for 24 months after account deletion or inactivity.</li>
+              <li>Transaction records are retained for 5 years for tax and legal compliance purposes.</li>
+              <li>You may request data deletion at any time by contacting <a href="mailto:privacy@ntwaza.com" style="color:#2e7d32;text-decoration:none;font-weight:500;">privacy@ntwaza.com</a>.</li>
+            </ul>
+          </div>
+
+          <div class="legal-section">
+            <div class="section-head"><span class="num">5</span><h2>Data Security</h2></div>
+            <ul>
+              <li>We implement industry-standard security measures including: encryption of data in transit (TLS/SSL) and at rest (AES-256), role-based access controls for internal systems, regular security audits and vulnerability assessments, and secure, isolated database environments.</li>
+              <li>While we take commercially reasonable measures to protect your data, no method of electronic transmission or storage is 100% secure. We cannot guarantee absolute security.</li>
+            </ul>
+          </div>
+
+          <div class="legal-section">
+            <div class="section-head"><span class="num">6</span><h2>Your Rights</h2></div>
+            <p>Depending on your jurisdiction, you may have the following rights:</p>
+            <ul>
+              <li><strong>Access:</strong> Request a copy of the personal data we hold about you.</li>
+              <li><strong>Correction:</strong> Request correction of inaccurate or incomplete data.</li>
+              <li><strong>Deletion:</strong> Request deletion of your personal data (subject to legal retention requirements).</li>
+              <li><strong>Portability:</strong> Request a machine-readable export of your data.</li>
+              <li><strong>Objection:</strong> Object to certain types of data processing (e.g. direct marketing).</li>
+              <li><strong>Withdraw Consent:</strong> Withdraw consent for data processing at any time, without affecting the lawfulness of prior processing.</li>
+            </ul>
+            <p>To exercise any of these rights, contact <a href="mailto:privacy@ntwaza.com" style="color:#2e7d32;text-decoration:none;font-weight:500;">privacy@ntwaza.com</a>. We will respond within 30 days.</p>
+          </div>
+
+          <div class="legal-section">
+            <div class="section-head"><span class="num">7</span><h2>Location Data</h2></div>
+            <ul>
+              <li>We collect precise location data only when you actively use the app's delivery or tracking features, and only with your explicit permission.</li>
+              <li>You can revoke location access at any time through your device settings.</li>
+              <li>Location data is used solely for: providing accurate delivery estimates, enabling real-time order tracking, and optimising rider assignment and routing.</li>
+            </ul>
+          </div>
+
+          <div class="legal-section">
+            <div class="section-head"><span class="num">8</span><h2>Cookies &amp; Tracking Technologies</h2></div>
+            <ul>
+              <li>Our website uses cookies and similar technologies to enhance your browsing experience, analyse site traffic, and personalise content.</li>
+              <li>Essential cookies are required for the Platform to function and cannot be disabled.</li>
+              <li>Analytics cookies help us understand usage patterns and improve our Service.</li>
+              <li>You can manage cookie preferences through your browser settings.</li>
+            </ul>
+          </div>
+
+          <div class="legal-section">
+            <div class="section-head"><span class="num">9</span><h2>Children's Privacy</h2></div>
+            <p>Our Service is not directed at children under the age of 13. We do not knowingly collect personal data from children. If we learn that a child under 13 has provided personal information, we will promptly delete it. If you believe a child has provided data to us, please contact <a href="mailto:privacy@ntwaza.com" style="color:#2e7d32;text-decoration:none;font-weight:500;">privacy@ntwaza.com</a>.</p>
+          </div>
+
+          <div class="legal-section">
+            <div class="section-head"><span class="num">10</span><h2>International Data Transfers</h2></div>
+            <p>Your data may be processed in countries outside Rwanda where our servers and third-party service providers are located. In such cases, we ensure appropriate safeguards (e.g. Standard Contractual Clauses) are in place to protect your data.</p>
+          </div>
+
+          <div class="legal-section">
+            <div class="section-head"><span class="num">11</span><h2>Changes to This Policy</h2></div>
+            <ul>
+              <li>We may update this Privacy Policy from time to time to reflect changes in our practices, legal requirements, or regulatory guidance.</li>
+              <li>Material changes will be communicated via push notification, email, or prominent in-app notice at least 14 days before taking effect.</li>
+              <li>Continued use of the Service after the effective date constitutes your acceptance of the updated policy.</li>
+            </ul>
+          </div>
+
+          <div class="legal-contact">
+            <h3>Contact &amp; Privacy Inquiries</h3>
+            <p>For questions, data requests, or concerns regarding your privacy, please contact us:</p>
+            <br />
+            <p>Privacy: <a href="mailto:privacy@ntwaza.com">privacy@ntwaza.com</a></p>
+            <p>General: <a href="mailto:support@ntwaza.com">support@ntwaza.com</a></p>
+            <p>Phone: <a href="tel:+250782195474">+250 782 195 474</a></p>
+            <p>Address: NTWAZA Ltd., Kigali, Rwanda</p>
+            <p style="margin-top:12px;font-size:12px;color:#999;">Mon – Sat, 7:00 AM – 9:00 PM (CAT)</p>
+          </div>
+
+        </div>
+      </main>
+
+      <footer class="site-footer">
+        <div class="container footer-main">
+          <div class="footer-col footer-brand">
+            <div class="logo">NTWAZA</div>
+            <p>Premium on-demand delivery for food, groceries, and essentials across Kigali, Rwanda.</p>
+            <div class="footer-social">
+              <a href="https://instagram.com/ntwaza" aria-label="Instagram" target="_blank" rel="noopener"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg></a>
+              <a href="https://twitter.com/ntwaza" aria-label="X / Twitter" target="_blank" rel="noopener"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>
+              <a href="https://facebook.com/ntwaza" aria-label="Facebook" target="_blank" rel="noopener"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></a>
+            </div>
+          </div>
+          <div class="footer-col"><h5>Company</h5><a href="/about">About Ntwaza</a><a href="/faq">FAQ</a></div>
+          <div class="footer-col"><h5>Legal</h5><a href="/terms">Terms of Service</a><a href="/privacy">Privacy Policy</a></div>
         </div>
         <div class="container footer-bottom">
-          <span>&copy; 2026 NTWAZA &nbsp; | &nbsp; <a href="/web_admin/vendor_login.html">Vendor Login</a></span>
+          <span>&copy; 2026 NTWAZA Ltd. All rights reserved.</span>
+          <span class="footer-bottom-links"><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/web/auth/login">Login</a></span>
         </div>
       </footer>
-      <script>
-        const hamburger = document.getElementById("hamburger");
-        const navLinks = document.getElementById("nav-links");
-        const closeMenu = document.getElementById("close-menu");
-
-        if (hamburger && navLinks) {
-          hamburger.addEventListener("click", () => {
-            hamburger.classList.toggle("active");
-            navLinks.classList.toggle("active");
-          });
-        }
-
-        if (closeMenu && hamburger && navLinks) {
-          closeMenu.addEventListener("click", () => {
-            hamburger.classList.remove("active");
-            navLinks.classList.remove("active");
-          });
-        }
-
-        if (navLinks && hamburger) {
-          navLinks.querySelectorAll("a").forEach((link) => {
-            link.addEventListener("click", () => {
-              hamburger.classList.remove("active");
-              navLinks.classList.remove("active");
-            });
-          });
-        }
-      </script>
     </div>
+    <script>
+      const hamburger = document.getElementById("hamburger");
+      const navLinks = document.getElementById("nav-links");
+      const closeMenu = document.getElementById("close-menu");
+      if (hamburger && navLinks) { hamburger.addEventListener("click", () => { hamburger.classList.toggle("active"); navLinks.classList.toggle("active"); }); }
+      if (closeMenu && hamburger && navLinks) { closeMenu.addEventListener("click", () => { hamburger.classList.remove("active"); navLinks.classList.remove("active"); }); }
+      if (navLinks && hamburger) { navLinks.querySelectorAll("a").forEach((link) => { link.addEventListener("click", () => { hamburger.classList.remove("active"); navLinks.classList.remove("active"); }); }); }
+    </script>
   </body>
 </html>

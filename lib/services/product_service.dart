@@ -14,8 +14,8 @@ class ProductService {
     final isRestaurant = vendor?.isRestaurant ?? false;
     
     final endpoint = isRestaurant 
-        ? '/api/vendors/$vendorId/menus'
-        : '/api/vendors/$vendorId/products';  // ✅ FIXED: Changed from /categories to /products
+        ? '/api/restaurant/vendors/$vendorId/menus'
+        : '/api/vendors/$vendorId/products';
     
     print('🔍 ProductService: Fetching ${isRestaurant ? "menus" : "products"} for vendor: $vendorId');
     print('🌐 Using endpoint: $endpoint');
@@ -43,40 +43,62 @@ class ProductService {
 
     print('📦 Received ${productsOrMenusData.length} $dataKey...');
 
-    // For restaurants, parse as categories with products
+    // For restaurants, parse menus → categories → dishes into ProductCategory objects
     if (isRestaurant) {
       final List<ProductCategory> categories = [];
       for (int i = 0; i < productsOrMenusData.length; i++) {
         try {
-          print('🔄 Parsing menu $i: ${productsOrMenusData[i]['name']}');
+          final menuData = Map<String, dynamic>.from(productsOrMenusData[i]);
+          print('🔄 Parsing menu $i: ${menuData['name']}');
           
-          final categoryJson = Map<String, dynamic>.from(productsOrMenusData[i]);
-          if (categoryJson['products'] is List) {
-            categoryJson['products'] = (categoryJson['products'] as List).map((productJson) {
-              final mutableProduct = Map<String, dynamic>.from(productJson);
-              if (mutableProduct['vendor_id'] == null || 
-                  mutableProduct['vendor_id'].toString().isEmpty ||
-                  mutableProduct['vendor_id'] == '0') {
-                mutableProduct['vendor_id'] = vendorId;
-              }
-              if (vendor != null && 
-                  (mutableProduct['vendor_name'] == null || 
-                   mutableProduct['vendor_name'].toString().isEmpty)) {
-                mutableProduct['vendor_name'] = vendor.name;
-              }
-              return mutableProduct;
-            }).toList();
+          // Backend returns: { name, categories: [{ name, dishes: [...] }] }
+          // We need to flatten categories with dishes into ProductCategory with products
+          final menuCategories = menuData['categories'] as List? ?? [];
+          
+          if (menuCategories.isEmpty) {
+            // Menu has no categories — check if it has a direct 'products' key (legacy fallback)
+            if (menuData['products'] is List) {
+              final categoryJson = Map<String, dynamic>.from(menuData);
+              categoryJson['products'] = (categoryJson['products'] as List).map((p) {
+                final mp = Map<String, dynamic>.from(p);
+                if (mp['vendor_id'] == null || mp['vendor_id'].toString().isEmpty || mp['vendor_id'] == '0') mp['vendor_id'] = vendorId;
+                if (vendor != null && (mp['vendor_name'] == null || mp['vendor_name'].toString().isEmpty)) mp['vendor_name'] = vendor.name;
+                return mp;
+              }).toList();
+              categories.add(ProductCategory.fromJson(categoryJson));
+              print('✅ Menu (legacy): ${menuData['name']} with ${(categoryJson['products'] as List).length} products');
+            }
+            continue;
           }
           
-          final category = ProductCategory.fromJson(categoryJson);
-          categories.add(category);
-          print('✅ Menu: ${category.name} with ${category.products.length} products');
+          // Flatten each menu category into a ProductCategory
+          for (var catData in menuCategories) {
+            final catJson = Map<String, dynamic>.from(catData);
+            // Rename 'dishes' to 'products' so ProductCategory.fromJson can parse it
+            final dishes = catJson['dishes'] as List? ?? [];
+            catJson['products'] = dishes.map((dish) {
+              final d = Map<String, dynamic>.from(dish);
+              // Map dish fields to product fields for Product.fromJson compatibility
+              if (d['vendor_id'] == null || d['vendor_id'].toString().isEmpty || d['vendor_id'] == '0') d['vendor_id'] = vendorId;
+              if (vendor != null && (d['vendor_name'] == null || d['vendor_name'].toString().isEmpty)) d['vendor_name'] = vendor.name;
+              // Map 'original_price' → 'compare_at_price' if needed
+              if (d['original_price'] != null && d['compare_at_price'] == null) d['compare_at_price'] = d['original_price'];
+              // Ensure category field is set
+              if (d['category'] == null) d['category'] = catJson['name'] ?? '';
+              return d;
+            }).toList();
+            catJson.remove('dishes');
+            
+            final category = ProductCategory.fromJson(catJson);
+            categories.add(category);
+            print('✅ Category: ${category.name} with ${category.products.length} dishes');
+          }
         } catch (e, stackTrace) {
           print('❌ Error parsing menu $i: $e');
           print('Stack trace: $stackTrace');
         }
       }
-      print('✅ Successfully parsed ${categories.length} menus');
+      print('✅ Successfully parsed ${categories.length} categories from menus');
       return categories;
     } 
     
@@ -148,7 +170,7 @@ class ProductService {
     final isRestaurant = isRestaurantOverride ?? (vendor?.isRestaurant ?? false);
     
     final endpoint = isRestaurant
-        ? '/api/vendors/$vendorId/menus'
+        ? '/api/restaurant/vendors/$vendorId/menus'
         : '/api/vendors/$vendorId/products';
     
     print('🔍 ProductService: Fetching products for vendor: $vendorId (${isRestaurant ? "restaurant" : "shop"})');
@@ -156,7 +178,7 @@ class ProductService {
 
     final response = await _apiService.get(endpoint);
 
-    // For restaurants, flatten menus/categories into products
+    // For restaurants, flatten menus → categories → dishes into products
     if (isRestaurant) {
       final dataKey = response.containsKey('menus') ? 'menus' : 'categories';
       final menusData = response[dataKey];
@@ -164,18 +186,30 @@ class ProductService {
       
       final List<Product> allProducts = [];
       for (var menu in menusData) {
-        if (menu['products'] is List) {
+        // Backend structure: menu → categories → dishes
+        final menuCategories = menu['categories'] as List? ?? [];
+        for (var cat in menuCategories) {
+          final dishes = cat['dishes'] as List? ?? [];
+          for (var dishJson in dishes) {
+            try {
+              final d = Map<String, dynamic>.from(dishJson);
+              if (d['vendor_id'] == null || d['vendor_id'].toString().isEmpty) d['vendor_id'] = vendorId;
+              if (vendor != null && d['vendor_name'] == null) d['vendor_name'] = vendor.name;
+              if (d['original_price'] != null && d['compare_at_price'] == null) d['compare_at_price'] = d['original_price'];
+              if (d['category'] == null) d['category'] = cat['name'] ?? '';
+              allProducts.add(Product.fromJson(d));
+            } catch (e) {
+              print('❌ Error parsing dish: $e');
+            }
+          }
+        }
+        // Legacy fallback: direct products list in menu
+        if (menuCategories.isEmpty && menu['products'] is List) {
           for (var productJson in menu['products']) {
             try {
-              // ✅ Inject vendor_id
               final mutableProduct = Map<String, dynamic>.from(productJson);
-              if (mutableProduct['vendor_id'] == null || 
-                  mutableProduct['vendor_id'].toString().isEmpty) {
-                mutableProduct['vendor_id'] = vendorId;
-              }
-              if (vendor != null && mutableProduct['vendor_name'] == null) {
-                mutableProduct['vendor_name'] = vendor.name;
-              }
+              if (mutableProduct['vendor_id'] == null || mutableProduct['vendor_id'].toString().isEmpty) mutableProduct['vendor_id'] = vendorId;
+              if (vendor != null && mutableProduct['vendor_name'] == null) mutableProduct['vendor_name'] = vendor.name;
               allProducts.add(Product.fromJson(mutableProduct));
             } catch (e) {
               print('❌ Error parsing product: $e');
@@ -183,7 +217,7 @@ class ProductService {
           }
         }
       }
-      print('✅ Successfully parsed ${allProducts.length} products from menus');
+      print('✅ Successfully parsed ${allProducts.length} dishes from menus');
       return allProducts;
     }
 

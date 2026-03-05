@@ -124,6 +124,10 @@ class _SplashScreenState extends State<SplashScreen>
     });
 
     // 1. Request location permission FIRST (required for delivery)
+    // Small delay to ensure Android activity is fully initialized for permission dialogs
+    await Future.delayed(const Duration(milliseconds: 300));
+    if (!mounted) return;
+    
     print('\n📍 STEP 1: Location Permission');
     setState(() => _statusText = 'Requesting location access...');
     bool locationGranted = await _requestLocation();
@@ -133,7 +137,7 @@ class _SplashScreenState extends State<SplashScreen>
       print('  ⚠️ Location denied, retrying...');
       // Try once more
       setState(() => _statusText = 'Location is needed for delivery');
-      await Future.delayed(const Duration(milliseconds: 800));
+      await Future.delayed(const Duration(milliseconds: 1000));
       if (!mounted) return;
 
       locationGranted = await _requestLocation();
@@ -141,23 +145,31 @@ class _SplashScreenState extends State<SplashScreen>
 
       if (!locationGranted) {
         print('  ❌ Location permission permanently denied');
+        // Still initialize notifications even if location denied
+        _requestNotifications().catchError((e) {
+          print('  ⚠️ Notification setup failed: $e');
+        });
         await prefs.setBool('has_seen_permissions', true);
         print('✅ STARTUP: Complete (no location - user will need to add manually)');
         return;
       }
     }
 
-    // 2. Request notification permission (background, don't block main flow)
+    // 2. Request notification permission AFTER location is fully resolved
+    // Wait for location dialog to fully dismiss before showing notification dialog
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (!mounted) return;
+    
     print('\n📲 STEP 2: Notification Permission');
     setState(() => _statusText = 'Setting up notifications...');
-    // Run async without awaiting - don't block startup
-    _requestNotifications().then((_) {
-      print('  ✅ Notification setup complete');
-    }).catchError((e) {
-      print('  ⚠️ Notification setup failed: $e');
-    });
-    // Give it a brief moment but don't wait indefinitely
-    await Future.delayed(const Duration(milliseconds: 500));
+    // Await notification setup to ensure proper sequencing of permission dialogs
+    await _requestNotifications().timeout(
+      const Duration(seconds: 8),
+      onTimeout: () {
+        print('  ⚠️ Notification setup timed out');
+      },
+    );
+    if (!mounted) return;
 
     // 3. Get and save current location
     print('\n📍 STEP 3: Capture Current Location');

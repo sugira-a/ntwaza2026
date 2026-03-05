@@ -4,7 +4,10 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/wishlist_provider.dart';
 import '../../providers/cart_provider.dart';
+import '../../providers/vendor_provider.dart';
 import '../../models/product.dart';
+import '../../models/vendor.dart';
+import '../vendor/widgets/product_detail_modal.dart';
 
 class WishlistScreen extends StatelessWidget {
   const WishlistScreen({super.key});
@@ -118,7 +121,9 @@ class WishlistScreen extends StatelessWidget {
     final pText = isDark ? Colors.white : const Color(0xFF111111);
     final sText = isDark ? Colors.white54 : const Color(0xFF6B7280);
 
-    return Container(
+    return GestureDetector(
+      onTap: () => _openProductDetail(context, product),
+      child: Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: card,
@@ -203,6 +208,34 @@ class WishlistScreen extends StatelessWidget {
           ],
         ),
       ),
+      ),
+    );
+  }
+
+  void _openProductDetail(BuildContext context, Product product) {
+    // Build a minimal vendor from product data
+    final vendorProvider = context.read<VendorProvider>();
+    Vendor? vendor;
+    try {
+      vendor = vendorProvider.vendors.firstWhere((v) => v.id == product.vendorId);
+    } catch (_) {
+      vendor = Vendor(
+        id: product.vendorId,
+        name: product.vendorName ?? 'Store',
+        category: 'Store',
+        vendorType: VendorType.product,
+        logoUrl: '',
+        rating: 0, totalRatings: 0,
+        latitude: 0, longitude: 0,
+        prepTimeMinutes: 0, deliveryFee: 0,
+        isOpen: true,
+      );
+    }
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => ProductDetailModal(product: product, vendor: vendor!),
     );
   }
 

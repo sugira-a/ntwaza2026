@@ -4,11 +4,47 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>About Us | NTWAZA Delivery</title>
-    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png" />
+    <link rel="icon" type="image/x-icon" href="/static/icon/favicon.ico" />
     <link rel="stylesheet" href="landing.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+    <style>
+      .about-hero { padding: 120px 0 48px; background: #0b0b0b; }
+      .about-hero h1 { font-family: "Space Grotesk", sans-serif; font-size: clamp(2rem, 3.5vw, 2.8rem); font-weight: 700; color: #fff; margin: 0 0 16px; }
+      .about-hero p { font-size: 15px; line-height: 1.7; color: rgba(255,255,255,0.6); max-width: 640px; margin: 0; }
+
+      .about-body { background: #fff; padding: 56px 0 64px; }
+      .about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 56px; }
+      .about-card { background: #f8faf8; border: 1px solid #eef3ee; border-radius: 14px; padding: 32px; }
+      .about-card .card-icon { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 10px; background: #edf7ee; margin-bottom: 16px; }
+      .about-card .card-icon svg { width: 22px; height: 22px; color: #2e7d32; stroke: #2e7d32; }
+      .about-card h3 { font-family: "Space Grotesk", sans-serif; font-size: 17px; font-weight: 600; color: #1a1a1a; margin: 0 0 10px; }
+      .about-card p { font-family: "Work Sans", sans-serif; font-size: 14px; line-height: 1.8; color: #555; margin: 0; }
+
+      .about-section { margin-bottom: 48px; }
+      .about-section h2 { font-family: "Space Grotesk", sans-serif; font-size: 22px; font-weight: 700; color: #1a1a1a; margin: 0 0 16px; }
+      .about-section p { font-family: "Work Sans", sans-serif; font-size: 14.5px; line-height: 1.8; color: #555; margin: 0 0 12px; max-width: 720px; }
+
+      .about-values { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 32px; }
+      .value-item { text-align: center; padding: 28px 16px; background: #fafafa; border-radius: 12px; }
+      .value-item .value-emoji { font-size: 28px; margin-bottom: 12px; }
+      .value-item h4 { font-family: "Space Grotesk", sans-serif; font-size: 15px; font-weight: 600; color: #1a1a1a; margin: 0 0 8px; }
+      .value-item p { font-family: "Work Sans", sans-serif; font-size: 13px; line-height: 1.7; color: #777; margin: 0; }
+
+      .about-cta { background: #f0f7f0; border-radius: 14px; padding: 40px; text-align: center; margin-top: 16px; }
+      .about-cta h3 { font-family: "Space Grotesk", sans-serif; font-size: 20px; font-weight: 700; color: #1a1a1a; margin: 0 0 10px; }
+      .about-cta p { font-family: "Work Sans", sans-serif; font-size: 14px; color: #666; margin: 0 0 20px; }
+      .about-cta a { display: inline-block; padding: 12px 32px; background: #2e7d32; color: #fff; border-radius: 10px; font-family: "Space Grotesk", sans-serif; font-weight: 600; font-size: 14px; text-decoration: none; transition: background 0.2s; }
+      .about-cta a:hover { background: #256b29; }
+
+      @media (max-width: 768px) {
+        .about-hero { padding: 100px 0 36px; }
+        .about-body { padding: 36px 0 44px; }
+        .about-grid { grid-template-columns: 1fr; gap: 16px; }
+        .about-values { grid-template-columns: 1fr; gap: 16px; }
+      }
+    </style>
   </head>
   <body>
     <div class="page">
@@ -16,14 +52,11 @@
         <div class="container nav">
           <a href="/" class="logo">NTWAZA</a>
           <button class="hamburger" id="hamburger" aria-label="Menu">
-            <span></span>
-            <span></span>
-            <span></span>
+            <span></span><span></span><span></span>
           </button>
           <nav class="nav-links" id="nav-links">
             <button class="close-menu" id="close-menu" aria-label="Close menu">
-              <span></span>
-              <span></span>
+              <span></span><span></span>
             </button>
             <a href="/">Home</a>
             <a href="/#how">How it works</a>
@@ -33,97 +66,121 @@
           </nav>
         </div>
       </header>
-      <main>
-        <section class="section light centered">
-          <div class="container">
-            <h1 class="section-title">About NTWAZA</h1>
-            <p class="section-subtitle">
-              NTWAZA is a Kigali-based delivery network serving Rwanda with fast,
-              reliable delivery for food, groceries, and essentials. We combine
-              local partners, trained couriers, and real-time tracking to keep
-              every order visible and on time.
-            </p>
-          </div>
-        </section>
-        <section class="section">
-          <div class="container">
-            <h2 class="section-title">Our mission</h2>
-            <p class="section-subtitle">
-              Make everyday delivery in Rwanda simple, safe, and predictable for
-              customers and businesses.
-            </p>
-            <h2 class="section-title">How we operate</h2>
-            <p class="section-subtitle">
-              We connect customers with vetted local merchants and couriers,
-              provide live tracking, and support clear delivery windows across
-              Kigali and nearby areas.
-            </p>
-            <h2 class="section-title">Built for Rwanda</h2>
-            <p class="section-subtitle">
-              NTWAZA is designed for local roads, neighborhoods, and peak-hour
-              traffic patterns, with responsive customer support and partner
-              tools for businesses.
-            </p>
-          </div>
-        </section>
-      </main>
-      <footer class="site-footer">
-        <div class="container footer-top">
-          <div class="footer-brand">
-            <div class="logo">NTWAZA</div>
-            <p>Premium delivery for food, groceries, and essentials in Kigali.</p>
-          </div>
+
+      <section class="about-hero">
+        <div class="container">
+          <h1>About NTWAZA</h1>
+          <p>We're building the most reliable delivery platform in Rwanda — connecting customers, local vendors, and riders through technology that makes everyday delivery simple, fast, and transparent.</p>
         </div>
-        <div class="container footer-grid">
-          <div>
-            <h5>Company</h5>
-            <a href="/about">About us</a>
-            <a href="/faq">FAQ</a>
+      </section>
+
+      <main class="about-body">
+        <div class="container">
+
+          <div class="about-grid">
+            <div class="about-card">
+              <div class="card-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 002 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+              </div>
+              <h3>On-Demand Delivery</h3>
+              <p>Order food, groceries, retail products, and everyday essentials from trusted local vendors — delivered to your door in minutes across Kigali.</p>
+            </div>
+            <div class="about-card">
+              <div class="card-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              </div>
+              <h3>Real-Time Tracking</h3>
+              <p>Follow every order from the moment it's placed to when it arrives — live GPS tracking for complete visibility and peace of mind.</p>
+            </div>
+            <div class="about-card">
+              <div class="card-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+              </div>
+              <h3>Local Partnerships</h3>
+              <p>We work with vetted restaurants, shops, and independent vendors across Kigali — supporting local businesses while serving customers better.</p>
+            </div>
+            <div class="about-card">
+              <div class="card-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              </div>
+              <h3>Secure Payments</h3>
+              <p>Pay with Mobile Money (MTN MoMo, Airtel Money), Visa, Mastercard, or Cash on Delivery. All transactions are encrypted and PCI-compliant.</p>
+            </div>
           </div>
-          <div>
-            <h5>Policies</h5>
-            <a href="/terms">Terms &amp; conditions</a>
-            <a href="/privacy">Privacy policy</a>
+
+          <div class="about-section">
+            <h2>Our Mission</h2>
+            <p>To make everyday delivery in Rwanda simple, safe, and predictable — for customers who need reliability and businesses that need reach. We believe that fast, affordable delivery should be accessible to everyone, not just those in central areas.</p>
           </div>
-          <div>
-            <h5>Contact center</h5>
-            <a href="mailto:hello@ntwaza.com">hello@ntwaza.com</a>
-            <a href="mailto:partners@ntwaza.com">partners@ntwaza.com</a>
-            <a href="tel:+250785119320">+250 785 119 320</a>
+
+          <div class="about-section">
+            <h2>How We Operate</h2>
+            <p>Ntwaza connects customers with a network of verified local merchants and trained delivery riders. Orders flow through our platform in real time — from placement to vendor confirmation, rider assignment, pickup, and last-mile delivery with live tracking.</p>
+            <p>Our logistics engine is optimised for Kigali's roads, traffic patterns, and peak-hour demand, ensuring delivery windows that are realistic and reliable.</p>
           </div>
+
+          <div class="about-section">
+            <h2>Built for Rwanda</h2>
+            <p>NTWAZA is designed from the ground up for Rwanda's unique landscape — local roads, neighbourhoods, and real traffic conditions. We provide responsive customer support, dedicated partner tools for businesses, and a rider network that understands every corner of Kigali.</p>
+          </div>
+
+          <div class="about-section">
+            <h2>What We Stand For</h2>
+            <div class="about-values">
+              <div class="value-item">
+                <div class="value-emoji">&#9889;</div>
+                <h4>Speed</h4>
+                <p>Most deliveries completed within 20–60 minutes across Kigali</p>
+              </div>
+              <div class="value-item">
+                <div class="value-emoji">&#128274;</div>
+                <h4>Trust</h4>
+                <p>Vetted vendors, trained riders, and encrypted payments you can rely on</p>
+              </div>
+              <div class="value-item">
+                <div class="value-emoji">&#127758;</div>
+                <h4>Local First</h4>
+                <p>Built for Rwanda's roads, communities, and local businesses</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="about-cta">
+            <h3>Ready to order?</h3>
+            <p>Download the Ntwaza app and get premium delivery straight to your door.</p>
+            <a href="/#download">Get the App</a>
+          </div>
+
+        </div>
+      </main>
+
+      <footer class="site-footer">
+        <div class="container footer-main">
+          <div class="footer-col footer-brand">
+            <div class="logo">NTWAZA</div>
+            <p>Premium on-demand delivery for food, groceries, and essentials across Kigali, Rwanda.</p>
+            <div class="footer-social">
+              <a href="https://instagram.com/ntwaza" aria-label="Instagram" target="_blank" rel="noopener"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg></a>
+              <a href="https://twitter.com/ntwaza" aria-label="X / Twitter" target="_blank" rel="noopener"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>
+              <a href="https://facebook.com/ntwaza" aria-label="Facebook" target="_blank" rel="noopener"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></a>
+            </div>
+          </div>
+          <div class="footer-col"><h5>Company</h5><a href="/about">About Ntwaza</a><a href="/faq">FAQ</a></div>
+          <div class="footer-col"><h5>Legal</h5><a href="/terms">Terms of Service</a><a href="/privacy">Privacy Policy</a></div>
         </div>
         <div class="container footer-bottom">
-          <span>&copy; 2026 NTWAZA &nbsp; | &nbsp; <a href="/web_admin/vendor_login.html">Vendor Login</a></span>
+          <span>&copy; 2026 NTWAZA Ltd. All rights reserved.</span>
+          <span class="footer-bottom-links"><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/web/auth/login">Login</a></span>
         </div>
       </footer>
-      <script>
-        const hamburger = document.getElementById("hamburger");
-        const navLinks = document.getElementById("nav-links");
-        const closeMenu = document.getElementById("close-menu");
-
-        if (hamburger && navLinks) {
-          hamburger.addEventListener("click", () => {
-            hamburger.classList.toggle("active");
-            navLinks.classList.toggle("active");
-          });
-        }
-
-        if (closeMenu && hamburger && navLinks) {
-          closeMenu.addEventListener("click", () => {
-            hamburger.classList.remove("active");
-            navLinks.classList.remove("active");
-          });
-        }
-
-        if (navLinks && hamburger) {
-          navLinks.querySelectorAll("a").forEach((link) => {
-            link.addEventListener("click", () => {
-              hamburger.classList.remove("active");
-              navLinks.classList.remove("active");
-            });
-          });
-        }
-      </script>
     </div>
+    <script>
+      const hamburger = document.getElementById("hamburger");
+      const navLinks = document.getElementById("nav-links");
+      const closeMenu = document.getElementById("close-menu");
+      if (hamburger && navLinks) { hamburger.addEventListener("click", () => { hamburger.classList.toggle("active"); navLinks.classList.toggle("active"); }); }
+      if (closeMenu && hamburger && navLinks) { closeMenu.addEventListener("click", () => { hamburger.classList.remove("active"); navLinks.classList.remove("active"); }); }
+      if (navLinks && hamburger) { navLinks.querySelectorAll("a").forEach((link) => { link.addEventListener("click", () => { hamburger.classList.remove("active"); navLinks.classList.remove("active"); }); }); }
+    </script>
   </body>
 </html>

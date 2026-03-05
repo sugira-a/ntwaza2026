@@ -253,10 +253,11 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
       
       if (shouldFetch) {
         await vendorProvider.fetchVendors(forceRefresh: forceRefresh);
-        await _fetchRealSpecialOffers();
       } else {
         print('📦 Using cached vendors - no API call needed');
       }
+      // Always fetch special offers independently (they change frequently)
+      _fetchRealSpecialOffers();
       
       // Mark address as used
       await context.read<AddressProvider>().markAddressAsUsed(address.id);
@@ -870,18 +871,18 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
                       ) 
                     : null,
                   filled: true, 
-                  fillColor: isDarkMode ? Colors.grey[900] : Colors.white,
+                  fillColor: isDarkMode ? const Color(0xFF1A1A1A) : const Color(0xFFF5F5F5),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10), 
-                    borderSide: BorderSide(color: isDarkMode ? Colors.grey[800]! : const Color(0xFFE0E0E0), width: 0.5),
+                    borderSide: BorderSide.none,
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10), 
-                    borderSide: BorderSide(color: isDarkMode ? Colors.grey[800]! : const Color(0xFFE0E0E0), width: 0.5),
+                    borderSide: BorderSide.none,
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10), 
-                    borderSide: BorderSide(color: isDarkMode ? Colors.grey[600]! : const Color(0xFFBDBDBD), width: 1),
+                    borderSide: BorderSide.none,
                   ),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   isDense: true,
@@ -1293,6 +1294,184 @@ void _showAddressManagementDialog(BuildContext context, bool isDarkMode, Color c
     );
   }
 
+  void _showAllVendorsSheet(BuildContext context, List<Vendor> vendors, bool isDarkMode, Color cardColor, Color textColor, Color subtextColor) {
+    final bg = isDarkMode ? const Color(0xFF0A0A0A) : const Color(0xFFF5F6F8);
+    final card = isDarkMode ? const Color(0xFF161B22) : Colors.white;
+    final border = isDarkMode ? const Color(0xFF21262D) : const Color(0xFFE5E7EB);
+    final pText = isDarkMode ? Colors.white : const Color(0xFF111111);
+    final sText = isDarkMode ? Colors.white54 : const Color(0xFF6B7280);
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          backgroundColor: bg,
+          body: CustomScrollView(
+            slivers: [
+              SliverAppBar(
+                expandedHeight: 140,
+                pinned: true,
+                backgroundColor: isDarkMode ? const Color(0xFF0D1117) : const Color(0xFF0B0F14),
+                leading: IconButton(
+                  icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                  onPressed: () => Navigator.pop(context),
+                ),
+                flexibleSpace: FlexibleSpaceBar(
+                  collapseMode: CollapseMode.parallax,
+                  background: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft, end: Alignment.bottomRight,
+                        colors: isDarkMode
+                            ? [const Color(0xFF0D1117), const Color(0xFF161B22)]
+                            : [const Color(0xFF0B0F14), const Color(0xFF1B2028)],
+                      ),
+                    ),
+                    child: SafeArea(
+                      bottom: false,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 52, 20, 0),
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Row(children: [
+                            const Icon(Icons.store_rounded, color: Color(0xFF4CAF50), size: 26),
+                            const SizedBox(width: 10),
+                            const Text('All Vendors', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w800, letterSpacing: -0.5)),
+                          ]),
+                          const SizedBox(height: 6),
+                          Text(
+                            '${vendors.length} ${vendors.length == 1 ? 'vendor' : 'vendors'} available',
+                            style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 13),
+                          ),
+                        ]),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              if (vendors.isEmpty)
+                SliverFillRemaining(
+                  child: Center(
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      Container(
+                        width: 64, height: 64,
+                        decoration: BoxDecoration(shape: BoxShape.circle, color: const Color(0xFF4CAF50).withOpacity(0.1)),
+                        child: const Icon(Icons.store_outlined, color: Color(0xFF4CAF50), size: 30),
+                      ),
+                      const SizedBox(height: 14),
+                      Text('No vendors found', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: pText)),
+                      const SizedBox(height: 6),
+                      Text('Try changing your location or category.', style: TextStyle(fontSize: 13, color: sText)),
+                    ]),
+                  ),
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (ctx, i) {
+                        final v = vendors[i];
+                        final isRestaurant = v.isRestaurant;
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          decoration: BoxDecoration(
+                            color: card,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: border),
+                            boxShadow: [BoxShadow(color: Colors.black.withOpacity(isDarkMode ? 0.25 : 0.06), blurRadius: 12, offset: const Offset(0, 4))],
+                          ),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(16),
+                            onTap: () {
+                              Navigator.pop(context);
+                              Navigator.push(context, MaterialPageRoute(builder: (_) => VendorDetailScreen(vendor: v)));
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Row(children: [
+                                // Vendor image
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: v.logoUrl != null && v.logoUrl!.isNotEmpty
+                                      ? Image.network(v.logoUrl!, width: 72, height: 72, fit: BoxFit.cover,
+                                          errorBuilder: (_, __, ___) => Container(
+                                            width: 72, height: 72,
+                                            color: isDarkMode ? Colors.grey[900] : Colors.grey[200],
+                                            child: Icon(isRestaurant ? Icons.restaurant : Icons.store, color: Colors.grey[400], size: 28),
+                                          ))
+                                      : Container(
+                                          width: 72, height: 72,
+                                          decoration: BoxDecoration(
+                                            color: isDarkMode ? Colors.grey[900] : Colors.grey[200],
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          child: Icon(isRestaurant ? Icons.restaurant : Icons.store, color: Colors.grey[400], size: 28),
+                                        ),
+                                ),
+                                const SizedBox(width: 12),
+                                // Vendor info
+                                Expanded(
+                                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                    Text(v.name, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: pText), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                    const SizedBox(height: 4),
+                                    // Rating, time, distance
+                                    Row(children: [
+                                      Icon(Icons.star_rounded, size: 14, color: const Color(0xFFFFA000)),
+                                      const SizedBox(width: 3),
+                                      Text(v.totalRatings == 0 ? 'New' : v.formattedRating, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: sText)),
+                                      const SizedBox(width: 12),
+                                      Icon(Icons.schedule_outlined, size: 13, color: sText),
+                                      const SizedBox(width: 3),
+                                      Text(v.formattedDeliveryTime, style: TextStyle(fontSize: 12, color: sText)),
+                                      if (v.formattedDistance != 'D/U') ...[
+                                        const SizedBox(width: 12),
+                                        Icon(Icons.near_me_outlined, size: 13, color: sText),
+                                        const SizedBox(width: 3),
+                                        Text(v.formattedDistance, style: TextStyle(fontSize: 12, color: sText)),
+                                      ],
+                                    ]),
+                                    const SizedBox(height: 6),
+                                    // Status badges
+                                    Row(children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: v.isOpen ? const Color(0xFF4CAF50).withOpacity(0.1) : Colors.red.withOpacity(0.08),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Text(v.isOpen ? 'Open' : 'Closed', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: v.isOpen ? const Color(0xFF4CAF50) : Colors.red[400])),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF4CAF50).withOpacity(0.08),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Text(v.formattedDeliveryFee, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF2E7D32))),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(isRestaurant ? 'Restaurant' : v.category, style: TextStyle(fontSize: 11, color: sText)),
+                                    ]),
+                                  ]),
+                                ),
+                                // Arrow
+                                Icon(Icons.chevron_right_rounded, color: sText, size: 22),
+                              ]),
+                            ),
+                          ),
+                        );
+                      },
+                      childCount: vendors.length,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildPackageDeliveryBanner() {
     final authProvider = context.watch<AuthProvider>();
     final user = authProvider.user;
@@ -1305,32 +1484,32 @@ void _showAddressManagementDialog(BuildContext context, bool isDarkMode, Color c
         context.push('/create-pickup-order');
       },
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          gradient: LinearGradient(colors: [Colors.black, Colors.grey[900]!], begin: Alignment.topLeft, end: Alignment.bottomRight),
+          gradient: LinearGradient(colors: [Colors.black, Colors.grey[900]!], begin: Alignment.centerLeft, end: Alignment.centerRight),
           borderRadius: BorderRadius.circular(14),
           boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 12, offset: const Offset(0, 4), spreadRadius: 1)],
         ),
         child: Row(children: [
           Container(
-            width: 48, height: 48,
+            width: 44, height: 44,
             decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withOpacity(0.15), border: Border.all(color: Colors.white.withOpacity(0.3), width: 1.5)),
-            child: const Icon(Icons.local_shipping, color: Colors.white, size: 24),
+            child: const Icon(Icons.local_shipping, color: Colors.white, size: 22),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
               Text('Send a Package', style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800)),
               const SizedBox(height: 3),
-              Text('Fast pickup & delivery anywhere', style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 12)),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6), 
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(7)),
-                child: const Text('Ntwaza Now →', style: TextStyle(color: Colors.black, fontSize: 12, fontWeight: FontWeight.w700)),
-              ),
-            ])
+              Text('Fast pickup & delivery', style: TextStyle(color: Colors.white.withOpacity(0.85), fontSize: 12)),
+            ]),
+          ),
+          const SizedBox(width: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+            child: const Text('Ntwaza Now →', style: TextStyle(color: Colors.black, fontSize: 12, fontWeight: FontWeight.w700)),
           ),
         ]),
       ),
@@ -1866,13 +2045,13 @@ void _showAddressManagementDialog(BuildContext context, bool isDarkMode, Color c
                         Expanded(
                           child: Row(mainAxisSize: MainAxisSize.min, children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                               decoration: BoxDecoration(
                                 color: (isDarkMode ? const Color(0xFF1B5E20) : const Color(0xFF4CAF50)).withOpacity(isDarkMode ? 0.15 : 0.08),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
-                                'DF $deliveryFeeText', 
+                                deliveryFeeText, 
                                 style: TextStyle(
                                   fontSize: 10, 
                                   fontWeight: FontWeight.w600, 
@@ -2827,12 +3006,26 @@ Widget _buildNoVendorsOverlay(bool isDarkMode, Color cardColor, Color textColor,
     color: Colors.black,
     child: ListView(
       controller: _scrollController,
+      padding: EdgeInsets.zero,
       children: [
         const SizedBox(height: 4),
         _buildPackageDeliveryBanner(),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
-          child: Text('Browse Categories', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: textColor)),
+          child: Row(children: [
+            Expanded(child: Text('Browse Categories', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: textColor))),
+            GestureDetector(
+              onTap: () => _showAllVendorsSheet(context, displayVendors, isDarkMode, cardColor, textColor, subtextColor),
+              child: Container(
+                width: 34, height: 34,
+                decoration: BoxDecoration(
+                  color: isDarkMode ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(Icons.menu_rounded, size: 18, color: textColor),
+              ),
+            ),
+          ]),
         ),
         SizedBox(
           height: 40,
@@ -2899,18 +3092,7 @@ Widget _buildNoVendorsOverlay(bool isDarkMode, Color cardColor, Color textColor,
             ),
           // Sponsored / Featured ads - horizontal carousel
           if (specialOffers.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  const Icon(Icons.campaign_outlined, size: 18, color: Color(0xFF10B981)),
-                  const SizedBox(width: 6),
-                  Text('Featured', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: textColor)),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             _FeaturedOffersCarousel(
               offers: specialOffers,
               isDarkMode: isDarkMode,
@@ -3045,7 +3227,7 @@ class _FeaturedOffersCarouselState extends State<_FeaturedOffersCarousel> {
   @override
   void initState() {
     super.initState();
-    _pageController = PageController(viewportFraction: 0.92);
+    _pageController = PageController(viewportFraction: 0.88);
     _startAutoSlide();
   }
 
@@ -3059,13 +3241,13 @@ class _FeaturedOffersCarouselState extends State<_FeaturedOffersCarousel> {
   void _startAutoSlide() {
     if (widget.offers.length < 2) return;
     _autoSlideTimer?.cancel();
-    _autoSlideTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+    _autoSlideTimer = Timer.periodic(const Duration(seconds: 4), (_) {
       if (!mounted || !_pageController.hasClients) return;
       final nextPage = (_currentPage + 1) % widget.offers.length;
       _pageController.animateToPage(
         nextPage,
-        duration: const Duration(milliseconds: 450),
-        curve: Curves.easeInOut,
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeOutCubic,
       );
     });
   }
@@ -3079,16 +3261,24 @@ class _FeaturedOffersCarouselState extends State<_FeaturedOffersCarousel> {
           child: PageView.builder(
             controller: _pageController,
             itemCount: widget.offers.length,
+            padEnds: true,
+            physics: const BouncingScrollPhysics(),
             onPageChanged: (index) => setState(() => _currentPage = index),
             itemBuilder: (context, index) {
               return AnimatedScale(
-                scale: index == _currentPage ? 1.0 : 0.95,
-                duration: const Duration(milliseconds: 300),
-                child: _OfferAdCard(
-                  offer: widget.offers[index],
-                  isDarkMode: widget.isDarkMode,
-                  textColor: widget.textColor,
-                  onTap: () => widget.onOfferTap(widget.offers[index]),
+                scale: index == _currentPage ? 1.0 : 0.92,
+                duration: const Duration(milliseconds: 350),
+                curve: Curves.easeOutCubic,
+                child: AnimatedOpacity(
+                  opacity: index == _currentPage ? 1.0 : 0.6,
+                  duration: const Duration(milliseconds: 350),
+                  curve: Curves.easeOutCubic,
+                  child: _OfferAdCard(
+                    offer: widget.offers[index],
+                    isDarkMode: widget.isDarkMode,
+                    textColor: widget.textColor,
+                    onTap: () => widget.onOfferTap(widget.offers[index]),
+                  ),
                 ),
               );
             },

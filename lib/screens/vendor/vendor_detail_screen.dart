@@ -408,8 +408,8 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
                 delegate: SliverChildListDelegate([
                   _buildCategoryItem(
                     context,
-                    'All Products',
-                    Icons.apps_rounded,
+                    provider.isRestaurant ? 'Full Menu' : 'All Products',
+                    provider.isRestaurant ? Icons.restaurant_menu : Icons.apps_rounded,
                     provider.selectedCategoryId == null,
                     isDarkMode,
                     textColor,
@@ -1165,7 +1165,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
                       },
                       style: TextStyle(color: textColor),
                       decoration: InputDecoration(
-                        hintText: 'Search products...',
+                        hintText: provider.isRestaurant ? 'Search menu...' : 'Search products...',
                         hintStyle: TextStyle(color: subtextColor),
                         prefixIcon: Icon(Icons.search, color: subtextColor),
                         suffixIcon: _searchController.text.isNotEmpty
@@ -1242,12 +1242,12 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
                                     color: (isDarkMode ? Colors.grey[900] : Colors.grey[100]),
                                     shape: BoxShape.circle,
                                   ),
-                                  child: Icon(Icons.inventory_2_outlined, size: 36, color: subtextColor.withOpacity(0.5)),
+                                  child: Icon(provider.isRestaurant ? Icons.restaurant_menu : Icons.inventory_2_outlined, size: 36, color: subtextColor.withOpacity(0.5)),
                                 ),
                                 SizedBox(height: 16),
-                                Text('No products yet', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: textColor)),
+                                Text(provider.isRestaurant ? 'No menu items yet' : 'No products yet', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: textColor)),
                                 SizedBox(height: 6),
-                                Text('This vendor hasn\'t added any products.', style: TextStyle(fontSize: 13, color: subtextColor)),
+                                Text(provider.isRestaurant ? 'This restaurant hasn\'t added any menu items.' : 'This vendor hasn\'t added any products.', style: TextStyle(fontSize: 13, color: subtextColor)),
                               ],
                             ),
                           ),
@@ -1347,15 +1347,13 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
                         ),
                         SizedBox(height: 16),
                         _buildInfoCard(
-                          icon: Icons.delivery_dining,
+                          icon: Icons.local_shipping_outlined,
                           title: 'Delivery Information',
                           child: Column(
                             children: [
                               _buildInfoRow('Delivery Fee', widget.vendor.deliveryFeeDisplay, textColor, subtextColor),
                               SizedBox(height: 12),
-                              _buildInfoRow('Estimated Time', widget.vendor.formattedDeliveryTime, textColor, subtextColor),
-                              SizedBox(height: 12),
-                              _buildInfoRow('Delivery Radius', '${widget.vendor.deliveryRadiusKm.toStringAsFixed(1)} km', textColor, subtextColor),
+                              _buildInfoRow('Estimated Time', widget.vendor.realDeliveryTime, textColor, subtextColor),
                               SizedBox(height: 12),
                               _buildInfoRow('Distance', widget.vendor.formattedDistance, textColor, subtextColor),
                             ],

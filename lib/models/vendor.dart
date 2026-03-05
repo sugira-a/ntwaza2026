@@ -155,11 +155,20 @@ class Vendor with ChangeNotifier {
   
   /// Get delivery time
   String get formattedDeliveryTime {
+    final minutes = estimatedDeliveryTimeMinutes ?? prepTimeMinutes;
+    
+    // For non-restaurants (supermarkets/shops), always show a realistic range
+    if (!isRestaurant) {
+      final base = minutes > 0 ? minutes : 30;
+      final lower = base.clamp(25, 40);
+      final upper = (base + 15).clamp(35, 55);
+      return '$lower-$upper mins';
+    }
+    
+    // For restaurants, use estimatedDeliveryDisplay if available
     if (estimatedDeliveryDisplay != null && estimatedDeliveryDisplay!.isNotEmpty) {
       return estimatedDeliveryDisplay!;
     }
-    
-    final minutes = estimatedDeliveryTimeMinutes ?? prepTimeMinutes;
     
     if (minutes < 60) {
       return '$minutes mins';
@@ -170,6 +179,19 @@ class Vendor with ChangeNotifier {
     }
   }
   
+  /// Get real delivery time (actual value, not artificial range)
+  String get realDeliveryTime {
+    if (estimatedDeliveryDisplay != null && estimatedDeliveryDisplay!.isNotEmpty) {
+      return estimatedDeliveryDisplay!;
+    }
+    final minutes = estimatedDeliveryTimeMinutes ?? prepTimeMinutes;
+    if (minutes <= 0) return 'N/A';
+    if (minutes < 60) return '$minutes min';
+    final hours = minutes ~/ 60;
+    final rem = minutes % 60;
+    return rem > 0 ? '$hours h $rem min' : '$hours h';
+  }
+
   /// Get formatted rating
   String get formattedRating {
     return rating.toStringAsFixed(1);

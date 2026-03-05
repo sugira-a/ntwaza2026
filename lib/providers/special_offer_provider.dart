@@ -58,11 +58,16 @@ class SpecialOfferProvider with ChangeNotifier {
   // Fetch homepage offers (optimized for customer home screen)
   Future<void> fetchHomepageOffers() async {
     try {
-      _isLoading = true;
-      _error = null;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        notifyListeners();
-      });
+      // Don't clear old offers or set loading if we already have data
+      // This prevents the carousel from disappearing during refresh
+      final hadOffers = _homepageOffers.isNotEmpty;
+      if (!hadOffers) {
+        _isLoading = true;
+        _error = null;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          notifyListeners();
+        });
+      }
       
       final offers = await _apiService.getHomepageSpecialOffers();
       
@@ -73,8 +78,8 @@ class SpecialOfferProvider with ChangeNotifier {
       _logger.e('Error in fetchHomepageOffers: $e');
       _error = e.toString();
       _isLoading = false;
+      // Keep old offers on error so they don't disappear
       notifyListeners();
-      rethrow;
     }
   }
   

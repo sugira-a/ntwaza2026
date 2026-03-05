@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../providers/theme_provider.dart';
+import '../../providers/auth_provider.dart';
+import '../../services/api/api_service.dart';
 
 class HelpSupportScreen extends StatefulWidget {
   const HelpSupportScreen({super.key});
@@ -11,456 +14,505 @@ class HelpSupportScreen extends StatefulWidget {
 
 class _HelpSupportScreenState extends State<HelpSupportScreen> {
   int? _expandedIndex;
+  bool _isSubmitting = false;
 
-  final List<FAQItem> faqs = [
-    FAQItem(
-      question: 'How do I place an order?',
-      answer:
-          'Browse vendors or restaurants, select items, add them to cart, choose delivery address, and proceed to checkout. You can track your order in real-time.',
-      icon: Icons.shopping_cart,
+  // ── Contact Info ──
+  static const String _phone = '+250782195474';
+  static const String _phoneDisplay = '+250 782 195 474';
+  static const String _email = 'support@ntwaza.com';
+  static const String _whatsApp = '250782195474';
+  static const String _workingHours = 'Mon – Sat, 7:00 AM – 9:00 PM (CAT)';
+
+  // ── FAQ ──
+  final List<_FAQ> _faqs = [
+    _FAQ(
+      q: 'How do I place an order?',
+      a: 'Browse vendors near you, add items to your cart, confirm your delivery address, and proceed to checkout. You will receive real-time updates once the order is accepted.',
+      icon: Icons.shopping_bag_outlined,
     ),
-    FAQItem(
-      question: 'What payment methods are accepted?',
-      answer:
-          'We accept mobile money (MTN, Airtel), credit/debit cards, and cash on delivery for orders within Kigali.',
-      icon: Icons.payment,
+    _FAQ(
+      q: 'What payment methods are accepted?',
+      a: 'We accept Mobile Money (MTN MoMo, Airtel Money), Visa / Mastercard, and Cash on Delivery for orders within Kigali.',
+      icon: Icons.account_balance_wallet_outlined,
     ),
-    FAQItem(
-      question: 'How long does delivery take?',
-      answer:
-          'Most deliveries in Kigali take 30-60 minutes depending on traffic and distance. Real-time tracking is available.',
-      icon: Icons.timer,
+    _FAQ(
+      q: 'How long does delivery take?',
+      a: 'Most deliveries within Kigali are completed in 20–60 minutes depending on distance, traffic, and vendor preparation time. You can track your rider in real time.',
+      icon: Icons.schedule_outlined,
     ),
-    FAQItem(
-      question: 'Can I cancel my order?',
-      answer:
-          'You can cancel within 5 minutes of placing the order before the vendor starts preparing. Contact support for urgent cancellations.',
-      icon: Icons.cancel,
+    _FAQ(
+      q: 'Can I cancel or modify my order?',
+      a: 'You may cancel within 5 minutes of placing your order, provided the vendor has not yet started preparing it. Modifications can be made by contacting our support team before preparation begins.',
+      icon: Icons.edit_note_outlined,
     ),
-    FAQItem(
-      question: 'What is your refund policy?',
-      answer:
-          'We offer full refunds for cancelled orders or if items are not delivered as promised. Refunds are processed within 2-3 business days.',
-      icon: Icons.money_off,
+    _FAQ(
+      q: 'What is your refund policy?',
+      a: 'Full refunds are issued for cancelled orders and undelivered items. Partial refunds may apply for missing or incorrect items. Refunds are processed within 2–3 business days to the original payment method.',
+      icon: Icons.currency_exchange_outlined,
     ),
-    FAQItem(
-      question: 'How do I report a missing item?',
-      answer:
-          'Report missing items within 1 hour of delivery through the order details page. Include photos for faster resolution.',
-      icon: Icons.report_problem,
+    _FAQ(
+      q: 'How do I report a problem with my order?',
+      a: 'Navigate to your order history, select the order, and tap "Report an Issue". Alternatively, submit a support ticket below or email us at $_email. Please include photos where applicable.',
+      icon: Icons.flag_outlined,
     ),
-    FAQItem(
-      question: 'Is my location data safe?',
-      answer:
-          'Your location data is encrypted and only shared with delivery personnel for the current order. We never sell your data.',
-      icon: Icons.security,
+    _FAQ(
+      q: 'Is my personal data secure?',
+      a: 'Absolutely. All data is encrypted in transit and at rest. Location data is shared only with your assigned rider during active deliveries and is never sold to third parties. See our Privacy Policy for details.',
+      icon: Icons.shield_outlined,
     ),
-    FAQItem(
-      question: 'How do I update my profile?',
-      answer:
-          'Go to Profile > Edit Profile to update your name, phone, address, and payment methods. Changes are saved instantly.',
-      icon: Icons.edit,
+    _FAQ(
+      q: 'Do you deliver outside Kigali?',
+      a: 'We currently operate within Kigali and its surrounding areas. We are actively expanding to other cities in Rwanda and will notify you when new areas become available.',
+      icon: Icons.location_on_outlined,
     ),
   ];
 
-  final List<SupportChannelItem> supportChannels = [
-    SupportChannelItem(
-      title: 'Live Chat',
-      description: 'Chat with support team',
-      icon: Icons.chat_bubble,
-      color: Colors.blue,
-      action: 'Available 8AM - 10PM',
-    ),
-    SupportChannelItem(
-      title: 'Email Support',
-      description: 'support@ntwaza.com',
-      icon: Icons.email,
-      color: Colors.orange,
-      action: 'Response within 24 hours',
-    ),
-    SupportChannelItem(
-      title: 'Phone Support',
-      description: '+250 788 123 456',
-      icon: Icons.phone,
-      color: Colors.green,
-      action: 'Call us anytime',
-    ),
-    SupportChannelItem(
-      title: 'WhatsApp',
-      description: 'Get instant help',
-      icon: Icons.chat,
-      color: Colors.lightGreen,
-      action: 'Click to chat',
-    ),
-  ];
+  // ── Support ticket form ──
+  final _formKey = GlobalKey<FormState>();
+  final _subjectCtrl = TextEditingController();
+  final _descCtrl = TextEditingController();
+  String _ticketCategory = 'general';
 
   @override
+  void dispose() {
+    _subjectCtrl.dispose();
+    _descCtrl.dispose();
+    super.dispose();
+  }
+
+  // ── Actions ──
+  Future<void> _launchPhone() async {
+    final uri = Uri.parse('tel:$_phone');
+    if (await canLaunchUrl(uri)) await launchUrl(uri);
+  }
+
+  Future<void> _launchEmail() async {
+    final uri = Uri.parse('mailto:$_email?subject=Support%20Request');
+    if (await canLaunchUrl(uri)) await launchUrl(uri);
+  }
+
+  Future<void> _launchWhatsApp() async {
+    final uri = Uri.parse('https://wa.me/$_whatsApp?text=Hello%20Ntwaza%20Support');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  Future<void> _submitTicket() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _isSubmitting = true);
+
+    try {
+      final auth = context.read<AuthProvider>();
+      final token = auth.token;
+      if (token == null) {
+        _showSnack('Please log in to submit a support ticket.', isError: true);
+        setState(() => _isSubmitting = false);
+        return;
+      }
+
+      final api = ApiService();
+      final response = await api.post(
+        '/api/admin/dashboard/complaints',
+        {
+          'subject': _subjectCtrl.text.trim(),
+          'description': _descCtrl.text.trim(),
+          'category': _ticketCategory,
+          'priority': 'medium',
+        },
+      );
+
+      // response is already decoded by ApiService._handleResponse
+      if (response is Map && response['success'] == true) {
+        final ticketNum = response['data']?['ticket_number'] ?? '';
+        _subjectCtrl.clear();
+        _descCtrl.clear();
+        _showSnack('Ticket $ticketNum submitted successfully. We\'ll respond within 24 hours.');
+      } else {
+        final errMsg = (response is Map) ? (response['error'] ?? 'Failed to submit ticket') : 'Failed to submit ticket';
+        _showSnack(errMsg.toString(), isError: true);
+      }
+    } catch (e) {
+      _showSnack('Unable to reach support servers. Please try again.', isError: true);
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+
+  void _showSnack(String msg, {bool isError = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg),
+      backgroundColor: isError ? Colors.red[700] : const Color(0xFF2E7D32),
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    ));
+  }
+
+  // ── Build ──
+  @override
   Widget build(BuildContext context) {
-    final themeProvider = context.watch<ThemeProvider>();
-    final isDarkMode = themeProvider.isDarkMode;
-    final bgColor = isDarkMode ? const Color(0xFF121212) : Colors.white;
-    final cardColor = isDarkMode ? const Color(0xFF1E1E1E) : Colors.grey[50];
-    final textColor = isDarkMode ? Colors.white : Colors.black;
-    final subtextColor = isDarkMode ? Colors.grey[400] : Colors.grey[600];
+    final isDark = context.watch<ThemeProvider>().isDarkMode;
+    final bg = isDark ? const Color(0xFF121212) : const Color(0xFFFAFAFA);
+    final card = bg; // cards match background — seamless
+    final text = isDark ? Colors.white : const Color(0xFF1A1A1A);
+    final sub = isDark ? Colors.grey[400]! : Colors.grey[600]!;
+    final divider = Colors.transparent;
+    const accent = Color(0xFF2E7D32);
 
     return Scaffold(
-      backgroundColor: bgColor,
-      body: CustomScrollView(
-        slivers: [
-          // Header
-          SliverAppBar(
-            expandedHeight: 200,
-            floating: false,
-            pinned: true,
-            backgroundColor: const Color(0xFF2E7D32),
-            elevation: 0,
-            flexibleSpace: FlexibleSpaceBar(
-              title: const Text(
-                'Help & Support',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      const Color(0xFF2E7D32),
-                      Colors.green[600]!,
-                    ],
-                  ),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.help_outline, size: 60, color: Colors.white.withOpacity(0.8)),
-                    const SizedBox(height: 12),
-                    Text(
-                      'How can we help you today?',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
+      backgroundColor: bg,
+      appBar: AppBar(
+        backgroundColor: bg,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_ios_new, size: 20, color: text),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Text('Help & Support',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: text)),
+        centerTitle: false,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 8),
+            Text('We\'re here to help', style: TextStyle(fontSize: 14, color: sub)),
+            const SizedBox(height: 24),
+
+            // ── Contact Channels ──
+            _sectionHeader('Contact Us', Icons.headset_mic_outlined, text),
+            const SizedBox(height: 4),
+            Text('Reach our support team through any of the channels below.',
+                style: TextStyle(fontSize: 13, color: sub, height: 1.4)),
+            const SizedBox(height: 12),
+            _contactCard(
+              icon: Icons.phone_outlined,
+              title: 'Phone',
+              subtitle: _phoneDisplay,
+              trailing: 'Mon-Sat 7AM-9PM',
+              onTap: _launchPhone,
+              card: card,
+              text: text,
+              sub: sub,
+              accent: accent,
+            ),
+            const SizedBox(height: 8),
+            _contactCard(
+              icon: Icons.email_outlined,
+              title: 'Email',
+              subtitle: _email,
+              trailing: 'Within 24hrs',
+              onTap: _launchEmail,
+              card: card,
+              text: text,
+              sub: sub,
+              accent: accent,
+            ),
+            const SizedBox(height: 8),
+            _contactCard(
+              icon: Icons.chat_outlined,
+              title: 'WhatsApp',
+              subtitle: 'Chat with us instantly',
+              trailing: 'Open WhatsApp',
+              onTap: _launchWhatsApp,
+              card: card,
+              text: text,
+              sub: sub,
+              accent: accent,
+            ),
+
+            const SizedBox(height: 28),
+
+                  // ── FAQ ──
+                  _sectionHeader('Frequently Asked Questions', Icons.quiz_outlined, text),
+                  const SizedBox(height: 4),
+                  Text('Quick answers to common questions.',
+                      style: TextStyle(fontSize: 13, color: sub, height: 1.4)),
+                  const SizedBox(height: 16),
+                  ..._faqs.asMap().entries.map((e) =>
+                      _faqTile(e.key, e.value, isDark, card, text, sub, divider, accent)),
+
+                  const SizedBox(height: 32),
+
+                  // ── Submit Ticket ──
+                  _sectionHeader('Submit a Support Ticket', Icons.confirmation_number_outlined, text),
+                  const SizedBox(height: 4),
+                  Text('Can\'t find your answer? Describe your issue and our team will respond promptly.',
+                      style: TextStyle(fontSize: 13, color: sub, height: 1.4)),
+                  const SizedBox(height: 16),
+                  _ticketForm(isDark, card, text, sub, divider, accent),
+
+                  const SizedBox(height: 32),
+
+                  // ── Office Info ──
+                  _sectionHeader('Company Information', Icons.business_outlined, text),
+                  const SizedBox(height: 16),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: card,
+                      borderRadius: BorderRadius.circular(12),
                     ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('NTWAZA Ltd.',
+                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: text)),
+                        const SizedBox(height: 12),
+                        _infoRow(Icons.location_on_outlined, 'Kigali, Rwanda', sub),
+                        const SizedBox(height: 8),
+                        _infoRow(Icons.phone_outlined, _phoneDisplay, sub),
+                        const SizedBox(height: 8),
+                        _infoRow(Icons.email_outlined, _email, sub),
+                        const SizedBox(height: 8),
+                        _infoRow(Icons.access_time_outlined, _workingHours, sub),
+                        const SizedBox(height: 16),
+                        Divider(color: divider, height: 1),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Ntwaza is a technology-driven delivery platform connecting customers with local vendors and service providers across Rwanda.',
+                          style: TextStyle(fontSize: 12.5, color: sub, height: 1.5),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 40),
+                ],
+              ),
+            ),
+          );
+  }
+
+  // ── Widgets ──
+
+  Widget _sectionHeader(String title, IconData icon, Color textColor) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: const Color(0xFF2E7D32)),
+        const SizedBox(width: 8),
+        Text(title,
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: textColor)),
+      ],
+    );
+  }
+
+  Widget _contactCard({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required String trailing,
+    required VoidCallback onTap,
+    required Color card,
+    required Color text,
+    required Color sub,
+    required Color accent,
+  }) {
+    return Material(
+      color: card,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: accent.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, size: 17, color: accent),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title,
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: text)),
+                    Text(subtitle,
+                        style: TextStyle(fontSize: 11.5, color: sub),
+                        maxLines: 1, overflow: TextOverflow.ellipsis),
                   ],
                 ),
               ),
-            ),
-          ),
-          // Content
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Support Channels
-                  _buildSectionTitle('Contact Us', textColor),
-                  const SizedBox(height: 12),
-                  _buildSupportChannels(isDarkMode, cardColor),
-                  const SizedBox(height: 32),
-
-                  // FAQ Section
-                  _buildSectionTitle('Frequently Asked Questions', textColor),
-                  const SizedBox(height: 12),
-                  _buildFAQSection(isDarkMode, cardColor, textColor, subtextColor),
-                  const SizedBox(height: 32),
-
-                  // Additional Help
-                  _buildAdditionalHelp(isDarkMode, cardColor, textColor, subtextColor),
-                  const SizedBox(height: 24),
-                ],
+              const SizedBox(width: 6),
+              Flexible(
+                flex: 0,
+                child: Text(trailing,
+                    style: TextStyle(fontSize: 9.5, color: sub.withOpacity(0.6)),
+                    textAlign: TextAlign.end,
+                    maxLines: 1, overflow: TextOverflow.ellipsis),
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSectionTitle(String title, Color textColor) {
-    return Text(
-      title,
-      style: TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.bold,
-        color: textColor,
-      ),
-    );
-  }
-
-  Widget _buildSupportChannels(bool isDarkMode, Color? cardColor) {
-    return GridView.builder(
-      physics: const NeverScrollableScrollPhysics(),
-      shrinkWrap: true,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 1,
-      ),
-      itemCount: supportChannels.length,
-      itemBuilder: (context, index) {
-        final channel = supportChannels[index];
-        return GestureDetector(
-          onTap: () {
-            _showChannelAction(context, channel);
-          },
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: cardColor,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: channel.color.withOpacity(0.3),
-                width: 1.5,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 8,
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: channel.color.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    channel.icon,
-                    size: 32,
-                    color: channel.color,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  channel.title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  channel.description,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildFAQSection(bool isDarkMode, Color? cardColor, Color textColor, Color? subtextColor) {
-    return ListView.builder(
-      physics: const NeverScrollableScrollPhysics(),
-      shrinkWrap: true,
-      itemCount: faqs.length,
-      itemBuilder: (context, index) {
-        final faq = faqs[index];
-        final isExpanded = _expandedIndex == index;
-
-        return Container(
-          margin: const EdgeInsets.only(bottom: 10),
-          decoration: BoxDecoration(
-            color: cardColor,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: isExpanded
-                  ? const Color(0xFF2E7D32).withOpacity(0.5)
-                  : (isDarkMode ? Colors.grey[800]! : Colors.grey[200]!),
-              width: 1.5,
-            ),
-          ),
-          child: Theme(
-            data: Theme.of(context).copyWith(
-              splashColor: Colors.transparent,
-              highlightColor: Colors.transparent,
-            ),
-            child: ExpansionTile(
-              tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              onExpansionChanged: (expanded) {
-                setState(() {
-                  _expandedIndex = expanded ? index : null;
-                });
-              },
-              title: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF2E7D32).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      faq.icon,
-                      size: 20,
-                      color: const Color(0xFF2E7D32),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      faq.question,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: textColor,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              children: [
-                Text(
-                  faq.answer,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: subtextColor,
-                    height: 1.6,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildAdditionalHelp(bool isDarkMode, Color? cardColor, Color textColor, Color? subtextColor) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF2E7D32).withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: const Color(0xFF2E7D32).withOpacity(0.3),
-          width: 1.5,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2E7D32).withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Icons.info_outline,
-                  color: Color(0xFF2E7D32),
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Need more help?',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: textColor,
-                ),
-              ),
+              const SizedBox(width: 4),
+              Icon(Icons.chevron_right, size: 16, color: sub.withOpacity(0.4)),
             ],
           ),
-          const SizedBox(height: 12),
-          Text(
-            'If you couldn\'t find the answer to your question, our support team is ready to help. Reach out through any of the channels above.',
-            style: TextStyle(
-              fontSize: 13,
-              color: subtextColor,
-              height: 1.5,
-            ),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            height: 44,
-            child: ElevatedButton.icon(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Opening chat with support team...'),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.chat_bubble_outline, size: 18),
-              label: const Text(
-                'Start Live Chat',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2E7D32),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                elevation: 0,
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  void _showChannelAction(BuildContext context, SupportChannelItem channel) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${channel.title}: ${channel.action}'),
-        duration: const Duration(seconds: 2),
+  Widget _faqTile(int index, _FAQ faq, bool isDark, Color card, Color text, Color sub, Color divider, Color accent) {
+    final isOpen = _expandedIndex == index;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: card,
+        borderRadius: BorderRadius.circular(10),
       ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+          childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+          initiallyExpanded: isOpen,
+          onExpansionChanged: (open) => setState(() => _expandedIndex = open ? index : null),
+          leading: Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: accent.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(faq.icon, size: 18, color: accent),
+          ),
+          title: Text(faq.q,
+              style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: text)),
+          trailing: AnimatedRotation(
+            turns: isOpen ? 0.5 : 0,
+            duration: const Duration(milliseconds: 200),
+            child: Icon(Icons.expand_more, color: sub, size: 22),
+          ),
+          children: [
+            Text(faq.a, style: TextStyle(fontSize: 13, color: sub, height: 1.6)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _ticketForm(bool isDark, Color card, Color text, Color sub, Color divider, Color accent) {
+    final categories = {
+      'general': 'General Inquiry',
+      'order_issue': 'Order Issue',
+      'payment': 'Payment Problem',
+      'account': 'Account & Profile',
+      'technical': 'Technical / App Bug',
+      'feedback': 'Feedback & Suggestions',
+    };
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: card,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Category', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: text)),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              value: _ticketCategory,
+              decoration: _inputDecor(isDark, sub),
+              dropdownColor: card,
+              style: TextStyle(fontSize: 13.5, color: text),
+              items: categories.entries
+                  .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
+                  .toList(),
+              onChanged: (v) => setState(() => _ticketCategory = v ?? 'general'),
+            ),
+            const SizedBox(height: 16),
+            Text('Subject', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: text)),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _subjectCtrl,
+              style: TextStyle(fontSize: 13.5, color: text),
+              decoration: _inputDecor(isDark, sub).copyWith(hintText: 'Brief summary of your issue'),
+              validator: (v) => (v == null || v.trim().isEmpty) ? 'Subject is required' : null,
+            ),
+            const SizedBox(height: 16),
+            Text('Description', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: text)),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _descCtrl,
+              style: TextStyle(fontSize: 13.5, color: text),
+              decoration: _inputDecor(isDark, sub).copyWith(
+                hintText: 'Please describe the issue in detail...',
+                alignLabelWithHint: true,
+              ),
+              maxLines: 5,
+              validator: (v) => (v == null || v.trim().isEmpty) ? 'Description is required' : null,
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              height: 46,
+              child: ElevatedButton(
+                onPressed: _isSubmitting ? null : _submitTicket,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: accent,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                child: _isSubmitting
+                    ? const SizedBox(width: 20, height: 20,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : const Text('Submit Ticket',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  InputDecoration _inputDecor(bool isDark, Color sub) {
+    return InputDecoration(
+      filled: true,
+      fillColor: isDark ? const Color(0xFF262626) : const Color(0xFFF5F5F5),
+      hintStyle: TextStyle(fontSize: 13, color: sub.withOpacity(0.6)),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: Color(0xFF2E7D32), width: 1.5),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(color: Colors.red[400]!, width: 1),
+      ),
+    );
+  }
+
+  Widget _infoRow(IconData icon, String label, Color sub) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: sub),
+        const SizedBox(width: 10),
+        Flexible(child: Text(label, style: TextStyle(fontSize: 13, color: sub, height: 1.3))),
+      ],
     );
   }
 }
 
-class FAQItem {
-  final String question;
-  final String answer;
+class _FAQ {
+  final String q, a;
   final IconData icon;
-
-  FAQItem({
-    required this.question,
-    required this.answer,
-    required this.icon,
-  });
-}
-
-class SupportChannelItem {
-  final String title;
-  final String description;
-  final IconData icon;
-  final Color color;
-  final String action;
-
-  SupportChannelItem({
-    required this.title,
-    required this.description,
-    required this.icon,
-    required this.color,
-    required this.action,
-  });
+  _FAQ({required this.q, required this.a, required this.icon});
 }
