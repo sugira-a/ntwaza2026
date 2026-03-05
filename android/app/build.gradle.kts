@@ -54,11 +54,11 @@ android {
         }
     }
     
-    // Split APK by CPU architecture - DISABLED due to Flutter NDK conflict
-    // Use --split-per-abi flag with flutter build instead
-    splits {
-        abi {
-            isEnable = false
+    // Only include arm64 native libs (covers 95%+ of modern phones)
+    // Dramatically reduces APK size by excluding armeabi-v7a and x86_64
+    defaultConfig {
+        ndk {
+            abiFilters += listOf("arm64-v8a")
         }
     }
 }

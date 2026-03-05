@@ -105,7 +105,9 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
   }
 
   @override
+  @override
   void dispose() {
+    _saveCurrentChat();
     _dotController.dispose();
     _fadeController.dispose();
     _controller.dispose();
@@ -208,7 +210,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
       'id': DateTime.now().millisecondsSinceEpoch.toString(),
       'title': title,
       'ts': DateTime.now().toIso8601String(),
-      'messages': textMessages.map((m) => {
+      'messages': textMessages.map((m) => <String, dynamic>{
         'text': m.text,
         'isUser': m.isUser,
         'isError': m.isError,
