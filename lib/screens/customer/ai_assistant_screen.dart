@@ -1190,6 +1190,35 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
     _scrollToBottom();
   }
 
+  static IconData _vendorTypeIcon(String? vendorType) {
+    switch (vendorType?.toLowerCase()) {
+      case 'restaurant':
+        return Icons.restaurant;
+      case 'cafe':
+        return Icons.coffee;
+      case 'fast_food':
+        return Icons.fastfood;
+      case 'bar':
+        return Icons.local_bar;
+      case 'bakery':
+        return Icons.bakery_dining;
+      case 'supermarket':
+        return Icons.store;
+      case 'grocery':
+        return Icons.shopping_basket;
+      case 'minimart':
+        return Icons.storefront;
+      case 'pharmacy':
+        return Icons.local_pharmacy;
+      case 'electronics':
+        return Icons.devices;
+      case 'fashion':
+        return Icons.checkroom;
+      default:
+        return Icons.shopping_bag;
+    }
+  }
+
   void _scrollToBottom() {
     if (!mounted) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1896,23 +1925,53 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
                           child: _richText(reply.note, tp, ts, isDark),
                         ),
 
-                      // Items — compact list
+                      // Items — compact list with vendor + product intelligence
                       if (reply.hasItems) ...[
                         ...reply.items.map((item) => Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-                          child: Row(children: [
-                            Expanded(child: Text('${item.name} \u00D7${item.qty}', style: TextStyle(
-                              color: tp, fontSize: 13, fontWeight: FontWeight.w500,
-                            ))),
-                            Text('${_fmt.format(item.subtotal)} RWF', style: TextStyle(
-                              color: ts, fontSize: 12,
-                            )),
-                            const SizedBox(width: 6),
-                            GestureDetector(
-                              onTap: () => _addSingleItemToCart(item),
-                              child: Icon(Icons.add_circle_outline_rounded, size: 20, color: _brandLight),
-                            ),
-                          ]),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 3),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(children: [
+                                Expanded(child: Text('${item.name} \u00D7${item.qty}', style: TextStyle(
+                                  color: tp, fontSize: 13, fontWeight: FontWeight.w500,
+                                ))),
+                                Text('${_fmt.format(item.subtotal)} RWF', style: TextStyle(
+                                  color: ts, fontSize: 12,
+                                )),
+                                const SizedBox(width: 6),
+                                GestureDetector(
+                                  onTap: () => _addSingleItemToCart(item),
+                                  child: Icon(Icons.add_circle_outline_rounded, size: 20, color: _brandLight),
+                                ),
+                              ]),
+                              // Vendor name + type + prep time + allergens
+                              if (item.vendorName != null && item.vendorName!.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 1),
+                                  child: Row(children: [
+                                    Icon(_vendorTypeIcon(item.vendorType), size: 11, color: ts.withOpacity(0.7)),
+                                    const SizedBox(width: 3),
+                                    Text('@${item.vendorName}', style: TextStyle(
+                                      color: ts.withOpacity(0.7), fontSize: 11,
+                                    )),
+                                    if (item.prepTime != null) ...[
+                                      const SizedBox(width: 6),
+                                      Icon(Icons.timer_outlined, size: 11, color: ts.withOpacity(0.6)),
+                                      Text(' ${item.prepTime}min', style: TextStyle(
+                                        color: ts.withOpacity(0.6), fontSize: 11,
+                                      )),
+                                    ],
+                                    if (item.allergens != null && item.allergens!.isNotEmpty) ...[
+                                      const SizedBox(width: 6),
+                                      Text('\u26a0 ${item.allergens}', style: TextStyle(
+                                        color: Colors.orange.shade700, fontSize: 10, fontWeight: FontWeight.w500,
+                                      )),
+                                    ],
+                                  ]),
+                                ),
+                            ],
+                          ),
                         )),
                         // Total + Add All
                         if (reply.total != null && reply.total! > 0)

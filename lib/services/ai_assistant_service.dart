@@ -60,6 +60,10 @@ class AiReplyItem {
   final String reason;
   final String? category;
   final String? vendorId;
+  final String? vendorName;
+  final String? vendorType;
+  final String? allergens;
+  final int? prepTime;
 
   AiReplyItem({
     required this.name,
@@ -69,6 +73,10 @@ class AiReplyItem {
     this.reason = '',
     this.category,
     this.vendorId,
+    this.vendorName,
+    this.vendorType,
+    this.allergens,
+    this.prepTime,
   });
 
   factory AiReplyItem.fromJson(Map<String, dynamic> json) {
@@ -82,6 +90,10 @@ class AiReplyItem {
       reason: json['reason'] as String? ?? '',
       category: json['category'] as String?,
       vendorId: json['vendor_id'] as String?,
+      vendorName: json['vendor_name'] as String?,
+      vendorType: json['vendor_type'] as String?,
+      allergens: json['allergens'] as String?,
+      prepTime: json['prep_time'] as int?,
     );
   }
 }
