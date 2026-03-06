@@ -69,11 +69,21 @@ class AdminDashboardPro extends StatefulWidget {
 class _AdminDashboardProState extends State<AdminDashboardPro> {
   int _selectedIndex = 0;
   static const int _pollSeconds = 30;  // Increased from 10 for cost savings
+  // Save references for safe disposal
+  late final NotificationProvider _notificationProvider;
+  late final AdminOrderProvider _adminOrderProvider;
 
   @override
   void initState() {
     super.initState();
     _initializeDashboard();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _notificationProvider = context.read<NotificationProvider>();
+    _adminOrderProvider = context.read<AdminOrderProvider>();
   }
 
   Future<void> _initializeDashboard() async {
@@ -120,8 +130,8 @@ class _AdminDashboardProState extends State<AdminDashboardPro> {
 
   @override
   void dispose() {
-    context.read<NotificationProvider>().stopPolling();
-    context.read<AdminOrderProvider>().stopAutoRefresh();
+    _notificationProvider.stopPolling();
+    _adminOrderProvider.stopAutoRefresh();
     super.dispose();
   }
 
@@ -1094,6 +1104,7 @@ class _OrderDetailsSheetState extends State<_OrderDetailsSheet> {
         recipients: ['customer', 'vendor', 'rider'], // Send to all parties
       );
       
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Row(
@@ -1108,6 +1119,7 @@ class _OrderDetailsSheetState extends State<_OrderDetailsSheet> {
         ),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to send message: $e'),

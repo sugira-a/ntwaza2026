@@ -18,9 +18,9 @@ class RiderPickupOrderDetailScreen extends StatefulWidget {
 
 class _RiderPickupOrderDetailScreenState extends State<RiderPickupOrderDetailScreen> {
   // Neutral palette + green accent
-  static const Color pureBlack = Color(0xFF0B0B0B);
+  static const Color pureBlack = Color(0xFF1A1A1A);
   static const Color pureWhite = Color(0xFFFFFFFF);
-  static const Color softBlack = Colors.black;
+  static const Color softBlack = Color(0xFF222222);
   static const Color borderGray = Color(0xFFE5E7EB);
   static const Color mutedGray = Color(0xFF6B7280);
   static const Color accentGreen = Color(0xFF4CAF50);
@@ -39,17 +39,17 @@ class _RiderPickupOrderDetailScreenState extends State<RiderPickupOrderDetailScr
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = isDark ? pureWhite : pureBlack;
     final subtextColor = isDark ? Colors.white70 : mutedGray;
-    final backgroundColor = isDark ? pureBlack : const Color(0xFFDADDE2);
-    final cardColor = isDark ? softBlack : const Color(0xFFDADDE2);
+    final backgroundColor = isDark ? pureBlack : Colors.white;
+    final cardColor = isDark ? softBlack : Colors.white;
     final borderColor = isDark ? const Color(0xFF1F1F1F) : borderGray;
 
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: Icon(Icons.arrow_back, color: isDark ? Colors.white : Colors.black),
           onPressed: () {
             if (mounted) Navigator.pop(context);
           },
@@ -59,7 +59,7 @@ class _RiderPickupOrderDetailScreenState extends State<RiderPickupOrderDetailScr
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w700,
-            color: Colors.white,
+            color: isDark ? Colors.white : Colors.black,
           ),
         ),
       ),

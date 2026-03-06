@@ -67,7 +67,7 @@ class _RiderMainScreenState extends State<RiderMainScreen> {
         if (mounted) context.go('/login');
       });
       return Scaffold(
-        backgroundColor: isDark ? Colors.black : const Color(0xFFDADDE2),
+        backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
         body: Center(
           child: CircularProgressIndicator(
             color: isDark ? Colors.white : Colors.black,
@@ -81,7 +81,7 @@ class _RiderMainScreenState extends State<RiderMainScreen> {
         if (mounted) context.go('/');
       });
       return Scaffold(
-        backgroundColor: isDark ? Colors.black : const Color(0xFFDADDE2),
+        backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
         body: Center(
           child: Text(
             'Rider access only',
@@ -106,24 +106,24 @@ class _RiderMainScreenState extends State<RiderMainScreen> {
         }
       },
       child: Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
       body: IndexedStack(
         index: _selectedIndex,
         children: screens,
       ),
       bottomNavigationBar: Container(
-        color: Colors.black,
+        color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
         child: NavigationBarTheme(
           data: NavigationBarThemeData(
             backgroundColor: Colors.transparent,
-            indicatorColor: const Color(0xFF1F2937),
+            indicatorColor: isDark ? const Color(0xFF2D2D30) : const Color(0xFFE5E7EB),
             height: 64,
             iconTheme: WidgetStateProperty.resolveWith((states) {
               if (states.contains(WidgetState.selected)) {
-                return const IconThemeData(color: Colors.white);
+                return IconThemeData(color: isDark ? Colors.white : Colors.black);
               }
-              return const IconThemeData(color: Color(0xFF9CA3AF));
+              return IconThemeData(color: isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280));
             }),
             labelTextStyle: WidgetStateProperty.all(
               const TextStyle(fontSize: 11, color: Colors.transparent),

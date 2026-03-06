@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/auth_provider.dart';
@@ -28,7 +27,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   final TextEditingController _notesController = TextEditingController();
   final TextEditingController _promoController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  String _paymentMethod = 'cash';
+  String _paymentMethod = 'momo';
   final Map<String, Vendor?> _vendorCache = {};
   bool _isProcessing = false;
   bool _isRecalculatingFees = false;
@@ -547,6 +546,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   Future<void> _placeOrder() async {
+    // Prevent double-tap: if already processing, ignore
+    if (_isProcessing) return;
+
     final addressProvider = context.read<AddressProvider>();
     if (addressProvider.selectedAddress == null) {
       _showError('Please select a delivery address');
@@ -614,60 +616,57 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         final response = await apiService.post('/api/orders/direct', orderData);
         if (response['success'] == true) {
           orderIds.add(response['order']['id'].toString());
+          // Check if payment was auto-initiated by backend
+          if (response['payment'] != null) {
+            final paymentResult = response['payment'] as Map<String, dynamic>;
+            if (paymentResult['success'] == true) {
+              // Payment USSD push sent — clear cart and show instructions
+              final cart = context.read<CartProvider>();
+              for (var item in selectedItems) {
+                cart.removeCartItem(item);
+              }
+              if (mounted) {
+                setState(() => _isProcessing = false);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('📲 Dial *182# on your phone to approve the payment.'),
+                    backgroundColor: Color(0xFF1565C0),
+                    duration: Duration(seconds: 8),
+                  ),
+                );
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) context.go('/');
+                });
+              }
+              return;
+            } else {
+              // Payment failed but order was created — clear cart and go home
+              final cart = context.read<CartProvider>();
+              for (var item in selectedItems) {
+                cart.removeCartItem(item);
+              }
+              if (mounted) {
+                setState(() => _isProcessing = false);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Order placed! Mobile Money payment could not be initiated. You can pay from your orders.'),
+                    backgroundColor: Color(0xFFE65100),
+                    duration: Duration(seconds: 5),
+                  ),
+                );
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) context.go('/');
+                });
+              }
+              return;
+            }
+          }
         } else {
           throw Exception(response['error'] ?? 'Failed to create order');
         }
       }
-      // Handle payment based on method
-      if (_paymentMethod != 'cash' && orderIds.isNotEmpty) {
-        // Initiate K-Pay payment for the first order (or primary order)
-        final paymentService = PaymentService();
-        final paymentResult = await paymentService.initiatePayment(
-          orderId: orderIds.first,
-          paymentMethod: _paymentMethod,
-          phoneNumber: _phoneController.text.trim(),
-        );
 
-        if (paymentResult['success'] == true) {
-          final checkoutUrl = paymentResult['checkout_url'] as String?;
-          if (checkoutUrl != null && checkoutUrl.isNotEmpty) {
-            // Clear cart items
-            final cart = context.read<CartProvider>();
-            for (var item in selectedItems) {
-              cart.removeCartItem(item);
-            }
-            
-            // Launch K-Pay checkout in browser
-            final uri = Uri.parse(checkoutUrl);
-            if (await canLaunchUrl(uri)) {
-              await launchUrl(uri, mode: LaunchMode.externalApplication);
-            }
-
-            if (mounted) {
-              setState(() => _isProcessing = false);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('🔄 Complete your payment in the browser. You will be notified when done.'),
-                  backgroundColor: Color(0xFF1565C0),
-                  duration: Duration(seconds: 5),
-                ),
-              );
-              // Navigate to order tracking / home
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) context.go('/');
-              });
-            }
-            return;
-          }
-        } else {
-          // Payment initiation failed — order is created but unpaid
-          if (mounted) {
-            _showError(paymentResult['error'] ?? 'Failed to initiate payment. You can retry from your orders.');
-          }
-        }
-      }
-
-      // Cash on delivery or fallback — clear cart and go home
+      // Cash on delivery — clear cart and go home
       final cart = context.read<CartProvider>();
       for (var item in selectedItems) {
         cart.removeCartItem(item);
@@ -1011,11 +1010,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     children: [
                       _buildSectionHeader(Icons.account_balance_wallet_outlined, 'Payment', textColor),
                       const SizedBox(height: 10),
-                      _buildPaymentOption('cash', 'Cash on Delivery', Icons.money_rounded, textColor, subtextColor, isDarkMode, accent),
-                      const SizedBox(height: 6),
-                      _buildPaymentOption('momo', 'Mobile Money', Icons.phone_android_rounded, textColor, subtextColor, isDarkMode, accent),
-                      const SizedBox(height: 6),
-                      _buildPaymentOption('card', 'Card Payment', Icons.credit_card_rounded, textColor, subtextColor, isDarkMode, accent),
+                      _buildPaymentOption('momo', 'Mobile Money (MTN/Airtel)', Icons.phone_android_rounded, textColor, subtextColor, isDarkMode, accent),
                       if (_paymentMethod == 'momo') ...[
                         const SizedBox(height: 10),
                         _buildCleanTextField(
@@ -1090,7 +1085,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             : _isProcessing
                                 ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)))
                                 : Text(
-                                    _paymentMethod == 'cash' ? 'Place Order' : 'Pay & Place Order',
+                                    'Pay & Place Order',
                                     style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                                   ),
                       ),

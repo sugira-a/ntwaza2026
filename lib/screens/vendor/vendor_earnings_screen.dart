@@ -35,7 +35,7 @@ class _VendorEarningsScreenState extends State<VendorEarningsScreen> with Single
     final orderProvider = context.watch<VendorOrderProvider>();
     
     final isDarkMode = themeProvider.isDarkMode;
-    final backgroundColor = isDarkMode ? const Color(0xFF202124) : Colors.white;
+    final backgroundColor = isDarkMode ? const Color(0xFF1A1A1A) : Colors.white;
     final cardColor = isDarkMode ? const Color(0xFF1B1B1F) : Colors.white;
     final textColor = isDarkMode ? Colors.white : Colors.black;
     final subtextColor = isDarkMode ? Colors.grey[400]! : Colors.grey[600]!;

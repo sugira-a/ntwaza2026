@@ -164,7 +164,7 @@ class _VendorProductsScreenState extends State<VendorProductsScreen> {
     }
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF202124) : Colors.white,
+      backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
       body: RefreshIndicator(
         onRefresh: _loadProducts,
         color: isDark ? Colors.white : Colors.black,
@@ -174,12 +174,12 @@ class _VendorProductsScreenState extends State<VendorProductsScreen> {
             SliverAppBar(
               expandedHeight: 70,
               pinned: true,
-              backgroundColor: isDark ? const Color(0xFF202124) : Colors.white,
+              backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
               elevation: 0,
               flexibleSpace: FlexibleSpaceBar(
                 background: Container(
                   decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF202124) : Colors.white,
+                    color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
                   ),
                   padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
                   child: Column(
@@ -483,7 +483,7 @@ class _VendorProductsScreenState extends State<VendorProductsScreen> {
   Widget _buildProductCard(Product product, bool isDark, {bool isGrid = false}) {
     final hasImage = product.imageUrl != null && product.imageUrl!.isNotEmpty;
     final isInStock = _isProductAvailable(product);
-    final cardColor = isDark ? const Color(0xFF202124) : Colors.white;
+    final cardColor = isDark ? const Color(0xFF222222) : Colors.white;
     final cardBorder = isDark ? Colors.grey[850]! : Colors.grey[300]!;
     
     return GestureDetector(

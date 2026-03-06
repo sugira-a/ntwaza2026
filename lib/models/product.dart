@@ -2,6 +2,7 @@
 // FIXED: vendorId is now non-nullable (required)
 
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../services/api/api_service.dart';
 
 class Product {
@@ -79,6 +80,11 @@ class Product {
       if (normalized.contains('/static/uploads/catalog/')) {
         final filename = normalized.split('/').last;
         return '${ApiService.baseUrl}/static/uploads/products/$filename';
+      }
+      // Proxy R2 images through backend on web (CORS workaround)
+      if (kIsWeb && normalized.contains('.r2.dev/')) {
+        final r2Key = normalized.split('.r2.dev/').last;
+        return '${ApiService.baseUrl}/api/r2-image/$r2Key';
       }
       return normalized;
     }

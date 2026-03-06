@@ -18,9 +18,9 @@ class _RiderAllOrdersScreenState extends State<RiderAllOrdersScreen> {
   final TextEditingController _searchController = TextEditingController();
 
   static const Color accentGreen = Color(0xFF4CAF50);
-  static const Color pureBlack = Color(0xFF0B0B0B);
+  static const Color pureBlack = Color(0xFF1A1A1A);
   static const Color pureWhite = Color(0xFFFFFFFF);
-  static const Color softBlack = Colors.black;
+  static const Color softBlack = Color(0xFF222222);
 
   @override
   void initState() {
@@ -65,8 +65,8 @@ class _RiderAllOrdersScreenState extends State<RiderAllOrdersScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor = isDark ? pureBlack : const Color(0xFFDADDE2);
-    final cardColor = isDark ? softBlack : const Color(0xFFDADDE2);
+    final backgroundColor = isDark ? pureBlack : Colors.white;
+    final cardColor = isDark ? softBlack : Colors.white;
     final textColor = isDark ? pureWhite : pureBlack;
     final subtextColor = isDark ? Colors.white70 : const Color(0xFF6B7280);
     final borderColor = isDark ? const Color(0xFF1F1F1F) : const Color(0xFFE5E7EB);
@@ -74,7 +74,7 @@ class _RiderAllOrdersScreenState extends State<RiderAllOrdersScreen> {
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
         elevation: 0,
         centerTitle: true,
         title: Text(
@@ -82,7 +82,7 @@ class _RiderAllOrdersScreenState extends State<RiderAllOrdersScreen> {
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w800,
-            color: Colors.white,
+            color: isDark ? Colors.white : Colors.black,
             letterSpacing: -0.5,
           ),
         ),

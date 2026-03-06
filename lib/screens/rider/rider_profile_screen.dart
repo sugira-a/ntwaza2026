@@ -25,8 +25,8 @@ class RiderProfileScreen extends StatelessWidget {
     final isDark = themeProvider.isDarkMode;
     final user = authProvider.user;
 
-    final backgroundColor = isDark ? Colors.black : const Color(0xFFDADDE2);
-    final cardColor = isDark ? Colors.black : const Color(0xFFDADDE2);
+    final backgroundColor = isDark ? const Color(0xFF1A1A1A) : Colors.white;
+    final cardColor = isDark ? const Color(0xFF222222) : Colors.white;
     final textColor = isDark ? Colors.white : darkGray;
     final subtextColor = isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280);
 
@@ -35,14 +35,14 @@ class RiderProfileScreen extends StatelessWidget {
       return Scaffold(
         backgroundColor: backgroundColor,
         appBar: AppBar(
-          backgroundColor: Colors.black,
+          backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
           surfaceTintColor: Colors.transparent,
           elevation: 0,
           centerTitle: true,
           title: Text(
             'Profile',
             style: TextStyle(
-              color: Colors.white,
+              color: isDark ? Colors.white : Colors.black,
               fontSize: 22,
               fontWeight: FontWeight.w900,
               letterSpacing: -0.5,
@@ -61,14 +61,14 @@ class RiderProfileScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
         title: Text(
           'Profile & Settings',
           style: TextStyle(
-            color: Colors.white,
+            color: isDark ? Colors.white : Colors.black,
             fontSize: 22,
             fontWeight: FontWeight.w900,
             letterSpacing: -0.5,

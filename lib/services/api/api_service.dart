@@ -131,14 +131,16 @@ class ApiService {
       }
       return json.decode(response.body);
     } else {
-      String errorMessage = 'Error ${response.statusCode}';
+      String errorMessage = 'Server error (${response.statusCode})';
       try {
         final errorBody = json.decode(response.body);
         errorMessage = errorBody['error'] ?? errorBody['message'] ?? errorMessage;
       } catch (_) {
-        errorMessage = response.body;
+        if (response.body.isNotEmpty) {
+          errorMessage = response.body;
+        }
       }
-      throw Exception('API Error: $errorMessage');
+      throw Exception(errorMessage);
     }
   }
 

@@ -22,8 +22,8 @@ class VendorProfileScreen extends StatelessWidget {
     final isDark = themeProvider.isDarkMode;
     final user = authProvider.user;
 
-    final backgroundColor = isDark ? const Color(0xFF202124) : const Color(0xFFDADDE2);
-    final cardColor = isDark ? const Color(0xFF202124) : const Color(0xFFDADDE2);
+    final backgroundColor = isDark ? const Color(0xFF1A1A1A) : Colors.white;
+    final cardColor = isDark ? const Color(0xFF222222) : Colors.white;
     final textColor = isDark ? Colors.white : darkGray;
     final subtextColor = isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280);
 
@@ -31,7 +31,7 @@ class VendorProfileScreen extends StatelessWidget {
       return Scaffold(
         backgroundColor: backgroundColor,
         appBar: AppBar(
-          backgroundColor: isDark ? const Color(0xFF202124) : Colors.white,
+          backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
           surfaceTintColor: Colors.transparent,
           elevation: 0,
           leading: IconButton(

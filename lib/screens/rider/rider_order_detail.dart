@@ -90,21 +90,21 @@ class _RiderOrderDetailScreenState extends State<RiderOrderDetailScreen> {
     final textColor = isDark ? Colors.white : darkGray;
 
     return Scaffold(
-      backgroundColor: isDark ? Colors.black : const Color(0xFFDADDE2),
+      backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
       appBar: AppBar(
         title: Text(
           'Order ${shortenOrderNumber(_currentOrder.orderNumber)}',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w600,
-            color: Colors.white,
+            color: isDark ? Colors.white : Colors.black,
           ),
         ),
         elevation: 0,
-        backgroundColor: Colors.black,
+        backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
         surfaceTintColor: Colors.transparent,
         iconTheme: IconThemeData(
-          color: Colors.white,
+          color: isDark ? Colors.white : Colors.black,
         ),
       ),
       body: SingleChildScrollView(

@@ -50,8 +50,8 @@ class _RiderEarningsScreenState extends State<RiderEarningsScreen> {
     final riderProvider = context.watch<RiderOrderProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final backgroundColor = isDark ? Colors.black : const Color(0xFFDADDE2);
-    final cardColor = isDark ? Colors.black : const Color(0xFFDADDE2);
+    final backgroundColor = isDark ? const Color(0xFF1A1A1A) : Colors.white;
+    final cardColor = isDark ? const Color(0xFF222222) : Colors.white;
     final textColor = isDark ? Colors.white : darkGray;
     final subtextColor = isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280);
 
@@ -71,14 +71,14 @@ class _RiderEarningsScreenState extends State<RiderEarningsScreen> {
       backgroundColor: backgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        systemOverlayStyle: SystemUiOverlayStyle.light,
+        systemOverlayStyle: isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
         centerTitle: true,
         title: Text(
           'Earnings',
           style: TextStyle(
-            color: Colors.white,
+            color: isDark ? Colors.white : Colors.black,
             fontSize: 22,
             fontWeight: FontWeight.w900,
             letterSpacing: -0.5,

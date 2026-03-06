@@ -89,7 +89,7 @@ class _RiderDeliveryHistoryState extends State<RiderDeliveryHistory> {
         }
       },
       child: Scaffold(
-        backgroundColor: isDark ? Colors.black : const Color(0xFFDADDE2),
+        backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
         body: Consumer<RiderOrderProvider>(
         builder: (context, prov, _) {
           if (prov.isLoadingHistory) {

@@ -44,7 +44,7 @@ class _VendorOrderDetailScreenState extends State<VendorOrderDetailScreen> {
     
     if (orderProvider.orders.isEmpty) {
       return Scaffold(
-        backgroundColor: themeProvider.isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
+        backgroundColor: themeProvider.isDarkMode ? const Color(0xFF1A1A1A) : Colors.white,
         appBar: AppBar(title: const Text('Order Details')),
         body: const Center(child: CircularProgressIndicator(color: Color(0xFF2E7D32))),
       );
@@ -52,7 +52,7 @@ class _VendorOrderDetailScreenState extends State<VendorOrderDetailScreen> {
     
     final order = orderProvider.orders.firstWhere((o) => o.id == widget.orderId);
     final isDark = themeProvider.isDarkMode;
-    final bgColor = isDark ? const Color(0xFF121212) : const Color(0xFFDADDE2);
+    final bgColor = isDark ? const Color(0xFF1A1A1A) : Colors.white;
     final cardColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
     final textColor = isDark ? Colors.white : Colors.black;
     final subtextColor = isDark ? Colors.grey[400]! : Colors.grey[600]!;

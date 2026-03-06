@@ -24,12 +24,22 @@ class VendorMainScreen extends StatefulWidget {
 class _VendorMainScreenState extends State<VendorMainScreen> with SingleTickerProviderStateMixin {
   int _selectedIndex = 0;
   late TabController _orderTabController;
+  // Save references for safe disposal
+  late final NotificationProvider _notificationProvider;
+  late final VendorOrderProvider _vendorOrderProvider;
 
   @override
   void initState() {
     super.initState();
     _orderTabController = TabController(length: 4, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) => _initializeDashboard());
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _notificationProvider = context.read<NotificationProvider>();
+    _vendorOrderProvider = context.read<VendorOrderProvider>();
   }
 
   Future<void> _initializeDashboard() async {
@@ -53,8 +63,8 @@ class _VendorMainScreenState extends State<VendorMainScreen> with SingleTickerPr
   @override
   void dispose() {
     _orderTabController.dispose();
-    context.read<NotificationProvider>().stopPolling();
-    context.read<VendorOrderProvider>().stopAutoRefresh();
+    _notificationProvider.stopPolling();
+    _vendorOrderProvider.stopAutoRefresh();
     super.dispose();
   }
 
@@ -65,7 +75,7 @@ class _VendorMainScreenState extends State<VendorMainScreen> with SingleTickerPr
     final orderProvider = context.watch<VendorOrderProvider>();
     final notificationProvider = context.watch<NotificationProvider>();
     final isDark = themeProvider.isDarkMode;
-    final backgroundColor = isDark ? const Color(0xFF202124) : const Color(0xFFDADDE2);
+    final backgroundColor = isDark ? const Color(0xFF1A1A1A) : Colors.white;
 
     if (!authProvider.isAuthenticated || authProvider.token == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -108,7 +118,7 @@ class _VendorMainScreenState extends State<VendorMainScreen> with SingleTickerPr
         // Compact Header
         SliverToBoxAdapter(
           child: Container(
-            color: isDark ? const Color(0xFF202124) : Colors.black,
+            color: isDark ? const Color(0xFF1A1A1A) : Colors.black,
             padding: const EdgeInsets.fromLTRB(20, 45, 20, 10),
             child: Row(
               children: [
@@ -335,12 +345,12 @@ class _VendorMainScreenState extends State<VendorMainScreen> with SingleTickerPr
         children: screens,
       ),
       bottomNavigationBar: Container(
-        color: isDark ? const Color(0xFF202124) : Colors.white,
+        color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
         child: NavigationBarTheme(
           data: NavigationBarThemeData(
             backgroundColor: Colors.transparent,
-            indicatorColor: isDark ? const Color(0xFF1F2937) : const Color(0xFFE5E7EB),
+            indicatorColor: isDark ? const Color(0xFF2D2D30) : const Color(0xFFE5E7EB),
             height: 64,
             iconTheme: WidgetStateProperty.resolveWith((states) {
               if (states.contains(WidgetState.selected)) {
@@ -642,7 +652,7 @@ class _VendorMainScreenState extends State<VendorMainScreen> with SingleTickerPr
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF202124) : Colors.white,
+          color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isDark ? Colors.grey[800]! : Colors.grey[300]!,
@@ -1145,7 +1155,7 @@ class _VendorOrdersTabState extends State<VendorOrdersTab> {
       child: Column(
         children: [
           Container(
-            color: isDark ? const Color(0xFF202124) : Colors.white,
+            color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
             padding: const EdgeInsets.fromLTRB(20, 52, 20, 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1164,7 +1174,7 @@ class _VendorOrdersTabState extends State<VendorOrdersTab> {
                     ),
                     Container(
                       decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF202124) : Colors.white,
+                        color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: isDark ? Colors.grey[800]! : Colors.grey[300]!,
@@ -1184,7 +1194,7 @@ class _VendorOrdersTabState extends State<VendorOrdersTab> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF202124) : Colors.white,
+                    color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: isDark ? Colors.grey[800]! : Colors.grey[300]!,
@@ -1224,7 +1234,7 @@ class _VendorOrdersTabState extends State<VendorOrdersTab> {
                 const SizedBox(height: 16),
                 Container(
                   decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF202124) : Colors.white,
+                    color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
                       color: isDark ? Colors.grey[800]! : Colors.grey[300]!,
@@ -1267,7 +1277,7 @@ class _VendorOrdersTabState extends State<VendorOrdersTab> {
           ),
           Expanded(
             child: Container(
-              color: isDark ? const Color(0xFF202124) : Colors.white,
+              color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
               child: orderProvider.isLoading
                   ? Center(
                       child: CircularProgressIndicator(
@@ -1343,7 +1353,7 @@ class _OrdersList extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 36),
           margin: const EdgeInsets.symmetric(horizontal: 24),
           decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF202124) : Colors.white,
+            color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isDark ? Colors.grey[800]! : Colors.grey[200]!,
@@ -1528,7 +1538,7 @@ class _MinimalNavBar extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF202124) : Colors.white,
+        color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
         border: Border(
           top: BorderSide(
             color: isDark ? Colors.grey[800]! : Colors.grey[300]!,

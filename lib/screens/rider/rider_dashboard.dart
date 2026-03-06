@@ -31,9 +31,9 @@ class _RiderDashboardState extends State<RiderDashboard> {
   late RiderOrderProvider _riderOrderProvider;
 
   // Neutral palette (black + white + gray) + green accent
-  static const Color pureBlack = Color(0xFF0B0B0B);
+  static const Color pureBlack = Color(0xFF1A1A1A);
   static const Color pureWhite = Color(0xFFFFFFFF);
-  static const Color softBlack = Colors.black;
+  static const Color softBlack = Color(0xFF222222);
   static const Color borderGray = Color(0xFFE5E7EB);
   static const Color mutedGray = Color(0xFF6B7280);
   static const Color accentGreen = Color(0xFF4CAF50);
@@ -138,7 +138,7 @@ class _RiderDashboardState extends State<RiderDashboard> {
           context: context,
           builder: (dialogContext) {
             return AlertDialog(
-              backgroundColor: isDark ? Colors.black : Colors.white,
+              backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
               title: Text(title, style: TextStyle(color: textColor)),
               content: Text(message, style: TextStyle(color: textColor)),
               actions: [
@@ -188,7 +188,7 @@ class _RiderDashboardState extends State<RiderDashboard> {
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor = isDark ? pureBlack : const Color(0xFFDADDE2);
+    final backgroundColor = isDark ? pureBlack : Colors.white;
     final cardColor = isDark ? softBlack : Colors.transparent;
     final textColor = isDark ? pureWhite : pureBlack;
     final subtextColor = isDark ? Colors.white70 : mutedGray;
@@ -1182,7 +1182,7 @@ class _RiderDashboardState extends State<RiderDashboard> {
         padding: const EdgeInsets.all(11),
         margin: const EdgeInsets.only(bottom: 9),
         decoration: BoxDecoration(
-          color: isDark ? Colors.black : const Color(0xFFFAFAFA),
+          color: isDark ? const Color(0xFF1A1A1A) : const Color(0xFFFAFAFA),
           borderRadius: BorderRadius.circular(10),
           
           boxShadow: [
@@ -1427,7 +1427,7 @@ class _RiderDashboardState extends State<RiderDashboard> {
         padding: const EdgeInsets.all(12),
         margin: const EdgeInsets.only(bottom: 10),
         decoration: BoxDecoration(
-          color: isDark ? Colors.black : const Color(0xFFFAFAFA),
+          color: isDark ? const Color(0xFF1A1A1A) : const Color(0xFFFAFAFA),
           borderRadius: BorderRadius.circular(10),
           
         ),
@@ -1769,7 +1769,7 @@ class _RiderDashboardState extends State<RiderDashboard> {
 
         return Container(
           decoration: BoxDecoration(
-            color: isDark ? Colors.black : Colors.white,
+            color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           ),
           padding: const EdgeInsets.symmetric(vertical: 12),
@@ -1896,7 +1896,7 @@ class _RiderDashboardState extends State<RiderDashboard> {
                         final shouldLogout = await showDialog<bool>(
                           context: outerContext,
                           builder: (dialogContext) => AlertDialog(
-                            backgroundColor: isDark ? Colors.black : Colors.white,
+                            backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
                             ),

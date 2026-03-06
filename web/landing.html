@@ -49,31 +49,47 @@
         <section class="hero" data-theme="dark">
           <div class="container hero-wrap">
             <div class="hero-content">
-              <h1 class="reveal delay-1">
-                Your order our Priority
-              </h1>
-              <p class="reveal delay-2">
-                Food, groceries, and essentials with live tracking across
-                Rwanda. Fast, reliable, and premium.
+              <div class="hero-badge reveal delay-1">
+                <span class="hero-badge-dot" aria-hidden="true"></span>
+                Delivering across Kigali in 30-45 minutes
+              </div>
+              <h1 class="reveal delay-1">Premium Delivery For Modern City Life</h1>
+              <p class="hero-description reveal delay-2">
+                Food, groceries, and essentials delivered fast with live map
+                tracking, secure payments, and verified riders.
               </p>
-              <div class="hero-meta reveal delay-3">
-                <div class="meta-card">
-                  30-45 min
-                  <span>Average delivery window</span>
+              <div class="hero-actions reveal delay-2">
+                <a class="primary-btn" href="#download">Get the app</a>
+                <a class="secondary-btn" href="#how">How it works</a>
+              </div>
+              <div class="hero-proof reveal delay-3">
+                <div class="proof-item">
+                  <strong>30-45 min</strong>
+                  <span>Average delivery time</span>
                 </div>
-                <div class="meta-card">
-                  Live tracking
-                  <span>Know where your delivery is</span>
+                <div class="proof-item">
+                  <strong>Live tracking</strong>
+                  <span>From dispatch to doorstep</span>
                 </div>
-              </div>              </div>
-            <div class="hero-visual reveal delay-2">
-              <img
-                src="https://images.unsplash.com/photo-1489515217757-5fd1be406fef?auto=format&fit=crop&w=900&q=80"
-                alt="City delivery in motion"
-              />
+                <div class="proof-item">
+                  <strong>Trusted riders</strong>
+                  <span>Verified local partners</span>
+                </div>
+              </div>
             </div>
-            <div class="hero-actions reveal delay-3">
-              <a class="primary-btn" href="#download">Get the app</a>
+            <div class="hero-visual reveal delay-2">
+              <div class="hero-media">
+                <img
+                  src="https://images.unsplash.com/photo-1489515217757-5fd1be406fef?auto=format&fit=crop&w=900&q=80"
+                  alt="City delivery in motion"
+                />
+                <div class="hero-media-gradient"></div>
+              </div>
+              <div class="hero-floating-card">
+                <span class="float-label">Active order</span>
+                <strong>ETA 12 min</strong>
+                <span class="float-subtext">Kacyiru to Kimihurura</span>
+              </div>
             </div>
           </div>
         </section>
@@ -299,10 +315,12 @@
         </div>
 
         <div class="container footer-bottom">
-          <span>&copy; 2026 NTWAZA Ltd. All rights reserved.</span>
+          <span>&copy; <span id="year">2026</span> NTWAZA Ltd. All rights reserved.</span>
           <span class="footer-bottom-links">
             <a href="/terms">Terms</a>
+            <span class="link-separator">|</span>
             <a href="/privacy">Privacy</a>
+            <span class="link-separator">|</span>
             <a href="/web/auth/login">Login</a>
           </span>
         </div>
@@ -359,24 +377,6 @@
           navLinks.classList.remove("active");
         });
       });
-
-      // Lightning strike on page load and click/tap
-      const heroSection = document.querySelector(".hero");
-      
-      const triggerLightning = () => {
-        heroSection.classList.add("lightning-strike");
-        setTimeout(() => {
-          heroSection.classList.remove("lightning-strike");
-        }, 500);
-      };
-
-      // Trigger on page load
-      window.addEventListener("load", () => {
-        setTimeout(triggerLightning, 300);
-      });
-
-      // Trigger on click/tap
-      heroSection.addEventListener("click", triggerLightning);
 
       // Contact Form Submission
       const contactForm = document.getElementById('contactForm');
@@ -444,6 +444,8 @@
         }
       });
 
+      // Update year dynamically
+      document.getElementById('year').textContent = new Date().getFullYear();
     </script>
   </body>
 </html>

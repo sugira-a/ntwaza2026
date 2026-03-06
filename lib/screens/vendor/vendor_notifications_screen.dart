@@ -27,7 +27,7 @@ class _VendorNotificationsScreenState extends State<VendorNotificationsScreen> {
     final isDark = context.watch<ThemeProvider>().isDarkMode;
 
     return Scaffold(
-      backgroundColor: isDark ? Colors.grey[900] : Colors.grey[50],
+      backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
       appBar: _buildAppBar(notificationProvider, isDark),
       body: RefreshIndicator(
         onRefresh: () => notificationProvider.fetchNotifications(),
