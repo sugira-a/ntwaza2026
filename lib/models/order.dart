@@ -326,6 +326,8 @@ enum OrderStatus {
   
   static OrderStatus fromString(String status) {
     switch (status.toLowerCase()) {
+      case 'awaiting_payment':
+        return OrderStatus.awaitingPayment;
       case 'pending':
         return OrderStatus.pending;
       case 'accepted':

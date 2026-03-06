@@ -615,12 +615,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         };
         final response = await apiService.post('/api/orders/direct', orderData);
         if (response['success'] == true) {
-          orderIds.add(response['order']['id'].toString());
+          final orderId = response['order']['id'].toString();
+          orderIds.add(orderId);
           // Check if payment was auto-initiated by backend
           if (response['payment'] != null) {
             final paymentResult = response['payment'] as Map<String, dynamic>;
             if (paymentResult['success'] == true) {
-              // Payment USSD push sent — clear cart and show instructions
+              // Payment USSD push sent — clear cart and go to order tracking
               final cart = context.read<CartProvider>();
               for (var item in selectedItems) {
                 cart.removeCartItem(item);
@@ -629,18 +630,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 setState(() => _isProcessing = false);
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('📲 Dial *182# on your phone to approve the payment.'),
+                    content: Text('📲 Dial *182# on your phone to approve the payment. Order will be confirmed after payment.'),
                     backgroundColor: Color(0xFF1565C0),
                     duration: Duration(seconds: 8),
                   ),
                 );
                 WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (mounted) context.go('/');
+                  if (mounted) context.go('/order/track/$orderId');
                 });
               }
               return;
             } else {
-              // Payment failed but order was created — clear cart and go home
+              // Payment failed but order was created — clear cart and go to order tracking
               final cart = context.read<CartProvider>();
               for (var item in selectedItems) {
                 cart.removeCartItem(item);
@@ -649,13 +650,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 setState(() => _isProcessing = false);
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('Order placed! Mobile Money payment could not be initiated. You can pay from your orders.'),
+                    content: Text('Payment could not be initiated. You can retry from order details.'),
                     backgroundColor: Color(0xFFE65100),
                     duration: Duration(seconds: 5),
                   ),
                 );
                 WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (mounted) context.go('/');
+                  if (mounted) context.go('/order/track/$orderId');
                 });
               }
               return;
