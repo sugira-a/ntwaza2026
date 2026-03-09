@@ -298,7 +298,7 @@ class _OrderRatingDialogState extends State<OrderRatingDialog>
             ),
             const SizedBox(height: 20),
             const Icon(
-              Icons.delivery_dining_rounded,
+              Icons.two_wheeler_rounded,
               size: 40,
               color: _green,
             ),
@@ -339,7 +339,7 @@ class _OrderRatingDialogState extends State<OrderRatingDialog>
             if (widget.hasRider) ...[
               const SizedBox(height: 16),
               _buildRatingSection(
-                icon: Icons.directions_bike_rounded,
+                icon: Icons.two_wheeler_rounded,
                 title: widget.riderName ?? 'Rider',
                 subtitle: 'Rate the rider',
                 rating: _riderRating,

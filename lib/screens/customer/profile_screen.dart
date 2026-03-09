@@ -76,7 +76,7 @@ class ProfileScreen extends StatelessWidget {
               isDark: isDark,
             ),
             _buildSettingTile(
-              icon: Icons.location_on_outlined,
+              icon: Icons.location_on_rounded,
               title: 'Addresses',
               subtitle: 'Manage delivery addresses',
               onTap: () => context.push('/location-picker'),
@@ -87,7 +87,7 @@ class ProfileScreen extends StatelessWidget {
               isDark: isDark,
             ),
             _buildSettingTile(
-              icon: Icons.receipt_long_outlined,
+              icon: Icons.receipt_long,
               title: 'Orders',
               subtitle: 'View past orders',
               onTap: () => context.push('/my-orders'),
@@ -148,7 +148,7 @@ class ProfileScreen extends StatelessWidget {
               isDark: isDark,
             ),
             _buildSettingTile(
-              icon: Icons.privacy_tip_outlined,
+              icon: Icons.privacy_tip,
               title: 'Privacy',
               subtitle: 'How we handle your data',
               onTap: () => context.push('/privacy-policy'),
@@ -159,7 +159,7 @@ class ProfileScreen extends StatelessWidget {
               isDark: isDark,
             ),
             _buildSettingTile(
-              icon: Icons.description_outlined,
+              icon: Icons.description,
               title: 'Terms',
               subtitle: 'Read our terms',
               onTap: () => context.push('/terms-of-service'),
@@ -265,7 +265,7 @@ class ProfileScreen extends StatelessWidget {
               value: 'edit',
               child: Row(
                 children: [
-                  Icon(Icons.edit_outlined, size: 20, color: textColor),
+                  Icon(Icons.edit, size: 20, color: textColor),
                   const SizedBox(width: 12),
                   Text('Edit Profile', style: TextStyle(color: textColor)),
                 ],
@@ -275,7 +275,7 @@ class ProfileScreen extends StatelessWidget {
               value: 'orders',
               child: Row(
                 children: [
-                  Icon(Icons.receipt_long_outlined, size: 20, color: textColor),
+                  Icon(Icons.receipt_long, size: 20, color: textColor),
                   const SizedBox(width: 12),
                   Text('My Orders', style: TextStyle(color: textColor)),
                 ],
@@ -528,11 +528,11 @@ class ProfileScreen extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _buildTextField(nameController, 'First Name', Icons.person_outline, isDark, textColor, subtextColor),
+                _buildTextField(nameController, 'First Name', Icons.account_circle_outlined, isDark, textColor, subtextColor),
                 const SizedBox(height: 14),
-                _buildTextField(lastNameController, 'Last Name', Icons.person_outline, isDark, textColor, subtextColor),
+                _buildTextField(lastNameController, 'Last Name', Icons.account_circle_outlined, isDark, textColor, subtextColor),
                 const SizedBox(height: 14),
-                _buildTextField(phoneController, 'Phone', Icons.phone_outlined, isDark, textColor, subtextColor, keyboardType: TextInputType.phone),
+                _buildTextField(phoneController, 'Phone', Icons.phone, isDark, textColor, subtextColor, keyboardType: TextInputType.phone),
               ],
             ),
           ),
@@ -660,7 +660,7 @@ class ProfileScreen extends StatelessWidget {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.email_outlined, color: accentGreen, size: 20),
+                        const Icon(Icons.email, color: accentGreen, size: 20),
                         const SizedBox(width: 10),
                         Expanded(child: Text('Code sent! Check your email.', style: TextStyle(color: textColor, fontSize: 13))),
                       ],

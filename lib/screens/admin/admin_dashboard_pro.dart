@@ -528,22 +528,22 @@ class _AdminDashboardProState extends State<AdminDashboardPro> {
           labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
           destinations: const [
             NavigationDestination(
-              icon: Icon(Icons.receipt_long_outlined),
+              icon: Icon(Icons.receipt_long),
               selectedIcon: Icon(Icons.receipt_long_rounded),
               label: 'Orders',
             ),
             NavigationDestination(
-              icon: Icon(Icons.two_wheeler_outlined),
+              icon: Icon(Icons.two_wheeler_rounded),
               selectedIcon: Icon(Icons.two_wheeler_rounded),
               label: 'Riders',
             ),
             NavigationDestination(
-              icon: Icon(Icons.attach_money_outlined),
+              icon: Icon(Icons.attach_money),
               selectedIcon: Icon(Icons.attach_money_rounded),
               label: 'Money',
             ),
             NavigationDestination(
-              icon: Icon(Icons.warning_amber_outlined),
+              icon: Icon(Icons.warning_amber),
               selectedIcon: Icon(Icons.warning_amber_rounded),
               label: 'Alerts',
             ),
@@ -629,7 +629,7 @@ class _OrdersOverviewTabState extends State<OrdersOverviewTab> {
               children: [
                 Expanded(child: _StatCard('Pending Pickups', '$pendingPickups', Icons.schedule, AppColors.warning)),
                 const SizedBox(width: 12),
-                Expanded(child: _StatCard('In Transit', '$inTransit', Icons.local_shipping, AppColors.info)),
+                Expanded(child: _StatCard('In Transit', '$inTransit', Icons.two_wheeler_rounded, AppColors.info)),
               ],
             ),
             const SizedBox(height: 12),
@@ -691,7 +691,7 @@ class _OrdersOverviewTabState extends State<OrdersOverviewTab> {
       padding: const EdgeInsets.all(40),
       child: Column(
         children: [
-          Icon(Icons.inbox_outlined, size: 64, color: AppColors.textSecondary.withOpacity(0.5)),
+          Icon(Icons.inbox, size: 64, color: AppColors.textSecondary.withOpacity(0.5)),
           const SizedBox(height: 16),
           Text(
             'No active orders',
@@ -788,7 +788,7 @@ class _OrderCard extends StatelessWidget {
       case 'picked_up':
         statusColor = AppColors.primary;
         statusText = 'In Transit';
-        statusIcon = Icons.local_shipping;
+        statusIcon = Icons.two_wheeler_rounded;
         break;
       case 'delivered':
         statusColor = AppColors.success;
@@ -894,7 +894,7 @@ class _OrderCard extends StatelessWidget {
                   child: Row(
                     children: [
                       Icon(
-                        Icons.location_on,
+                        Icons.location_on_rounded,
                         size: 16,
                         color: AppColors.getTextSecondary(context),
                       ),
@@ -938,7 +938,7 @@ class _OrderCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    Icon(Icons.shopping_bag_outlined, size: 13, color: AppColors.getTextSecondary(context).withOpacity(0.7)),
+                    Icon(Icons.shopping_bag_rounded, size: 13, color: AppColors.getTextSecondary(context).withOpacity(0.7)),
                     const SizedBox(width: 4),
                     Text(
                       '${order.items.length}',
@@ -957,7 +957,7 @@ class _OrderCard extends StatelessWidget {
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.chat_bubble_outlined, size: 12, color: AppColors.primary),
+                            Icon(Icons.chat_bubble, size: 12, color: AppColors.primary),
                             const SizedBox(width: 4),
                             Text(
                               'Chat',
@@ -1204,7 +1204,7 @@ class _OrderDetailsSheetState extends State<_OrderDetailsSheet> {
                 // Customer Info Section
                 _buildDetailSection(
                   'Customer Information',
-                  Icons.person,
+                  Icons.account_circle_rounded,
                   widget.order.customerName ?? 'Unknown',
                   [
                     {'label': 'Phone', 'value': widget.order.customerPhone ?? 'No phone number'},
@@ -1215,7 +1215,7 @@ class _OrderDetailsSheetState extends State<_OrderDetailsSheet> {
                 // Delivery Address
                 _buildDetailSection(
                   'Delivery Address',
-                  Icons.location_on,
+                  Icons.location_on_rounded,
                   widget.order.deliveryInfo?.address ?? 'No address',
                   [
                     {'label': 'Notes', 'value': widget.order.deliveryInfo?.notes ?? 'No delivery notes'},
@@ -1227,7 +1227,7 @@ class _OrderDetailsSheetState extends State<_OrderDetailsSheet> {
                 if (widget.order.deliveryInfo?.driverName != null)
                   _buildDetailSection(
                     'Rider Information',
-                    Icons.delivery_dining,
+                    Icons.two_wheeler_rounded,
                     widget.order.deliveryInfo!.driverName!,
                     [
                       {'label': 'Phone', 'value': widget.order.deliveryInfo!.driverPhone ?? 'No phone'},
@@ -1593,7 +1593,7 @@ class _OrderDetailsSheetState extends State<_OrderDetailsSheet> {
                       color: AppColors.primary.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.shopping_bag, size: 18, color: AppColors.primary),
+                    child: const Icon(Icons.shopping_bag_rounded, size: 18, color: AppColors.primary),
                   ),
                   const SizedBox(width: 12),
                   Text(
@@ -1886,7 +1886,7 @@ class _OrderDetailsSheetState extends State<_OrderDetailsSheet> {
                   color: AppColors.primary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.shopping_bag, size: 18, color: AppColors.primary),
+                child: const Icon(Icons.shopping_bag_rounded, size: 18, color: AppColors.primary),
               ),
               const SizedBox(width: 12),
               const Text(
@@ -2170,7 +2170,7 @@ class _RidersManagementTabState extends State<RidersManagementTab> {
           Row(
             children: [
               _buildHeaderButton(
-                icon: _showMap ? Icons.list_alt : Icons.map_outlined,
+                icon: _showMap ? Icons.list_alt : Icons.map,
                 color: const Color(0xFF00D9A5),
                 onTap: () => setState(() => _showMap = !_showMap),
               ),
@@ -2209,7 +2209,7 @@ class _RidersManagementTabState extends State<RidersManagementTab> {
         children: [
           Expanded(child: _buildStatCard('Online', _stats['online'] ?? 0, const Color(0xFF00D9A5), Icons.check_circle)),
           const SizedBox(width: 12),
-          Expanded(child: _buildStatCard('Busy', _stats['busy'] ?? 0, const Color(0xFFFFB020), Icons.local_shipping)),
+          Expanded(child: _buildStatCard('Busy', _stats['busy'] ?? 0, const Color(0xFFFFB020), Icons.two_wheeler_rounded)),
           const SizedBox(width: 12),
           Expanded(child: _buildStatCard('Offline', _stats['offline'] ?? 0, const Color(0xFF6B7280), Icons.do_not_disturb)),
         ],
@@ -2331,7 +2331,7 @@ class _RidersManagementTabState extends State<RidersManagementTab> {
                 color: const Color(0xFF10B981).withOpacity(0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.location_on, color: Color(0xFF10B981), size: 24),
+              child: const Icon(Icons.location_on_rounded, color: Color(0xFF10B981), size: 24),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -2482,7 +2482,7 @@ class _RidersManagementTabState extends State<RidersManagementTab> {
                       Row(
                         children: [
                           Icon(
-                            hasLocation ? Icons.location_on : Icons.location_off,
+                            hasLocation ? Icons.location_on_rounded : Icons.location_off,
                             size: 14,
                             color: hasLocation ? Colors.white.withOpacity(0.5) : Colors.white.withOpacity(0.3),
                           ),
@@ -2673,7 +2673,7 @@ class _RidersManagementTabState extends State<RidersManagementTab> {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      Icon(Icons.phone_outlined, size: 13, color: Colors.white.withOpacity(0.4)),
+                      Icon(Icons.phone, size: 13, color: Colors.white.withOpacity(0.4)),
                       const SizedBox(width: 4),
                       Text(
                         rider['phone']?.toString() ?? 'No phone',
@@ -2687,7 +2687,7 @@ class _RidersManagementTabState extends State<RidersManagementTab> {
                         style: const TextStyle(fontSize: 12, color: Color(0xFFF59E0B), fontWeight: FontWeight.w600),
                       ),
                       const SizedBox(width: 10),
-                      Icon(Icons.delivery_dining, size: 13, color: Colors.white.withOpacity(0.4)),
+                      Icon(Icons.two_wheeler_rounded, size: 13, color: Colors.white.withOpacity(0.4)),
                       const SizedBox(width: 2),
                       Text(
                         '$deliveries',
@@ -2706,7 +2706,7 @@ class _RidersManagementTabState extends State<RidersManagementTab> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.local_shipping, size: 11, color: Color(0xFFF59E0B)),
+                          const Icon(Icons.two_wheeler_rounded, size: 11, color: Color(0xFFF59E0B)),
                           const SizedBox(width: 4),
                           Text(
                             'Order #$currentOrder',
@@ -2743,7 +2743,7 @@ class _RidersManagementTabState extends State<RidersManagementTab> {
       child: Column(
         children: [
           Icon(
-            Icons.delivery_dining,
+            Icons.two_wheeler_rounded,
             size: 48,
             color: Colors.white.withOpacity(0.15),
           ),
@@ -2887,7 +2887,7 @@ class _UnassignedOrderCard extends StatelessWidget {
           const SizedBox(height: 10),
           Row(
             children: [
-              Icon(Icons.location_on_outlined, size: 13, color: Colors.white.withOpacity(0.4)),
+              Icon(Icons.location_on_rounded, size: 13, color: Colors.white.withOpacity(0.4)),
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
@@ -3049,7 +3049,7 @@ class _RiderDetailsSheet extends StatelessWidget {
                     children: [
                       _buildStatItem(Icons.star, '${rider['rating'] ?? 4.5}', 'Rating', const Color(0xFFF59E0B)),
                       Container(width: 1, height: 36, color: Colors.white.withOpacity(0.08)),
-                      _buildStatItem(Icons.delivery_dining, '${rider['deliveries'] ?? 0}', 'Trips', const Color(0xFF10B981)),
+                      _buildStatItem(Icons.two_wheeler_rounded, '${rider['deliveries'] ?? 0}', 'Trips', const Color(0xFF10B981)),
                       Container(width: 1, height: 36, color: Colors.white.withOpacity(0.08)),
                       _buildStatItem(Icons.attach_money, '${rider['earnings'] ?? 0}', 'Earned', const Color(0xFF8B5CF6)),
                     ],
@@ -3058,9 +3058,9 @@ class _RiderDetailsSheet extends StatelessWidget {
                 const SizedBox(height: 20),
                 
                 // Details Section
-                _buildDetailRow('Phone', rider['phone']?.toString() ?? 'No phone', Icons.phone_outlined),
-                _buildDetailRow('Vehicle', rider['vehicle']?.toString() ?? 'Not specified', Icons.two_wheeler),
-                _buildDetailRow('License', rider['license_plate']?.toString() ?? 'Not provided', Icons.badge_outlined),
+                _buildDetailRow('Phone', rider['phone']?.toString() ?? 'No phone', Icons.phone),
+                _buildDetailRow('Vehicle', rider['vehicle']?.toString() ?? 'Not specified', Icons.two_wheeler_rounded),
+                _buildDetailRow('License', rider['license_plate']?.toString() ?? 'Not provided', Icons.badge),
                 
                 if (rider['current_order'] != null) ...[
                   const SizedBox(height: 16),
@@ -3072,7 +3072,7 @@ class _RiderDetailsSheet extends StatelessWidget {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.local_shipping, color: Color(0xFFF59E0B), size: 20),
+                        const Icon(Icons.two_wheeler_rounded, color: Color(0xFFF59E0B), size: 20),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Column(
@@ -3107,7 +3107,7 @@ class _RiderDetailsSheet extends StatelessWidget {
                         ),
                       );
                     },
-                    icon: const Icon(Icons.location_on),
+                    icon: const Icon(Icons.location_on_rounded),
                     label: const Text('Open Location in Maps'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF10B981),
@@ -3127,7 +3127,7 @@ class _RiderDetailsSheet extends StatelessWidget {
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: () {},
-                        icon: const Icon(Icons.message_outlined, size: 18),
+                        icon: const Icon(Icons.message, size: 18),
                         label: const Text('Message'),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.white,
@@ -3433,7 +3433,7 @@ class _MoneyManagementTabState extends State<MoneyManagementTab> {
                     _StatCard(
                       'Orders',
                       '$totalOrders',
-                      Icons.shopping_bag,
+                      Icons.shopping_bag_rounded,
                       AppColors.info,
                     ),
                     _StatCard(
@@ -3481,7 +3481,7 @@ class _MoneyManagementTabState extends State<MoneyManagementTab> {
                         deliveryFees > 0 
                           ? 'Rider payouts'
                           : 'No delivery fees yet',
-                        Icons.delivery_dining,
+                        Icons.two_wheeler_rounded,
                         AppColors.info,
                         context,
                       ),
@@ -3492,7 +3492,7 @@ class _MoneyManagementTabState extends State<MoneyManagementTab> {
                         vendorPayouts > 0 
                           ? 'Payments to vendors'
                           : 'No vendor payouts yet',
-                        Icons.store,
+                        Icons.storefront_rounded,
                         AppColors.success,
                         context,
                       ),
@@ -3562,7 +3562,7 @@ class _MoneyManagementTabState extends State<MoneyManagementTab> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.shopping_bag, size: 14, color: Colors.white),
+                    const Icon(Icons.shopping_bag_rounded, size: 14, color: Colors.white),
                     const SizedBox(width: 4),
                     Text(
                       '$orders',

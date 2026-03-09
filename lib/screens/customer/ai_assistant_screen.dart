@@ -1,4 +1,4 @@
-﻿import 'dart:math';
+import 'dart:math';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -312,7 +312,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
     actions.add(_QuickAction('Plan groceries', Icons.psychology_rounded, '__SMART_CART__'));
 
     // 2. Track order — always useful
-    actions.add(_QuickAction('Track order', Icons.local_shipping_rounded, '__TRACK_ORDER__'));
+    actions.add(_QuickAction('Track order', Icons.two_wheeler_rounded, '__TRACK_ORDER__'));
 
     // 3. Time-aware meal idea (contextual — only 1 shown)
     if (h >= 5 && h < 11) {
@@ -1195,7 +1195,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
   static IconData _vendorTypeIcon(String? vendorType) {
     switch (vendorType?.toLowerCase()) {
       case 'restaurant':
-        return Icons.restaurant;
+        return Icons.restaurant_rounded;
       case 'cafe':
         return Icons.coffee;
       case 'fast_food':
@@ -1205,7 +1205,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
       case 'bakery':
         return Icons.bakery_dining;
       case 'supermarket':
-        return Icons.store;
+        return Icons.storefront_rounded;
       case 'grocery':
         return Icons.shopping_basket;
       case 'minimart':
@@ -1217,7 +1217,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
       case 'fashion':
         return Icons.checkroom;
       default:
-        return Icons.shopping_bag;
+        return Icons.shopping_bag_rounded;
     }
   }
 
@@ -1959,7 +1959,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
                                     )),
                                     if (item.prepTime != null) ...[
                                       const SizedBox(width: 6),
-                                      Icon(Icons.timer_outlined, size: 11, color: ts.withOpacity(0.6)),
+                                      Icon(Icons.timer, size: 11, color: ts.withOpacity(0.6)),
                                       Text(' ${item.prepTime}min', style: TextStyle(
                                         color: ts.withOpacity(0.6), fontSize: 11,
                                       )),
@@ -2013,7 +2013,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
                                 height: 36,
                                 child: OutlinedButton.icon(
                                   onPressed: () => _saveAsShoppingList(reply.items),
-                                  icon: const Icon(Icons.bookmark_add_outlined, size: 16),
+                                  icon: const Icon(Icons.bookmark_add, size: 16),
                                   label: const Text('Save', style: TextStyle(fontSize: 12)),
                                   style: OutlinedButton.styleFrom(
                                     foregroundColor: _brand,
@@ -2161,7 +2161,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
       chips.add(_QuickAction('Meal ideas', Icons.restaurant_rounded, '__MEAL_IDEAS__'));
     }
     if (lower.contains('order') || lower.contains('delivery') || lower.contains('track')) {
-      chips.add(_QuickAction('Track order', Icons.local_shipping_rounded, '__TRACK_ORDER__'));
+      chips.add(_QuickAction('Track order', Icons.two_wheeler_rounded, '__TRACK_ORDER__'));
     }
 
     if (chips.isEmpty) return const SizedBox.shrink();
@@ -2359,7 +2359,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
                   ),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Row(children: [
-                      Icon(Icons.monitor_heart_outlined, size: 14, color: _brandLight),
+                      Icon(Icons.monitor_heart, size: 14, color: _brandLight),
                       const SizedBox(width: 5),
                       Text('Nutrition Estimate', style: TextStyle(color: _brandLight, fontSize: 11, fontWeight: FontWeight.w700)),
                       const Spacer(),

@@ -10,9 +10,9 @@ class VendorProfileScreen extends StatelessWidget {
 
   // Neutral palette
   static const Color primaryColor = Color(0xFF111111);
-  static const Color primaryLight = Color(0xFFDADDE2);
+  static const Color primaryLight = Colors.white;
   static const Color darkGray = Color(0xFF0B0B0B);
-  static const Color lightGray = Color(0xFFDADDE2);
+  static const Color lightGray = Colors.white;
   static const Color accentGreen = Color(0xFF4CAF50);
 
   @override
@@ -565,7 +565,7 @@ class VendorProfileScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? Colors.transparent : const Color(0xFFDADDE2),
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -627,7 +627,7 @@ class VendorProfileScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? Colors.transparent : const Color(0xFFDADDE2),
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isDark
@@ -686,7 +686,7 @@ class VendorProfileScreen extends StatelessWidget {
     required Color iconColor,
   }) {
     return Material(
-      color: isDark ? Colors.transparent : const Color(0xFFDADDE2),
+      color: Colors.transparent,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: onTap,
@@ -786,7 +786,7 @@ class VendorProfileScreen extends StatelessWidget {
                       prefixIcon: Icon(Icons.lock_outline, color: subtextColor, size: 20),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          showOldPassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                          showOldPassword ? Icons.visibility : Icons.visibility_off,
                           color: subtextColor, size: 20,
                         ),
                         onPressed: () => setState(() => showOldPassword = !showOldPassword),
@@ -812,7 +812,7 @@ class VendorProfileScreen extends StatelessWidget {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.email_outlined, color: Color(0xFF4CAF50), size: 20),
+                        const Icon(Icons.email, color: Color(0xFF4CAF50), size: 20),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
@@ -858,7 +858,7 @@ class VendorProfileScreen extends StatelessWidget {
                       prefixIcon: Icon(Icons.lock_outline, color: subtextColor, size: 20),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          showNewPassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                          showNewPassword ? Icons.visibility : Icons.visibility_off,
                           color: subtextColor, size: 20,
                         ),
                         onPressed: () => setState(() => showNewPassword = !showNewPassword),
@@ -885,7 +885,7 @@ class VendorProfileScreen extends StatelessWidget {
                       prefixIcon: Icon(Icons.lock_outline, color: subtextColor, size: 20),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          showConfirmPassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                          showConfirmPassword ? Icons.visibility : Icons.visibility_off,
                           color: subtextColor, size: 20,
                         ),
                         onPressed: () => setState(() => showConfirmPassword = !showConfirmPassword),

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -27,7 +27,7 @@ class LandingScreen extends StatelessWidget {
                 color: const Color(0xFF2E7D32).withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.exit_to_app, color: Color(0xFF2E7D32), size: 22),
+              child: const Icon(Icons.logout_rounded, color: Color(0xFF2E7D32), size: 22),
             ),
             const SizedBox(width: 12),
             Text(

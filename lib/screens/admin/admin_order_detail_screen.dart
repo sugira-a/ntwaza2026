@@ -90,6 +90,7 @@ class _AdminOrderDetailScreenState extends State<AdminOrderDetailScreen>
 
   Color _getStatusColor(OrderStatus status) {
     switch (status) {
+      case OrderStatus.awaitingPayment: return const Color(0xFFEF6C00);
       case OrderStatus.completed: return accentGreen;
       case OrderStatus.cancelled: return red;
       case OrderStatus.pending: return const Color(0xFFF59E0B);
@@ -102,6 +103,7 @@ class _AdminOrderDetailScreenState extends State<AdminOrderDetailScreen>
 
   IconData _getStatusIcon(OrderStatus status) {
     switch (status) {
+      case OrderStatus.awaitingPayment: return Icons.payment_rounded;
       case OrderStatus.pending: return Icons.hourglass_empty_rounded;
       case OrderStatus.confirmed: return Icons.check_circle_outline_rounded;
       case OrderStatus.preparing: return Icons.restaurant_rounded;

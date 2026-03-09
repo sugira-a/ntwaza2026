@@ -525,9 +525,9 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
               if (!authProvider.isAuthenticated) ...[
                 _buildSettingsItem(Icons.login, 'Login', () { Navigator.pop(context); context.push('/login'); }, Icons.arrow_forward_ios, textColor),
                 Divider(height: 1, color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!),
-                _buildSettingsItem(Icons.person_add_outlined, 'Sign Up', () { Navigator.pop(context); context.push('/register'); }, Icons.arrow_forward_ios, textColor),
+                _buildSettingsItem(Icons.person_add, 'Sign Up', () { Navigator.pop(context); context.push('/register'); }, Icons.arrow_forward_ios, textColor),
               ] else ...[
-                _buildSettingsItem(Icons.person, 'Profile', () { Navigator.pop(context); context.push('/profile'); }, Icons.arrow_forward_ios, textColor),
+                _buildSettingsItem(Icons.account_circle_rounded, 'Profile', () { Navigator.pop(context); context.push('/profile'); }, Icons.arrow_forward_ios, textColor),
                 Divider(height: 1, color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!),
                 _buildSettingsItem(Icons.receipt_long, 'My Orders', () => Navigator.pop(context), Icons.arrow_forward_ios, textColor),
                 Divider(height: 1, color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!),
@@ -987,7 +987,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => Container(
                           color: isDarkMode ? Colors.grey[900] : Colors.grey[200],
-                          child: Center(child: Icon(Icons.restaurant, size: 80, color: isDarkMode ? Colors.grey[700] : Colors.grey[400])),
+                          child: Center(child: Icon(Icons.restaurant_rounded, size: 80, color: isDarkMode ? Colors.grey[700] : Colors.grey[400])),
                         ),
                       ),
                       Container(
@@ -1041,7 +1041,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
                                 Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(Icons.location_on, size: 16, color: Colors.white70),
+                                    Icon(Icons.location_on_rounded, size: 16, color: Colors.white70),
                                     SizedBox(width: 4),
                                     Text(widget.vendor.formattedDistance, style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w600)),
                                   ],
@@ -1242,7 +1242,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
                                     color: (isDarkMode ? Colors.grey[900] : Colors.grey[100]),
                                     shape: BoxShape.circle,
                                   ),
-                                  child: Icon(provider.isRestaurant ? Icons.restaurant_menu : Icons.inventory_2_outlined, size: 36, color: subtextColor.withOpacity(0.5)),
+                                  child: Icon(provider.isRestaurant ? Icons.restaurant_menu : Icons.inventory_2, size: 36, color: subtextColor.withOpacity(0.5)),
                                 ),
                                 SizedBox(height: 16),
                                 Text(provider.isRestaurant ? 'No menu items yet' : 'No products yet', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: textColor)),
@@ -1347,7 +1347,7 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
                         ),
                         SizedBox(height: 16),
                         _buildInfoCard(
-                          icon: Icons.local_shipping_outlined,
+                          icon: Icons.two_wheeler_rounded,
                           title: 'Delivery Information',
                           child: Column(
                             children: [
@@ -1436,11 +1436,11 @@ class _VendorDetailScreenState extends State<VendorDetailScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildNavItem(Icons.home_outlined, Icons.home, 'Home', 0, textColor, subtextColor),
-                _buildNavItem(Icons.restaurant_outlined, Icons.restaurant, 'Restaurants', 1, textColor, subtextColor),
-                _buildNavItem(Icons.shopping_bag_outlined, Icons.shopping_bag, 'Markets', 2, textColor, subtextColor),
-                _buildNavItem(Icons.shopping_cart_outlined, Icons.shopping_cart, 'Cart', 3, textColor, subtextColor),
-                _buildNavItem(Icons.person_outline, Icons.person, 'Profile', 4, textColor, subtextColor),
+                _buildNavItem(Icons.home_rounded, Icons.home_rounded, 'Home', 0, textColor, subtextColor),
+                _buildNavItem(Icons.restaurant_rounded, Icons.restaurant_rounded, 'Restaurants', 1, textColor, subtextColor),
+                _buildNavItem(Icons.shopping_bag_rounded, Icons.shopping_bag_rounded, 'Markets', 2, textColor, subtextColor),
+                _buildNavItem(Icons.shopping_cart, Icons.shopping_cart, 'Cart', 3, textColor, subtextColor),
+                _buildNavItem(Icons.account_circle_outlined, Icons.account_circle_rounded, 'Profile', 4, textColor, subtextColor),
               ],
             ),
           ),

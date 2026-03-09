@@ -51,7 +51,10 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 void main() async {
   // Setup error handling for uncaught exceptions
   FlutterError.onError = (FlutterErrorDetails details) {
-    print('❌ Flutter Error: ${details.exceptionAsString()}');
+    // Skip known harmless debug-mode frame timing assertion
+    final message = details.exceptionAsString();
+    if (message.contains('debugFrameWasSentToEngine')) return;
+    print('❌ Flutter Error: $message');
     print('${details.context}');
   };
   

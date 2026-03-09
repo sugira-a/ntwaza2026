@@ -48,6 +48,14 @@ class AppRouter {
       final isLoginPage = state.matchedLocation == '/login';
       final isRegisterPage = state.matchedLocation == '/register';
 
+      // Prevent browser back/side-swipe from showing login/register while still authenticated.
+      if (isAuthenticated && (isLoginPage || isRegisterPage)) {
+        if (isAdmin) return '/admin';
+        if (isVendor) return '/vendor';
+        if (isRider) return '/rider';
+        return '/';
+      }
+
       if (isAuthenticated && isVendor && !isAdmin && state.matchedLocation == '/') {
         return '/vendor';
       }

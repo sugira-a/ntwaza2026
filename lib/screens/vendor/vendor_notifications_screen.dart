@@ -66,7 +66,7 @@ class _VendorNotificationsScreenState extends State<VendorNotificationsScreen> {
           ),
         PopupMenuButton<String>(
           icon: Icon(Icons.more_vert, color: isDark ? Colors.white : Colors.black),
-          color: isDark ? Colors.grey[850] : Colors.white,
+          color: isDark ? const Color(0xFF252525) : Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           onSelected: (value) => value == 'clear_all' ? _showClearDialog(provider, isDark, true) : _showClearDialog(provider, isDark, false),
           itemBuilder: (context) => [
@@ -180,7 +180,7 @@ class _NotificationCard extends StatelessWidget {
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: isDark ? (isUnread ? Colors.grey[850] : Colors.grey[900]) : (isUnread ? Colors.blue.withOpacity(0.05) : Colors.white),
+            color: isDark ? (isUnread ? const Color(0xFF252525) : Colors.grey[900]) : (isUnread ? Colors.blue.withOpacity(0.05) : Colors.white),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: isUnread ? (isDark ? Colors.blue.withOpacity(0.3) : Colors.blue.withOpacity(0.3)) : (isDark ? Colors.grey[800]! : Colors.grey[300]!), width: isUnread ? 1.5 : 1),
           ),

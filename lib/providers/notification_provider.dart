@@ -19,10 +19,14 @@ class NotificationProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   Timer? _pollingTimer;
+  Timer? _rateLimitResumeTimer;
   bool _isPolling = false;
   bool _disposed = false;
   int _consecutiveFailures = 0;
   DateTime? _lastErrorLogTime;
+  DateTime? _rateLimitedUntil;
+  static const int _defaultPollingSeconds = 120;
+  static const Duration _rateLimitCooldown = Duration(minutes: 15);
 
   List<models.Notification> get notifications => _notifications;
   int get unreadCount => _unreadCount;
@@ -30,12 +34,11 @@ class NotificationProvider with ChangeNotifier {
   String? get error => _error;
   bool get isPolling => _isPolling;
 
-  Future<void> initialize({int pollingInterval = 60}) async {  // Increased from 30 to 60 seconds
+  Future<void> initialize({int pollingInterval = _defaultPollingSeconds}) async {
     print('🔔 Initializing NotificationProvider...');
     await _notificationService.initialize();
     _notificationService.onNotificationTapped = _handleNotificationTap;
     await _registerFcmToken();
-    await fetchNotifications();
     await fetchUnreadCount();
     startPolling(intervalSeconds: pollingInterval);
     print('✅ NotificationProvider initialized');
@@ -83,6 +86,8 @@ class NotificationProvider with ChangeNotifier {
   }
 
   Future<void> fetchUnreadCount() async {
+    if (_isInRateLimitCooldown()) return;
+
     try {
       // Skip polling if no auth token is set
       if ((_apiService.authToken ?? _apiService.token) == null) {
@@ -92,28 +97,56 @@ class NotificationProvider with ChangeNotifier {
 
       final response = await _apiService.get('/api/notifications/unread-count');
       if (response['success'] == true) {
+        _resetFailureCount();
+        _clearRateLimitCooldown();
         _unreadCount = (response['unread_count'] ?? response['count'] ?? 0) as int;
         notifyListeners();
       }
     } catch (e) {
-      // If we get a 401 / authorization error, stop polling to avoid spamming
       final err = e.toString().toLowerCase();
+      final isAuthError = err.contains('401') || err.contains('authorization') || err.contains('invalid token');
+      final isTransientNetwork = err.contains('failed to fetch') || err.contains('clientexception') || err.contains('connection');
+      final isRateLimited = _isRateLimitError(err);
+
+      if (isRateLimited) {
+        _activateRateLimitCooldown();
+        return;
+      }
+
+      // If we get a 401 / authorization error, stop polling to avoid spamming
+      if (isAuthError) {
+        print('🛑 Authorization error while polling notifications — stopping polling');
+        stopPolling();
+        return;
+      }
+
+      if (isTransientNetwork) {
+        _consecutiveFailures++;
+        final now = DateTime.now();
+        final shouldLog = _lastErrorLogTime == null || now.difference(_lastErrorLogTime!).inSeconds > 60;
+        if (shouldLog) {
+          print('⚠️ Unread count network issue (${_consecutiveFailures}): $e');
+          _lastErrorLogTime = now;
+        }
+        return;
+      }
+
       print('❌ Error fetching unread count: $e');
       if (err.contains('401') || err.contains('authorization') || err.contains('invalid token')) {
-        print('🛑 Authorization error while polling notifications — stopping polling');
         stopPolling();
       }
     }
   }
 
-  void startPolling({int intervalSeconds = 60}) {  // Increased from 30 to 60 seconds
+  void startPolling({int intervalSeconds = _defaultPollingSeconds}) {
+    final effectiveInterval = intervalSeconds < 120 ? 120 : intervalSeconds;
     if (_isPolling) {
       print('🔄 Polling already active');
       return;
     }
     _isPolling = true;
-    print('🔄 Starting polling (every $intervalSeconds seconds)...');
-    _pollingTimer = Timer.periodic(Duration(seconds: intervalSeconds), (_) => _pollNotifications());
+    print('🔄 Starting polling (every $effectiveInterval seconds)...');
+    _pollingTimer = Timer.periodic(Duration(seconds: effectiveInterval), (_) => _pollNotifications());
     notifyListeners();
   }
 
@@ -129,6 +162,8 @@ class NotificationProvider with ChangeNotifier {
 
   Future<void> _pollNotifications() async {
     if (_disposed) return;
+    if (_isInRateLimitCooldown()) return;
+
     try {
       // Ensure we have a token before polling
       if ((_apiService.authToken ?? _apiService.token) == null) {
@@ -140,6 +175,7 @@ class NotificationProvider with ChangeNotifier {
       if (_disposed) return;
       if (response['success'] == true) {
         _resetFailureCount();
+        _clearRateLimitCooldown();
         final newUnreadCount = (response['unread_count'] ?? response['count'] ?? 0) as int;
         if (newUnreadCount > _unreadCount) {
           print('🔔 New notifications detected! ($newUnreadCount)');
@@ -156,6 +192,11 @@ class NotificationProvider with ChangeNotifier {
     } catch (e) {
       _consecutiveFailures++;
       final err = e.toString().toLowerCase();
+
+      if (_isRateLimitError(err)) {
+        _activateRateLimitCooldown();
+        return;
+      }
       
       // Only log errors once per minute to avoid spam
       final now = DateTime.now();
@@ -178,6 +219,37 @@ class NotificationProvider with ChangeNotifier {
         stopPolling();
       }
     }
+  }
+
+  bool _isRateLimitError(String err) {
+    return err.contains('429') || err.contains('too many requests') || err.contains('rate limit');
+  }
+
+  bool _isInRateLimitCooldown() {
+    final until = _rateLimitedUntil;
+    return until != null && DateTime.now().isBefore(until);
+  }
+
+  void _activateRateLimitCooldown() {
+    _rateLimitedUntil = DateTime.now().add(_rateLimitCooldown);
+    _error = 'Too many requests. Notification polling paused for 15 minutes.';
+    stopPolling();
+    _rateLimitResumeTimer?.cancel();
+    _rateLimitResumeTimer = Timer(_rateLimitCooldown, () {
+      if (_disposed) return;
+      _rateLimitedUntil = null;
+      startPolling();
+      fetchUnreadCount();
+    });
+    notifyListeners();
+    print('🛑 Notification polling paused for ${_rateLimitCooldown.inMinutes} minutes due to 429 rate limit');
+  }
+
+  void _clearRateLimitCooldown() {
+    if (_rateLimitedUntil == null) return;
+    _rateLimitedUntil = null;
+    _rateLimitResumeTimer?.cancel();
+    _rateLimitResumeTimer = null;
   }
 
   // Reset failure counter on successful poll
@@ -320,6 +392,7 @@ class NotificationProvider with ChangeNotifier {
   void dispose() {
     _disposed = true;
     stopPolling();
+    _rateLimitResumeTimer?.cancel();
     super.dispose();
   }
 }

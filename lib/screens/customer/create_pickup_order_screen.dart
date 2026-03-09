@@ -11,6 +11,7 @@ import '../../providers/pickup_order_provider.dart';
 import '../../utils/distance.dart';
 import '../../utils/location_validator.dart';
 import '../../services/google_maps_service.dart';
+import '../../services/payment_service.dart';
 import '../admin/admin_dashboard_pro.dart';
 
 class CreatePickupOrderScreen extends StatefulWidget {
@@ -30,13 +31,14 @@ class _CreatePickupOrderScreenState extends State<CreatePickupOrderScreen> {
   final TextEditingController _weightController = TextEditingController();
   final TextEditingController _itemValueController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
+  final TextEditingController _momoPhoneController = TextEditingController();
 
   String _selectedPackageType = 'Small box';
 
   DeliveryAddress? _pickupAddress;
   DeliveryAddress? _dropoffAddress;
   DateTime _scheduledPickupTime = DateTime.now().add(const Duration(minutes: 30));
-  String _paymentMethod = 'cash';
+  String _paymentMethod = 'momo';
   bool _isSubmitting = false;
   bool _isCalculatingDistance = false;
   Map<String, dynamic>? _roadDistanceData;
@@ -56,6 +58,7 @@ class _CreatePickupOrderScreenState extends State<CreatePickupOrderScreen> {
     final auth = context.read<AuthProvider>();
     if (auth.user?.phone != null && auth.user!.phone!.isNotEmpty) {
       _pickupPhoneController.text = auth.user!.phone!;
+      _momoPhoneController.text = auth.user!.phone!;
     }
     // Prefill sender name from user database
     if (auth.user != null) {
@@ -102,6 +105,7 @@ class _CreatePickupOrderScreenState extends State<CreatePickupOrderScreen> {
     _weightController.dispose();
     _itemValueController.dispose();
     _notesController.dispose();
+    _momoPhoneController.dispose();
     super.dispose();
   }
 
@@ -343,6 +347,10 @@ class _CreatePickupOrderScreenState extends State<CreatePickupOrderScreen> {
       _showSnack('Pickup and dropoff must be within Kigali');
       return false;
     }
+    if (_paymentMethod == 'momo' && _momoPhoneController.text.trim().isEmpty) {
+      _showSnack('Enter your MoMo phone number');
+      return false;
+    }
     return true;
   }
 
@@ -409,7 +417,7 @@ class _CreatePickupOrderScreenState extends State<CreatePickupOrderScreen> {
     final provider = context.read<PickupOrderProvider>();
     final requireCall = _requiresCallBeforePayment();
     final pickupCode = _generatePickupCode();
-    final paymentMethod = requireCall ? 'cash' : _paymentMethod;
+    final paymentMethod = _paymentMethod;
     final notes = _composeNotes(_notesController.text, pickupCode, requireCall);
     final result = await provider.createPickupOrder(
       customerId: customer.id ?? '',
@@ -433,6 +441,37 @@ class _CreatePickupOrderScreenState extends State<CreatePickupOrderScreen> {
     final resultMap = result as Map<String, dynamic>?;
     final order = resultMap?['order'];
     if (order != null) {
+      // Initiate MoMo payment if selected
+      if (paymentMethod == 'momo' && mounted) {
+        final orderId = order['id']?.toString();
+        if (orderId != null) {
+          final paymentService = PaymentService();
+          final payResult = await paymentService.initiatePickupPayment(
+            pickupOrderId: orderId,
+            phoneNumber: _momoPhoneController.text.trim(),
+          );
+          if (mounted) {
+            if (payResult['success'] == true) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('📲 Dial *182# on your phone to approve the payment.'),
+                  backgroundColor: Color(0xFF1565C0),
+                  duration: Duration(seconds: 8),
+                ),
+              );
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Payment could not be initiated: ${payResult['error'] ?? 'Unknown error'}. You can retry later.'),
+                  backgroundColor: const Color(0xFFE65100),
+                  duration: const Duration(seconds: 5),
+                ),
+              );
+            }
+          }
+        }
+      }
+
       if (mounted) {
         final vendorCode = resultMap?['vendorCode']?.toString() ?? 'N/A';
         final customerCode = resultMap?['customerCode']?.toString() ?? 'N/A';
@@ -647,7 +686,7 @@ class _CreatePickupOrderScreenState extends State<CreatePickupOrderScreen> {
     final outsideServiceArea = (_pickupAddress != null && !pickupInKigali) ||
         (_dropoffAddress != null && !dropoffInKigali);
     final requireCall = _requiresCallBeforePayment();
-    final effectivePaymentMethod = requireCall ? 'cash' : _paymentMethod;
+    final effectivePaymentMethod = _paymentMethod;
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -727,7 +766,7 @@ class _CreatePickupOrderScreenState extends State<CreatePickupOrderScreen> {
                       textColor: isDark ? Colors.white : Colors.black,
                       subtextColor: isDark ? Colors.white70 : Colors.black54,
                       borderColor: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE3E5E8),
-                      prefixIcon: Icons.person_outline,
+                      prefixIcon: Icons.account_circle_outlined,
                       backgroundColor: isDark ? const Color(0xFF0F0F0F) : const Color(0xFFFDFEFF),
                     ),
                     const SizedBox(height: 12),
@@ -787,7 +826,7 @@ class _CreatePickupOrderScreenState extends State<CreatePickupOrderScreen> {
                       textColor: isDark ? Colors.white : Colors.black,
                       subtextColor: isDark ? Colors.white70 : Colors.black54,
                       borderColor: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE3E5E8),
-                      prefixIcon: Icons.person,
+                      prefixIcon: Icons.account_circle_rounded,
                       backgroundColor: isDark ? const Color(0xFF0F0F0F) : const Color(0xFFFDFEFF),
                     ),
                     const SizedBox(height: 12),
@@ -806,7 +845,7 @@ class _CreatePickupOrderScreenState extends State<CreatePickupOrderScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            _buildSectionHeaderRow('Package details', Icons.inventory_2_outlined, textColor, subtextColor),
+            _buildSectionHeaderRow('Package details', Icons.inventory_2, textColor, subtextColor),
             Container(
               margin: const EdgeInsets.symmetric(vertical: 12),
               decoration: BoxDecoration(
@@ -946,7 +985,7 @@ class _CreatePickupOrderScreenState extends State<CreatePickupOrderScreen> {
                 ],
               ),
             ),
-            _buildSectionHeaderRow('Payment', Icons.payments_outlined, textColor, subtextColor),
+            _buildSectionHeaderRow('Payment', Icons.payments, textColor, subtextColor),
             Container(
               margin: const EdgeInsets.symmetric(vertical: 12),
               decoration: BoxDecoration(
@@ -970,37 +1009,69 @@ class _CreatePickupOrderScreenState extends State<CreatePickupOrderScreen> {
               ),
               child: Padding(
                 padding: const EdgeInsets.all(16),
-                child: DropdownButtonFormField<String>(
-                  value: effectivePaymentMethod,
-                  items: const [
-                    DropdownMenuItem(value: 'cash', child: Text('Cash on delivery')),
-                    DropdownMenuItem(value: 'mobile_money', child: Text('Mobile Money')),
+                child: Column(
+                  children: [
+                    DropdownButtonFormField<String>(
+                      value: effectivePaymentMethod,
+                      items: const [
+                        DropdownMenuItem(value: 'momo', child: Text('Mobile Money (MTN/Airtel)')),
+                      ],
+                      onChanged: requireCall
+                          ? null
+                          : (value) {
+                              if (value != null) setState(() => _paymentMethod = value);
+                            },
+                      decoration: InputDecoration(
+                        labelText: 'Payment method',
+                        labelStyle: TextStyle(color: isDark ? Colors.white70 : Colors.black54),
+                        filled: true,
+                        fillColor: isDark ? const Color(0xFF0F0F0F) : const Color(0xFFFDFEFF),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE3E5E8)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE3E5E8)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE3E5E8), width: 1.5),
+                        ),
+                      ),
+                      style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 14),
+                      dropdownColor: isDark ? const Color(0xFF0F0F0F) : Colors.white,
+                    ),
+                    if (effectivePaymentMethod == 'momo') ...[
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _momoPhoneController,
+                        keyboardType: TextInputType.phone,
+                        decoration: InputDecoration(
+                          labelText: 'MoMo phone number',
+                          hintText: '250783300000',
+                          labelStyle: TextStyle(color: isDark ? Colors.white70 : Colors.black54),
+                          hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.black26),
+                          filled: true,
+                          fillColor: isDark ? const Color(0xFF0F0F0F) : const Color(0xFFFDFEFF),
+                          prefixIcon: Icon(Icons.phone_android, color: isDark ? Colors.white54 : Colors.black45, size: 20),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE3E5E8)),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE3E5E8)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: accentColor, width: 1.5),
+                          ),
+                        ),
+                        style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 14),
+                      ),
+                    ],
                   ],
-                  onChanged: requireCall
-                      ? null
-                      : (value) {
-                          if (value != null) setState(() => _paymentMethod = value);
-                        },
-                  decoration: InputDecoration(
-                    labelText: 'Payment method',
-                    labelStyle: TextStyle(color: isDark ? Colors.white70 : Colors.black54),
-                    filled: true,
-                    fillColor: isDark ? const Color(0xFF0F0F0F) : const Color(0xFFFDFEFF),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE3E5E8)),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE3E5E8)),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE3E5E8), width: 1.5),
-                    ),
-                  ),
-                  style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 14),
-                  dropdownColor: isDark ? const Color(0xFF0F0F0F) : Colors.white,
                 ),
               ),
             ),
@@ -1015,7 +1086,7 @@ class _CreatePickupOrderScreenState extends State<CreatePickupOrderScreen> {
                 subtextColor: subtextColor,
               ),
             ],
-            _buildSectionHeaderRow('Notes (optional)', Icons.edit_note_outlined, textColor, subtextColor),
+            _buildSectionHeaderRow('Notes (optional)', Icons.edit_note, textColor, subtextColor),
             Container(
               margin: const EdgeInsets.symmetric(vertical: 12),
               decoration: BoxDecoration(
@@ -1245,7 +1316,7 @@ class _CreatePickupOrderScreenState extends State<CreatePickupOrderScreen> {
       ),
       child: Row(
         children: [
-          Icon(Icons.local_shipping, color: accentColor, size: 20),
+          Icon(Icons.two_wheeler_rounded, color: accentColor, size: 20),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -1374,7 +1445,7 @@ class _CreatePickupOrderScreenState extends State<CreatePickupOrderScreen> {
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Row(
           children: [
-            Icon(Icons.location_on, color: AppColors.primary, size: 24),
+            Icon(Icons.location_on_rounded, color: AppColors.primary, size: 24),
             const SizedBox(width: 12),
             Expanded(
               child: Column(

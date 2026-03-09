@@ -53,7 +53,7 @@ class TermsOfServiceScreen extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.calendar_today_outlined, size: 14, color: accent),
+                        Icon(Icons.calendar_today, size: 14, color: accent),
                         const SizedBox(width: 8),
                         Text('Effective Date: $_effectiveDate',
                             style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: accent)),
@@ -101,7 +101,7 @@ class TermsOfServiceScreen extends StatelessWidget {
                   _numberedSection('4', 'Orders, Pricing & Payment', card, text, sub, divider, [
                     'All orders placed through the Platform are subject to acceptance by the relevant Vendor.',
                     'Prices are displayed in Rwandan Francs (RWF) and include applicable taxes unless otherwise stated.',
-                    'We accept Mobile Money (MTN MoMo, Airtel Money), debit/credit cards (Visa, Mastercard), and Cash on Delivery where available.',
+                    'We accept Mobile Money (MTN MoMo, Airtel Money) and debit/credit cards (Visa, Mastercard).',
                     'Delivery fees are calculated based on distance and may vary by location, time of day, and demand.',
                     'Promotional offers and discount codes are subject to specific terms and may be revoked at any time.',
                     'Payment is processed through secure, PCI-compliant third-party payment processors. Ntwaza does not store your full payment credentials.',
@@ -171,7 +171,7 @@ class TermsOfServiceScreen extends StatelessWidget {
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.contact_mail_outlined, size: 18, color: accent),
+                            Icon(Icons.contact_mail, size: 18, color: accent),
                             const SizedBox(width: 8),
                             Text('Contact & Inquiries',
                                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: text)),
@@ -183,13 +183,13 @@ class TermsOfServiceScreen extends StatelessWidget {
                           style: TextStyle(fontSize: 13, color: sub, height: 1.5),
                         ),
                         const SizedBox(height: 14),
-                        _contactRow(Icons.email_outlined, 'General: $_email', sub),
+                        _contactRow(Icons.email, 'General: $_email', sub),
                         const SizedBox(height: 6),
-                        _contactRow(Icons.gavel_outlined, 'Legal: $_legalEmail', sub),
+                        _contactRow(Icons.gavel, 'Legal: $_legalEmail', sub),
                         const SizedBox(height: 6),
-                        _contactRow(Icons.phone_outlined, 'Phone: $_phone', sub),
+                        _contactRow(Icons.phone, 'Phone: $_phone', sub),
                         const SizedBox(height: 6),
-                        _contactRow(Icons.location_on_outlined, 'NTWAZA Ltd., Kigali, Rwanda', sub),
+                        _contactRow(Icons.location_on_rounded, 'NTWAZA Ltd., Kigali, Rwanda', sub),
                         const SizedBox(height: 16),
                         Row(
                           children: [
@@ -199,7 +199,7 @@ class TermsOfServiceScreen extends StatelessWidget {
                                   final uri = Uri.parse('mailto:$_legalEmail?subject=Terms%20of%20Service%20Inquiry');
                                   if (await canLaunchUrl(uri)) await launchUrl(uri);
                                 },
-                                icon: const Icon(Icons.email_outlined, size: 16),
+                                icon: const Icon(Icons.email, size: 16),
                                 label: const Text('Email Legal Team', style: TextStyle(fontSize: 12.5)),
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: accent,
@@ -216,7 +216,7 @@ class TermsOfServiceScreen extends StatelessWidget {
                                   final uri = Uri.parse('tel:+250782195474');
                                   if (await canLaunchUrl(uri)) await launchUrl(uri);
                                 },
-                                icon: const Icon(Icons.phone_outlined, size: 16),
+                                icon: const Icon(Icons.phone, size: 16),
                                 label: const Text('Call Support', style: TextStyle(fontSize: 12.5)),
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: accent,

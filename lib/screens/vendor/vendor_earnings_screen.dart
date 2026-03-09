@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/vendor_order_provider.dart';
+import '../../models/order.dart';
 import '../../utils/helpers.dart';
 
 class VendorEarningsScreen extends StatefulWidget {
@@ -14,406 +15,383 @@ class VendorEarningsScreen extends StatefulWidget {
   State<VendorEarningsScreen> createState() => _VendorEarningsScreenState();
 }
 
-class _VendorEarningsScreenState extends State<VendorEarningsScreen> with SingleTickerProviderStateMixin {
+class _VendorEarningsScreenState extends State<VendorEarningsScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(() => setState(() {}));
   }
-  
+
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
   }
 
+  // ── helpers ─────────────────────────────────────────────────
+  List<Order> _completedOrders(VendorOrderProvider p) =>
+      p.orders.where((o) => o.status.index >= 4).toList();
+
+  List<Order> _todayOrders(VendorOrderProvider p) =>
+      _completedOrders(p).where((o) => _isToday(o.createdAt)).toList();
+
+  List<Order> _weekOrders(VendorOrderProvider p) =>
+      _completedOrders(p).where((o) => _isThisWeek(o.createdAt)).toList();
+
+  List<Order> _monthOrders(VendorOrderProvider p) =>
+      _completedOrders(p).where((o) => _isThisMonth(o.createdAt)).toList();
+
+  double _sumSubtotal(List<Order> orders) =>
+      orders.fold(0.0, (s, o) => s + o.subtotal);
+
+  int _sumItems(List<Order> orders) =>
+      orders.fold(0, (s, o) => s + o.items.length);
+
+  bool _isToday(DateTime d) {
+    final n = nowInRwanda(), r = toRwandaTime(d);
+    return r.year == n.year && r.month == n.month && r.day == n.day;
+  }
+
+  bool _isThisWeek(DateTime d) {
+    final n = nowInRwanda();
+    return toRwandaTime(d)
+        .isAfter(n.subtract(Duration(days: n.weekday - 1 + 1)));
+  }
+
+  bool _isThisMonth(DateTime d) {
+    final n = nowInRwanda(), r = toRwandaTime(d);
+    return r.year == n.year && r.month == n.month;
+  }
+
+  String _fmt(double v) => NumberFormat('#,###').format(v);
+
+  // ── build ───────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    final themeProvider = context.watch<ThemeProvider>();
-    final orderProvider = context.watch<VendorOrderProvider>();
-    
-    final isDarkMode = themeProvider.isDarkMode;
-    final backgroundColor = isDarkMode ? const Color(0xFF1A1A1A) : Colors.white;
-    final cardColor = isDarkMode ? const Color(0xFF1B1B1F) : Colors.white;
-    final textColor = isDarkMode ? Colors.white : Colors.black;
-    final subtextColor = isDarkMode ? Colors.grey[400]! : Colors.grey[600]!;
+    final isDark = context.watch<ThemeProvider>().isDarkMode;
+    final prov = context.watch<VendorOrderProvider>();
+    final bg = isDark ? const Color(0xFF0A0A0A) : const Color(0xFFF1F2F4);
+    final text = isDark ? Colors.white : Colors.black;
+    final sub = isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280);
+    final card = isDark ? const Color(0xFF1A1A1A) : Colors.white;
+    const accent = Color(0xFF22C55E);
 
-    // Calculate earnings from real data
-    final todayEarnings = _calculateTodayEarnings(orderProvider);
-    final weekEarnings = _calculateWeekEarnings(orderProvider);
-    final monthEarnings = _calculateMonthEarnings(orderProvider);
+    final todayList = _todayOrders(prov);
+    final weekList = _weekOrders(prov);
+    final monthList = _monthOrders(prov);
+
+    final selectedOrders = [todayList, weekList, monthList][_tabController.index];
+    final selectedEarnings = _sumSubtotal(selectedOrders);
 
     return Scaffold(
-      backgroundColor: backgroundColor,
+      backgroundColor: bg,
       appBar: AppBar(
-        backgroundColor: backgroundColor,
+        backgroundColor: bg,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        automaticallyImplyLeading: false,
         leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back_ios_new,
-            color: isDarkMode ? Colors.white : Colors.black,
-            size: 20,
-          ),
+          icon: Icon(Icons.arrow_back_ios_new, color: text, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text(
-          'Earnings',
-          style: TextStyle(
-            color: isDarkMode ? Colors.white : Colors.black,
-            fontSize: 22,
-            fontWeight: FontWeight.w900,
-            letterSpacing: -0.5,
-          ),
-        ),
+        title: Text('Earnings',
+            style: TextStyle(
+                color: text,
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.5)),
       ),
       body: RefreshIndicator(
-        onRefresh: () async {
-          await orderProvider.fetchOrders();
-        },
-        backgroundColor: cardColor,
-        color: isDarkMode ? Colors.white : Colors.black,
-        child: SingleChildScrollView(
+        onRefresh: () => prov.fetchOrders(),
+        color: text,
+        child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          child: Column(
-            children: [
-              // Total Balance Card
-              // Available Balance Card
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: isDarkMode ? const Color(0xFF24262B) : const Color(0xFF111827),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.08),
-                    width: 1,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
+          slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+                child: Column(children: [
+                  // ── Earnings card ──────────────────────────
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF111111), Color(0xFF1A1A1A)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(14),
                     ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Available Balance',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.85),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: const Row(
+                    child: Row(children: [
+                      Expanded(
+                        child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Icon(Icons.circle, color: Colors.cyan, size: 6),
-                              SizedBox(width: 4),
                               Text(
-                                'Active',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
-                          ),
+                                  'RWF ${_fmt(selectedEarnings)}',
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: -0.5)),
+                              const SizedBox(height: 2),
+                              Text('Product sales earnings',
+                                  style: TextStyle(
+                                      color: Colors.white.withOpacity(0.45),
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500)),
+                            ]),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: accent.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(8),
                         ),
+                        child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.shopping_bag_rounded,
+                                  color: accent, size: 14),
+                              const SizedBox(width: 5),
+                              Text('${selectedOrders.length}',
+                                  style: const TextStyle(
+                                      color: accent,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w800)),
+                            ]),
+                      ),
+                    ]),
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  // ── Tab bar ────────────────────────────────
+                  Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: BoxDecoration(
+                      color: card,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: TabBar(
+                      controller: _tabController,
+                      indicator: BoxDecoration(
+                        color: isDark ? Colors.white : Colors.black,
+                        borderRadius: BorderRadius.circular(9),
+                      ),
+                      labelColor: isDark ? Colors.black : Colors.white,
+                      unselectedLabelColor: sub,
+                      labelStyle: const TextStyle(
+                          fontSize: 12, fontWeight: FontWeight.w700),
+                      unselectedLabelStyle: const TextStyle(
+                          fontSize: 12, fontWeight: FontWeight.w600),
+                      dividerColor: Colors.transparent,
+                      indicatorSize: TabBarIndicatorSize.tab,
+                      splashFactory: NoSplash.splashFactory,
+                      tabs: const [
+                        Tab(text: 'Today'),
+                        Tab(text: 'Week'),
+                        Tab(text: 'Month'),
                       ],
                     ),
-                    const SizedBox(height: 10),
-                    Text(
-                      'Rwf ${NumberFormat('#,###').format(todayEarnings)}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 28,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Management view only',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.7),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                  ],
-                ),
-              ),
-
-              // Period Selector
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: cardColor,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: TabBar(
-                  controller: _tabController,
-                  indicator: UnderlineTabIndicator(
-                    borderSide: BorderSide(
-                      color: isDarkMode ? Colors.white : Colors.black,
-                      width: 3,
-                    ),
-                    insets: const EdgeInsets.symmetric(horizontal: 16),
                   ),
-                  labelColor: isDarkMode ? Colors.white : Colors.black,
-                  unselectedLabelColor: isDarkMode ? Colors.grey[500] : Colors.grey[500],
-                  labelStyle: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.2,
-                  ),
-                  unselectedLabelStyle: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  dividerColor: Colors.transparent,
-                  isScrollable: false,
-                  tabs: const [
-                    Tab(text: 'Today', height: 52),
-                    Tab(text: 'Week', height: 52),
-                    Tab(text: 'Month', height: 52),
-                  ],
-                ),
+
+                  const SizedBox(height: 14),
+
+                  // ── Quick stats row ────────────────────────
+                  Row(children: [
+                    _miniStat('Orders', '${selectedOrders.length}', Icons.receipt_long_rounded, accent, card, text, sub),
+                    const SizedBox(width: 10),
+                    _miniStat('Items', '${_sumItems(selectedOrders)}', Icons.inventory_2_rounded, const Color(0xFF3B82F6), card, text, sub),
+                    const SizedBox(width: 10),
+                    _miniStat('Avg', selectedOrders.isEmpty ? '0' : 'RWF ${_fmt(selectedEarnings / selectedOrders.length)}', Icons.trending_up_rounded, const Color(0xFFF59E0B), card, text, sub),
+                  ]),
+
+                  const SizedBox(height: 18),
+
+                  // ── Recent orders label ────────────────────
+                  Row(children: [
+                    Text('Recent Orders',
+                        style: TextStyle(
+                            color: text,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.2)),
+                    const Spacer(),
+                    Text('${selectedOrders.length} total',
+                        style: TextStyle(
+                            color: sub,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600)),
+                  ]),
+                  const SizedBox(height: 10),
+                ]),
               ),
-
-              const SizedBox(height: 16),
-
-              // Stats Cards
-              SizedBox(
-                height: 480,
-                child: TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildStatsView(
-                      context,
-                      'Today',
-                      todayEarnings,
-                      orderProvider.todayOrderCount,
-                      cardColor,
-                      isDarkMode ? Colors.white : Colors.black,
-                      isDarkMode ? Colors.grey[500]! : Colors.grey[600]!,
-                    ),
-                    _buildStatsView(
-                      context,
-                      'This Week',
-                      weekEarnings,
-                      orderProvider.orders.where((o) => _isThisWeek(o.createdAt)).length,
-                      cardColor,
-                      isDarkMode ? Colors.white : Colors.black,
-                      isDarkMode ? Colors.grey[500]! : Colors.grey[600]!,
-                    ),
-                    _buildStatsView(
-                      context,
-                      'This Month',
-                      monthEarnings,
-                      orderProvider.orders.where((o) => _isThisMonth(o.createdAt)).length,
-                      cardColor,
-                      isDarkMode ? Colors.white : Colors.black,
-                      isDarkMode ? Colors.grey[500]! : Colors.grey[600]!,
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 100),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatsView(
-    BuildContext context,
-    String period,
-    double earnings,
-    int orderCount,
-    Color cardColor,
-    Color textColor,
-    Color subtextColor,
-  ) {
-    final avgOrderValue = orderCount > 0 ? earnings / orderCount : 0;
-
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          // Revenue Card
-          _buildStatCard(
-            icon: Icons.trending_up,
-            iconColor: const Color(0xFF3B82F6),
-            title: 'Total Revenue',
-            value: 'Rwf ${NumberFormat('#,###').format(earnings)}',
-            subtitle: '$orderCount orders completed',
-            cardColor: cardColor,
-            textColor: textColor,
-            subtextColor: subtextColor,
-          ),
-          const SizedBox(height: 12),
-
-          // Average Order Value Card
-          _buildStatCard(
-            icon: Icons.receipt_long,
-            iconColor: const Color(0xFF8B5CF6),
-            title: 'Average Order',
-            value: 'Rwf ${NumberFormat('#,###').format(avgOrderValue)}',
-            subtitle: 'Per order',
-            cardColor: cardColor,
-            textColor: textColor,
-            subtextColor: subtextColor,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatCard({
-    required IconData icon,
-    required Color iconColor,
-    required String title,
-    required String value,
-    required String subtitle,
-    required Color cardColor,
-    required Color textColor,
-    required Color subtextColor,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.18),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
-        border: Border.all(
-          color: subtextColor.withOpacity(0.15),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  iconColor.withOpacity(0.35),
-                  iconColor.withOpacity(0.2),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: iconColor, size: 26),
+
+            // ── Order list ─────────────────────────────────
+            if (selectedOrders.isEmpty)
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: _emptyState(text, sub),
+              )
+            else
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (ctx, i) =>
+                        _orderTile(selectedOrders[i], isDark, card, text, sub),
+                    childCount: selectedOrders.length,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Mini stat chip ─────────────────────────────────────────
+  Widget _miniStat(String label, String value, IconData icon, Color accent,
+      Color card, Color text, Color sub) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+        decoration: BoxDecoration(
+          color: card,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(children: [
+          Icon(icon, color: accent, size: 18),
+          const SizedBox(height: 6),
+          Text(value,
+              style: TextStyle(
+                  color: text,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.3),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis),
+          const SizedBox(height: 2),
+          Text(label,
+              style: TextStyle(
+                  color: sub, fontSize: 10, fontWeight: FontWeight.w600)),
+        ]),
+      ),
+    );
+  }
+
+  // ── Order tile ─────────────────────────────────────────────
+  Widget _orderTile(
+      Order order, bool isDark, Color card, Color text, Color sub) {
+    final time = formatRwandaTime(
+        toRwandaTime(order.createdAt), 'MMM d, h:mm a');
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: card,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(children: [
+        // status dot
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: const Color(0xFF22C55E).withOpacity(0.12),
+            borderRadius: BorderRadius.circular(10),
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
+          child: const Icon(Icons.check_circle_rounded,
+              color: Color(0xFF22C55E), size: 18),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    color: subtextColor,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.3,
+                Row(children: [
+                  Expanded(
+                    child: Text(
+                        order.customerName ??
+                            shortenOrderNumber(order.orderNumber),
+                        style: TextStyle(
+                            color: text,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.2),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis),
                   ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  value,
-                  style: TextStyle(
-                    color: textColor,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    color: subtextColor,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+                  Text('RWF ${_fmt(order.subtotal)}',
+                      style: TextStyle(
+                          color: text,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.3)),
+                ]),
+                const SizedBox(height: 3),
+                Row(children: [
+                  Text(shortenOrderNumber(order.orderNumber),
+                      style: TextStyle(
+                          color: sub,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600)),
+                  const SizedBox(width: 6),
+                  Container(
+                      width: 3,
+                      height: 3,
+                      decoration:
+                          BoxDecoration(color: sub, shape: BoxShape.circle)),
+                  const SizedBox(width: 6),
+                  Text(
+                      '${order.items.length} item${order.items.length != 1 ? "s" : ""}',
+                      style: TextStyle(
+                          color: sub,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500)),
+                  const Spacer(),
+                  Text(time,
+                      style: TextStyle(color: sub, fontSize: 10)),
+                ]),
+              ]),
+        ),
+      ]),
     );
   }
 
-  double _calculateTodayEarnings(VendorOrderProvider provider) {
-    return provider.orders
-        .where((o) => _isToday(o.createdAt) && o.status.index >= 4)
-        .fold(0.0, (sum, order) => sum + order.subtotal);
+  // ── Empty state ────────────────────────────────────────────
+  Widget _emptyState(Color text, Color sub) {
+    return Center(
+      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: const Color(0xFF22C55E).withOpacity(0.08),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.receipt_long_rounded,
+              size: 36, color: Color(0xFF22C55E)),
+        ),
+        const SizedBox(height: 16),
+        Text('No orders yet',
+            style: TextStyle(
+                color: text, fontSize: 15, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 6),
+        Text('Completed orders will appear here',
+            style: TextStyle(color: sub, fontSize: 12)),
+      ]),
+    );
   }
 
-  double _calculateWeekEarnings(VendorOrderProvider provider) {
-    return provider.orders
-        .where((o) => _isThisWeek(o.createdAt) && o.status.index >= 4)
-        .fold(0.0, (sum, order) => sum + order.subtotal);
-  }
-
-  double _calculateMonthEarnings(VendorOrderProvider provider) {
-    return provider.orders
-        .where((o) => _isThisMonth(o.createdAt) && o.status.index >= 4)
-        .fold(0.0, (sum, order) => sum + order.subtotal);
-  }
-
-  bool _isToday(DateTime date) {
-    final now = nowInRwanda();
-    final rwandaDate = toRwandaTime(date);
-    return rwandaDate.year == now.year &&
-        rwandaDate.month == now.month &&
-        rwandaDate.day == now.day;
-  }
-
-  bool _isThisWeek(DateTime date) {
-    final now = nowInRwanda();
-    final rwandaDate = toRwandaTime(date);
-    final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
-    return rwandaDate.isAfter(startOfWeek.subtract(const Duration(days: 1)));
-  }
-
-  bool _isThisMonth(DateTime date) {
-    final now = nowInRwanda();
-    final rwandaDate = toRwandaTime(date);
-    return rwandaDate.year == now.year && rwandaDate.month == now.month;
-  }
-
+  // ── Payout dialog (kept) ───────────────────────────────────
   void _showPayoutDialog(
     BuildContext context,
     double suggestedAmount,

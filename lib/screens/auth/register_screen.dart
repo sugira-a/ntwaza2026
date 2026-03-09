@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../providers/theme_provider.dart';
@@ -24,6 +24,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _loading = false;
   bool _showPassword = false;
   bool _showConfirmPassword = false;
+  bool _agreedToTerms = false;
 
   @override
   void dispose() {
@@ -81,6 +82,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   void _register() async {
     if (!_formKey.currentState!.validate()) return;
+    
+    if (!_agreedToTerms) {
+      _showError('Please agree to the Terms & Conditions');
+      return;
+    }
     
     if (_passwordCtrl.text != _confirmPasswordCtrl.text) {
       _showError('Passwords don\'t match');
@@ -154,7 +160,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         suffixIcon: hasToggle
             ? IconButton(
                 icon: Icon(
-                  obscureText ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                  obscureText ? Icons.visibility_off : Icons.visibility,
                   color: theme.subtextColor,
                   size: 20,
                 ),
@@ -320,7 +326,49 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         onToggle: () => setState(() => _showConfirmPassword = !_showConfirmPassword),
                       ),
                       
-                      const SizedBox(height: 32),
+                      const SizedBox(height: 20),
+
+                      // Terms & Conditions checkbox
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: Checkbox(
+                              value: _agreedToTerms,
+                              onChanged: (v) => setState(() => _agreedToTerms = v ?? false),
+                              activeColor: const Color(0xFF22C55E),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                              side: BorderSide(color: theme.subtextColor.withValues(alpha: 0.5)),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => context.push('/terms-of-service'),
+                              child: RichText(
+                                text: TextSpan(
+                                  style: TextStyle(fontSize: 13, color: theme.subtextColor),
+                                  children: [
+                                    const TextSpan(text: 'I agree to the '),
+                                    TextSpan(
+                                      text: 'Terms & Conditions',
+                                      style: TextStyle(
+                                        color: const Color(0xFF22C55E),
+                                        fontWeight: FontWeight.w600,
+                                        decoration: TextDecoration.underline,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 24),
                       
                       // Register button
                       Container(

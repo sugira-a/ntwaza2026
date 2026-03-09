@@ -178,11 +178,11 @@ class _AdminPickupOrdersScreenState extends State<AdminPickupOrdersScreen>
               children: [
                 _buildFilterChip('All Sources', 'all', Icons.apps),
                 const SizedBox(width: 8),
-                _buildFilterChip('Vendor Orders', 'vendor', Icons.store),
+                _buildFilterChip('Vendor Orders', 'vendor', Icons.storefront_rounded),
                 const SizedBox(width: 8),
-                _buildFilterChip('Pickup Orders', 'pickup', Icons.local_shipping),
+                _buildFilterChip('Pickup Orders', 'pickup', Icons.two_wheeler_rounded),
                 const SizedBox(width: 8),
-                _buildFilterChip('Customer Direct', 'customer', Icons.person),
+                _buildFilterChip('Customer Direct', 'customer', Icons.account_circle_rounded),
               ],
             ),
           ),
@@ -222,7 +222,7 @@ class _AdminPickupOrdersScreenState extends State<AdminPickupOrdersScreen>
         children: [
           Expanded(child: _buildStatCard('Pending', _pendingCount, _Colors.warning, Icons.schedule)),
           const SizedBox(width: 10),
-          Expanded(child: _buildStatCard('In Transit', _inTransitCount, _Colors.accent, Icons.local_shipping)),
+          Expanded(child: _buildStatCard('In Transit', _inTransitCount, _Colors.accent, Icons.two_wheeler_rounded)),
           const SizedBox(width: 10),
           Expanded(child: _buildStatCard('Today', _completedToday, _Colors.primary, Icons.check_circle)),
         ],
@@ -330,7 +330,7 @@ class _AdminPickupOrdersScreenState extends State<AdminPickupOrdersScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(padding: const EdgeInsets.all(24), decoration: BoxDecoration(color: _Colors.card, shape: BoxShape.circle, border: Border.all(color: _Colors.border)), child: const Icon(Icons.inbox_outlined, size: 48, color: _Colors.textSecondary)),
+          Container(padding: const EdgeInsets.all(24), decoration: BoxDecoration(color: _Colors.card, shape: BoxShape.circle, border: Border.all(color: _Colors.border)), child: const Icon(Icons.inbox, size: 48, color: _Colors.textSecondary)),
           const SizedBox(height: 16),
           Text(message, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: _Colors.textSecondary)),
           const SizedBox(height: 8),
@@ -360,7 +360,7 @@ class _AdminPickupOrdersScreenState extends State<AdminPickupOrdersScreen>
                   children: [
                     Row(
                       children: [
-                        Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: _Colors.primary.withOpacity(0.15), borderRadius: BorderRadius.circular(12)), child: const Icon(Icons.local_shipping, color: _Colors.primary, size: 20)),
+                        Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: _Colors.primary.withOpacity(0.15), borderRadius: BorderRadius.circular(12)), child: const Icon(Icons.two_wheeler_rounded, color: _Colors.primary, size: 20)),
                         const SizedBox(width: 12),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -380,7 +380,7 @@ class _AdminPickupOrdersScreenState extends State<AdminPickupOrdersScreen>
                   decoration: BoxDecoration(color: _Colors.surface, borderRadius: BorderRadius.circular(12)),
                   child: Row(
                     children: [
-                      Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: _Colors.accent.withOpacity(0.15), shape: BoxShape.circle), child: const Icon(Icons.person, color: _Colors.accent, size: 18)),
+                      Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: _Colors.accent.withOpacity(0.15), shape: BoxShape.circle), child: const Icon(Icons.account_circle_rounded, color: _Colors.accent, size: 18)),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
@@ -402,7 +402,7 @@ class _AdminPickupOrdersScreenState extends State<AdminPickupOrdersScreen>
                 const SizedBox(height: 8),
                 Row(children: [Container(width: 2, height: 20, margin: const EdgeInsets.only(left: 11), decoration: BoxDecoration(gradient: LinearGradient(colors: [_Colors.warning, _Colors.primary], begin: Alignment.topCenter, end: Alignment.bottomCenter)))]),
                 const SizedBox(height: 8),
-                _buildLocationChip(Icons.location_on, _Colors.primary, order.dropoffLocation.address, 'Dropoff'),
+                _buildLocationChip(Icons.location_on_rounded, _Colors.primary, order.dropoffLocation.address, 'Dropoff'),
                 const SizedBox(height: 16),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -415,7 +415,7 @@ class _AdminPickupOrdersScreenState extends State<AdminPickupOrdersScreen>
                       ],
                     ),
                     if (order.riderName != null)
-                      Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6), decoration: BoxDecoration(color: _Colors.purple.withOpacity(0.15), borderRadius: BorderRadius.circular(8), border: Border.all(color: _Colors.purple.withOpacity(0.3))), child: Row(children: [const Icon(Icons.motorcycle, size: 14, color: _Colors.purple), const SizedBox(width: 4), Text(order.riderName!, style: const TextStyle(fontSize: 12, color: _Colors.purple, fontWeight: FontWeight.w600))]))
+                      Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6), decoration: BoxDecoration(color: _Colors.purple.withOpacity(0.15), borderRadius: BorderRadius.circular(8), border: Border.all(color: _Colors.purple.withOpacity(0.3))), child: Row(children: [const Icon(Icons.two_wheeler_rounded, size: 14, color: _Colors.purple), const SizedBox(width: 4), Text(order.riderName!, style: const TextStyle(fontSize: 12, color: _Colors.purple, fontWeight: FontWeight.w600))]))
                     else if (order.status == PickupOrderStatus.pending || order.status == PickupOrderStatus.confirmed)
                       GestureDetector(
                         onTap: () => _showAssignRiderDialog(order),
@@ -445,7 +445,7 @@ class _AdminPickupOrdersScreenState extends State<AdminPickupOrdersScreen>
               children: [
                 Row(
                   children: [
-                    Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: _Colors.warning.withOpacity(0.15), borderRadius: BorderRadius.circular(12)), child: const Icon(Icons.store, color: _Colors.warning, size: 20)),
+                    Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: _Colors.warning.withOpacity(0.15), borderRadius: BorderRadius.circular(12)), child: const Icon(Icons.storefront_rounded, color: _Colors.warning, size: 20)),
                     const SizedBox(width: 12),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -466,7 +466,7 @@ class _AdminPickupOrdersScreenState extends State<AdminPickupOrdersScreen>
                 decoration: BoxDecoration(color: _Colors.surface, borderRadius: BorderRadius.circular(12)),
                 child: Row(
                   children: [
-                    Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: _Colors.accent.withOpacity(0.15), shape: BoxShape.circle), child: const Icon(Icons.person, color: _Colors.accent, size: 18)),
+                    Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: _Colors.accent.withOpacity(0.15), shape: BoxShape.circle), child: const Icon(Icons.account_circle_rounded, color: _Colors.accent, size: 18)),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
@@ -601,22 +601,22 @@ class _OrderDetailsSheet extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 24),
-                _buildSection('Customer Information', Icons.person, _Colors.accent, [_DetailRow('Name', order.customerName), _DetailRow('Phone', order.customerPhone, isPhone: true), _DetailRow('Email', order.customerEmail)]),
+                _buildSection('Customer Information', Icons.account_circle_rounded, _Colors.accent, [_DetailRow('Name', order.customerName), _DetailRow('Phone', order.customerPhone, isPhone: true), _DetailRow('Email', order.customerEmail)]),
                 const SizedBox(height: 16),
                 _buildSection('Pickup Location', Icons.circle, _Colors.warning, [_DetailRow('Address', order.pickupLocation.address), if (order.pickupLocation.phoneNumber != null) _DetailRow('Contact', order.pickupLocation.phoneNumber!, isPhone: true)]),
                 const SizedBox(height: 16),
-                _buildSection('Dropoff Location', Icons.location_on, _Colors.primary, [_DetailRow('Address', order.dropoffLocation.address), if (order.dropoffLocation.phoneNumber != null) _DetailRow('Contact', order.dropoffLocation.phoneNumber!, isPhone: true)]),
+                _buildSection('Dropoff Location', Icons.location_on_rounded, _Colors.primary, [_DetailRow('Address', order.dropoffLocation.address), if (order.dropoffLocation.phoneNumber != null) _DetailRow('Contact', order.dropoffLocation.phoneNumber!, isPhone: true)]),
                 const SizedBox(height: 16),
                 _buildSection('Items (${order.items.length})', Icons.inventory_2, _Colors.purple, order.items.map((item) => Padding(padding: const EdgeInsets.only(bottom: 8), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(item.description, style: const TextStyle(color: _Colors.textPrimary, fontWeight: FontWeight.w500)), Text('${item.category} • ${item.estimatedWeight}kg • Qty: ${item.quantity}', style: const TextStyle(fontSize: 12, color: _Colors.textSecondary))]))).toList()),
                 const SizedBox(height: 16),
-                _buildSection('Payment', Icons.payment, _Colors.primary, [_DetailRow('Method', order.paymentMethod), _DetailRow('Delivery Fee', 'RWF ${order.deliveryFee.toStringAsFixed(0)}'), _DetailRow('Total', 'RWF ${order.totalAmount.toStringAsFixed(0)}', isBold: true), _DetailRow('Status', order.isPaid ? 'Paid ✓' : 'Pending', isSuccess: order.isPaid)]),
+                _buildSection('Payment', Icons.payments_rounded, _Colors.primary, [_DetailRow('Method', order.paymentMethod), _DetailRow('Delivery Fee', 'RWF ${order.deliveryFee.toStringAsFixed(0)}'), _DetailRow('Total', 'RWF ${order.totalAmount.toStringAsFixed(0)}', isBold: true), _DetailRow('Status', order.isPaid ? 'Paid ✓' : 'Pending', isSuccess: order.isPaid)]),
                 if (pickupCode != null) ...[
                   const SizedBox(height: 16),
                   _buildSection('Verification', Icons.verified, _Colors.primary, [
                     _DetailRow('Pickup Code', pickupCode, isBold: true),
                   ]),
                 ],
-                if (order.riderId != null) ...[const SizedBox(height: 16), _buildSection('Assigned Rider', Icons.motorcycle, _Colors.purple, [_DetailRow('Name', order.riderName ?? 'N/A'), _DetailRow('Phone', order.riderPhone ?? 'N/A', isPhone: true)])],
+                if (order.riderId != null) ...[const SizedBox(height: 16), _buildSection('Assigned Rider', Icons.two_wheeler_rounded, _Colors.purple, [_DetailRow('Name', order.riderName ?? 'N/A'), _DetailRow('Phone', order.riderPhone ?? 'N/A', isPhone: true)])],
                 const SizedBox(height: 24),
                 if (order.status == PickupOrderStatus.pending || order.status == PickupOrderStatus.confirmed)
                   SizedBox(
@@ -731,7 +731,7 @@ class _PremiumAssignRiderDialogState extends State<_PremiumAssignRiderDialog> {
                           margin: const EdgeInsets.only(bottom: 8),
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(color: isSelected ? _Colors.accent.withOpacity(0.15) : _Colors.card, borderRadius: BorderRadius.circular(12), border: Border.all(color: isSelected ? _Colors.accent : _Colors.border, width: isSelected ? 2 : 1)),
-                          child: Row(children: [Container(width: 44, height: 44, decoration: BoxDecoration(color: _Colors.accent.withOpacity(0.15), shape: BoxShape.circle), child: const Icon(Icons.person, color: _Colors.accent)), const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(rider['name'] ?? 'Unknown', style: const TextStyle(fontWeight: FontWeight.w600, color: _Colors.textPrimary)), Text(rider['phone'] ?? '', style: const TextStyle(fontSize: 12, color: _Colors.textSecondary))])), if (isSelected) Container(padding: const EdgeInsets.all(4), decoration: const BoxDecoration(color: _Colors.accent, shape: BoxShape.circle), child: const Icon(Icons.check, color: Colors.white, size: 16))]),
+                          child: Row(children: [Container(width: 44, height: 44, decoration: BoxDecoration(color: _Colors.accent.withOpacity(0.15), shape: BoxShape.circle), child: const Icon(Icons.account_circle_rounded, color: _Colors.accent)), const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(rider['name'] ?? 'Unknown', style: const TextStyle(fontWeight: FontWeight.w600, color: _Colors.textPrimary)), Text(rider['phone'] ?? '', style: const TextStyle(fontSize: 12, color: _Colors.textSecondary))])), if (isSelected) Container(padding: const EdgeInsets.all(4), decoration: const BoxDecoration(color: _Colors.accent, shape: BoxShape.circle), child: const Icon(Icons.check, color: Colors.white, size: 16))]),
                         ),
                       );
                     },

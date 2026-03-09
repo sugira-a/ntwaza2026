@@ -1,4 +1,4 @@
-﻿// lib/screens/auth/login_screen.dart - Clean modern design
+// lib/screens/auth/login_screen.dart - Clean modern design
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -164,7 +164,7 @@ class _LoginScreenState extends State<LoginScreen> {
         suffixIcon: hasToggle
             ? IconButton(
                 icon: Icon(
-                  obscureText ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                  obscureText ? Icons.visibility_off : Icons.visibility,
                   color: theme.subtextColor,
                   size: 20,
                 ),

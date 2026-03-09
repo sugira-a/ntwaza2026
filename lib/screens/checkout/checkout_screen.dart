@@ -339,7 +339,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
                 child: Row(
                   children: [
-                    const Icon(Icons.location_on, size: 24, color: Color(0xFF2E7D32)),
+                    const Icon(Icons.location_on_rounded, size: 24, color: Color(0xFF2E7D32)),
                     const SizedBox(width: 12),
                     const Text('Saved Addresses', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                     const Spacer(),
@@ -359,7 +359,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   padding: const EdgeInsets.all(48),
                   child: Column(
                     children: [
-                      Icon(Icons.location_off_outlined, size: 72, color: Colors.grey[400]),
+                      Icon(Icons.location_off, size: 72, color: Colors.grey[400]),
                       const SizedBox(height: 16),
                       Text(
                         'No saved addresses',
@@ -554,8 +554,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       _showError('Please select a delivery address');
       return;
     }
-    if (_phoneController.text.trim().isEmpty) {
-      _showError('Please enter your phone number');
+    if (_paymentMethod == 'momo' && _phoneController.text.trim().isEmpty) {
+      _showError('Please enter your phone number for Mobile Money');
       return;
     }
     setState(() => _isProcessing = true);
@@ -667,13 +667,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         }
       }
 
-      // Cash on delivery — clear cart and go home
+      // Non-momo payment — clear cart and go to orders
       final cart = context.read<CartProvider>();
       for (var item in selectedItems) {
         cart.removeCartItem(item);
       }
       if (mounted) {
         setState(() => _isProcessing = false);
+        final lastOrderId = orderIds.isNotEmpty ? orderIds.last : null;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('🎉 ${orderIds.length} order${orderIds.length > 1 ? 's' : ''} placed successfully!'),
@@ -682,7 +683,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           ),
         );
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) context.go('/');
+          if (mounted) {
+            if (lastOrderId != null) {
+              context.go('/order/$lastOrderId');
+            } else {
+              context.go('/my-orders');
+            }
+          }
         });
       }
     } catch (e) {
@@ -750,7 +757,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildSectionHeader(Icons.location_on_outlined, 'Delivery Address', textColor),
+                      _buildSectionHeader(Icons.location_on_rounded, 'Delivery Address', textColor),
                       const SizedBox(height: 10),
                       if (addressProvider.selectedAddress != null)
                         _buildSelectedAddressCompact(addressProvider.selectedAddress!, textColor, subtextColor, isDarkMode, accent)
@@ -768,7 +775,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildSectionHeader(Icons.receipt_long_outlined, 'Order Items', textColor),
+                      _buildSectionHeader(Icons.receipt_long, 'Order Items', textColor),
                       const SizedBox(height: 10),
                       ...itemsByVendor.entries.map((entry) {
                         final vendor = _vendorCache[entry.key];
@@ -857,7 +864,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildSectionHeader(Icons.local_offer_outlined, 'Promo Code', textColor),
+                      _buildSectionHeader(Icons.local_offer, 'Promo Code', textColor),
                       const SizedBox(height: 10),
                       if (_appliedPromoCode == null) ...[
                         Row(
@@ -988,11 +995,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildSectionHeader(Icons.phone_in_talk_outlined, 'Driver Contact', textColor),
+                      _buildSectionHeader(Icons.phone_in_talk, 'Driver Contact', textColor),
                       const SizedBox(height: 10),
                       Row(
                         children: [
-                          _buildOptionChip('Call', Icons.phone_outlined, _deliveryContactMethod == 'call', isDarkMode, textColor, subtextColor, accent, () => setState(() => _deliveryContactMethod = 'call')),
+                          _buildOptionChip('Call', Icons.phone, _deliveryContactMethod == 'call', isDarkMode, textColor, subtextColor, accent, () => setState(() => _deliveryContactMethod = 'call')),
                           const SizedBox(width: 8),
                           _buildOptionChip('Ring Bell', Icons.notifications_none_rounded, _deliveryContactMethod == 'ring', isDarkMode, textColor, subtextColor, accent, () => setState(() => _deliveryContactMethod = 'ring')),
                         ],
@@ -1009,7 +1016,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildSectionHeader(Icons.account_balance_wallet_outlined, 'Payment', textColor),
+                      _buildSectionHeader(Icons.account_balance_wallet, 'Payment', textColor),
                       const SizedBox(height: 10),
                       _buildPaymentOption('momo', 'Mobile Money (MTN/Airtel)', Icons.phone_android_rounded, textColor, subtextColor, isDarkMode, accent),
                       if (_paymentMethod == 'momo') ...[
@@ -1189,9 +1196,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         child: Row(
           children: [
             Icon(
-              address.label == 'Home' ? Icons.home_outlined
+              address.label == 'Home' ? Icons.home_rounded
                   : address.label == 'Work' ? Icons.work_outline_rounded
-                  : Icons.location_on_outlined,
+                  : Icons.location_on_rounded,
               color: accent, size: 20,
             ),
             const SizedBox(width: 10),
@@ -1224,7 +1231,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           height: 44,
           child: ElevatedButton.icon(
             onPressed: _navigateToLocationPicker,
-            icon: const Icon(Icons.add_location_alt_outlined, size: 18),
+            icon: const Icon(Icons.add_location_alt, size: 18),
             label: const Text('Add Delivery Address', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
             style: ElevatedButton.styleFrom(
               backgroundColor: accent,

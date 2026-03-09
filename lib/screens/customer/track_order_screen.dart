@@ -282,7 +282,7 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
             // Details
             _buildDetailRow('Items', '${_order!.items.length}', Icons.inventory_2),
             const SizedBox(height: 12),
-            _buildDetailRow('Amount', 'RWF ${_order!.amount.toStringAsFixed(0)}', Icons.payment),
+            _buildDetailRow('Amount', 'RWF ${_order!.amount.toStringAsFixed(0)}', Icons.payments_rounded),
             const SizedBox(height: 12),
             _buildDetailRow('Status', _order!.status.toString().split('.').last.toUpperCase(), Icons.info),
             
@@ -295,7 +295,7 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
-              _buildDetailRow('Rider', 'Assigned', Icons.person),
+              _buildDetailRow('Rider', 'Assigned', Icons.account_circle_rounded),
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -365,7 +365,7 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
         'status': PickupOrderStatus.assignedToRider,
         'title': 'Rider Assigned',
         'description': 'A rider is heading to the pickup location',
-        'icon': Icons.pedal_bike,
+        'icon': Icons.two_wheeler_rounded,
       },
       {
         'status': PickupOrderStatus.pickedUp,
@@ -377,13 +377,13 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
         'status': PickupOrderStatus.inTransit,
         'title': 'In Transit',
         'description': 'On the way to the drop-off location',
-        'icon': Icons.local_shipping,
+        'icon': Icons.two_wheeler_rounded,
       },
       {
         'status': PickupOrderStatus.delivered,
         'title': 'Delivered',
         'description': 'Package delivered to destination',
-        'icon': Icons.home,
+        'icon': Icons.home_rounded,
       },
     ];
 

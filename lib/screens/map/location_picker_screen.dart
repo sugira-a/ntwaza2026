@@ -428,29 +428,29 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   }
 
   IconData _getIconForPlaceType(String? placeType) {
-    if (placeType == null || placeType.isEmpty) return Icons.location_on;
+    if (placeType == null || placeType.isEmpty) return Icons.location_on_rounded;
     
     switch (placeType.toLowerCase()) {
       case 'bus station':
       case 'transit':
         return Icons.directions_bus;
       case 'restaurant':
-        return Icons.restaurant;
+        return Icons.restaurant_rounded;
       case 'park':
         return Icons.park;
       case 'mall':
       case 'shopping mall':
-        return Icons.shopping_bag;
+        return Icons.shopping_bag_rounded;
       case 'store':
-        return Icons.store;
+        return Icons.storefront_rounded;
       case 'hotel':
       case 'lodging':
         return Icons.hotel;
       case 'address':
-        return Icons.home_outlined;
+        return Icons.home_rounded;
       case 'place':
       default:
-        return Icons.location_on;
+        return Icons.location_on_rounded;
     }
   }
 
@@ -1110,7 +1110,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.home, color: Color(0xFF2E7D32)),
+              leading: const Icon(Icons.home_rounded, color: Color(0xFF2E7D32)),
               title: Text('Home', style: TextStyle(color: isDarkMode ? Colors.white : Colors.black)),
               onTap: () {
                 setState(() => _selectedLabel = 'Home');
@@ -1126,7 +1126,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.location_on, color: Color(0xFF2E7D32)),
+              leading: const Icon(Icons.location_on_rounded, color: Color(0xFF2E7D32)),
               title: Text('Other', style: TextStyle(color: isDarkMode ? Colors.white : Colors.black)),
               onTap: () {
                 setState(() => _selectedLabel = 'Other');
@@ -1221,7 +1221,7 @@ GoogleMap(
           // Center Pin - Changes color based on service area
           Center(
             child: Icon(
-              Icons.location_on,
+              Icons.location_on_rounded,
               size: 50,
               color: _isOutsideServiceArea ? Colors.red : Colors.green,
               shadows: [
@@ -1389,7 +1389,7 @@ GoogleMap(
                         Container(
                           margin: const EdgeInsets.only(top: 8),
                           decoration: BoxDecoration(
-                            color: isDarkMode ? Colors.grey[850] : Colors.grey[50],
+                            color: isDarkMode ? const Color(0xFF252525) : Colors.grey[50],
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: isDarkMode ? Colors.grey[700]! : Colors.grey[200]!,
@@ -1607,7 +1607,7 @@ GoogleMap(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Icon(
-                              Icons.location_on,
+                              Icons.location_on_rounded,
                               color: _isOutsideServiceArea ? Colors.red : Colors.green,
                               size: 24,
                             ),
@@ -1694,10 +1694,10 @@ GoogleMap(
                             children: [
                               Icon(
                                 _selectedLabel == 'Home'
-                                    ? Icons.home
+                                    ? Icons.home_rounded
                                     : _selectedLabel == 'Work'
                                         ? Icons.work
-                                        : Icons.location_on,
+                                        : Icons.location_on_rounded,
                                 size: 20,
                                 color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
                               ),

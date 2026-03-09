@@ -137,7 +137,7 @@ class _AdminRidersScreenState extends State<AdminRidersScreen> {
                         CircleAvatar(
                           radius: 28,
                           backgroundColor: statusColor.withOpacity(0.13),
-                          child: Icon(Icons.delivery_dining, color: statusColor, size: 28),
+                          child: Icon(Icons.two_wheeler_rounded, color: statusColor, size: 28),
                         ),
                         const SizedBox(width: 18),
                         Expanded(

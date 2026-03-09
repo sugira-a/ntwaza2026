@@ -99,7 +99,7 @@ class _CreateRiderScreenState extends State<CreateRiderScreen> {
                         controller: _nameCtrl,
                         decoration: InputDecoration(
                           labelText: 'Full name',
-                          prefixIcon: const Icon(Icons.person),
+                          prefixIcon: const Icon(Icons.account_circle_rounded),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor)),
                           enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor)),
                           focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: accentGreen, width: 1.5)),
@@ -148,7 +148,7 @@ class _CreateRiderScreenState extends State<CreateRiderScreen> {
                         controller: _vehicleCtrl,
                         decoration: InputDecoration(
                           labelText: 'Vehicle (e.g., Bike, Motorcycle)',
-                          prefixIcon: const Icon(Icons.directions_bike),
+                          prefixIcon: const Icon(Icons.two_wheeler_rounded),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor)),
                           enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor)),
                           focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: accentGreen, width: 1.5)),

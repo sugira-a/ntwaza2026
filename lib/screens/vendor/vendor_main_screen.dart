@@ -24,9 +24,7 @@ class VendorMainScreen extends StatefulWidget {
 class _VendorMainScreenState extends State<VendorMainScreen> with SingleTickerProviderStateMixin {
   int _selectedIndex = 0;
   late TabController _orderTabController;
-  // Save references for safe disposal
-  late final NotificationProvider _notificationProvider;
-  late final VendorOrderProvider _vendorOrderProvider;
+  bool _initialized = false;
 
   @override
   void initState() {
@@ -35,14 +33,10 @@ class _VendorMainScreenState extends State<VendorMainScreen> with SingleTickerPr
     WidgetsBinding.instance.addPostFrameCallback((_) => _initializeDashboard());
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _notificationProvider = context.read<NotificationProvider>();
-    _vendorOrderProvider = context.read<VendorOrderProvider>();
-  }
-
   Future<void> _initializeDashboard() async {
+    if (_initialized) return; // Prevent double initialization
+    _initialized = true;
+
     final authProvider = context.read<AuthProvider>();
     if (authProvider.token == null || authProvider.user == null) {
       if (mounted) context.go('/login');
@@ -50,8 +44,8 @@ class _VendorMainScreenState extends State<VendorMainScreen> with SingleTickerPr
     }
 
     try {
-      await context.read<NotificationProvider>().initialize();  // Uses default 60s
-      await context.read<VendorOrderProvider>().initialize();  // Uses default 30s
+      await context.read<NotificationProvider>().initialize();  // Uses default 120s
+      await context.read<VendorOrderProvider>().initialize();  // Uses default 60s
     } catch (e) {
       if (e.toString().contains('401') && mounted) {
         await authProvider.logout();
@@ -63,8 +57,11 @@ class _VendorMainScreenState extends State<VendorMainScreen> with SingleTickerPr
   @override
   void dispose() {
     _orderTabController.dispose();
-    _notificationProvider.stopPolling();
-    _vendorOrderProvider.stopAutoRefresh();
+    // Get providers from context before they're destroyed
+    try {
+      context.read<NotificationProvider>().stopPolling();
+      context.read<VendorOrderProvider>().stopAutoRefresh();
+    } catch (_) {}
     super.dispose();
   }
 
@@ -163,7 +160,7 @@ class _VendorMainScreenState extends State<VendorMainScreen> with SingleTickerPr
                   ),
                 ),
                 _buildIconButton(
-                  icon: Icons.notifications_outlined,
+                  icon: Icons.notifications,
                   badge: notificationProvider.unreadCount,
                   onTap: () => Navigator.push(
                     context,
@@ -291,7 +288,7 @@ class _VendorMainScreenState extends State<VendorMainScreen> with SingleTickerPr
                       const SizedBox(height: 12),
                       if (orderProvider.orders.isEmpty)
                         _buildEmptyState(
-                          Icons.receipt_outlined,
+                          Icons.receipt,
                           'No ${vendorConfig.orderLabel.toLowerCase()} yet',
                           'New ${vendorConfig.orderLabel.toLowerCase()} will appear here',
                           isDark,
@@ -325,8 +322,8 @@ class _VendorMainScreenState extends State<VendorMainScreen> with SingleTickerPr
     ];
 
     final productIcon = isRestaurant
-        ? Icons.restaurant_menu_outlined
-        : Icons.inventory_2_outlined;
+        ? Icons.restaurant_menu
+        : Icons.inventory_2;
     final productSelectedIcon = isRestaurant
         ? Icons.restaurant_menu_rounded
         : Icons.inventory_2_rounded;
@@ -344,55 +341,49 @@ class _VendorMainScreenState extends State<VendorMainScreen> with SingleTickerPr
         index: _selectedIndex,
         children: screens,
       ),
-      bottomNavigationBar: Container(
-        color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-        child: NavigationBarTheme(
-          data: NavigationBarThemeData(
-            backgroundColor: Colors.transparent,
-            indicatorColor: isDark ? const Color(0xFF2D2D30) : const Color(0xFFE5E7EB),
-            height: 64,
-            iconTheme: WidgetStateProperty.resolveWith((states) {
-              if (states.contains(WidgetState.selected)) {
-                return IconThemeData(color: isDark ? Colors.white : Colors.black);
-              }
-              return IconThemeData(
-                color: isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280),
-              );
-            }),
-            labelTextStyle: WidgetStateProperty.all(
-              const TextStyle(fontSize: 11, color: Colors.transparent),
-            ),
-          ),
-          child: NavigationBar(
-            selectedIndex: _selectedIndex,
-            onDestinationSelected: (index) {
+      bottomNavigationBar: Theme(
+        data: Theme.of(context).copyWith(
+          splashColor: Colors.transparent,
+          highlightColor: Colors.transparent,
+        ),
+        child: BottomNavigationBar(
+          currentIndex: _selectedIndex,
+          onTap: (index) {
+            if (mounted) {
               setState(() => _selectedIndex = index);
-            },
-            labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
-            destinations: [
-              const NavigationDestination(
-                icon: Icon(Icons.home_outlined),
-                selectedIcon: Icon(Icons.home_rounded),
-                label: 'Home',
-              ),
-              NavigationDestination(
-                icon: Icon(productIcon),
-                selectedIcon: Icon(productSelectedIcon),
-                label: vendorConfig.tabLabel,
-              ),
-              const NavigationDestination(
-                icon: Icon(Icons.receipt_long_outlined),
-                selectedIcon: Icon(Icons.receipt_long_rounded),
-                label: 'Orders',
-              ),
-              const NavigationDestination(
-                icon: Icon(Icons.person_outline),
-                selectedIcon: Icon(Icons.person_rounded),
-                label: 'Account',
-              ),
-            ],
-          ),
+            }
+          },
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+          selectedItemColor: isDark ? Colors.white : Colors.black,
+          unselectedItemColor: isDark ? const Color(0xFF6B7280) : const Color(0xFF9CA3AF),
+          selectedFontSize: 11,
+          unselectedFontSize: 11,
+          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700),
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500),
+          elevation: 0,
+          items: [
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.home_rounded),
+              activeIcon: Icon(Icons.home_rounded),
+              label: 'Home',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(productIcon),
+              activeIcon: Icon(productSelectedIcon),
+              label: vendorConfig.tabLabel,
+            ),
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.receipt_long),
+              activeIcon: Icon(Icons.receipt_long_rounded),
+              label: 'Orders',
+            ),
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.account_circle_outlined),
+              activeIcon: Icon(Icons.person_rounded),
+              label: 'Account',
+            ),
+          ],
         ),
       ),
     ),
@@ -415,7 +406,7 @@ class _VendorMainScreenState extends State<VendorMainScreen> with SingleTickerPr
                 color: const Color(0xFF2E7D32).withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.exit_to_app, color: Color(0xFF2E7D32), size: 22),
+              child: const Icon(Icons.logout_rounded, color: Color(0xFF2E7D32), size: 22),
             ),
             const SizedBox(width: 12),
             Text(
@@ -429,7 +420,7 @@ class _VendorMainScreenState extends State<VendorMainScreen> with SingleTickerPr
           ],
         ),
         content: Text(
-          'Are you sure you want to exit Ntwaza?',
+          'Choose what you want to do.',
           style: TextStyle(
             color: isDark ? Colors.grey[300] : Colors.grey[700],
             fontSize: 14,
@@ -439,6 +430,17 @@ class _VendorMainScreenState extends State<VendorMainScreen> with SingleTickerPr
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
             child: Text('Cancel', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(context).pop(false);
+              final authProvider = this.context.read<AuthProvider>();
+              await authProvider.logout();
+              if (this.context.mounted) {
+                this.context.go('/login');
+              }
+            },
+            child: const Text('Logout', style: TextStyle(color: Colors.red)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
@@ -470,7 +472,7 @@ class _VendorMainScreenState extends State<VendorMainScreen> with SingleTickerPr
   VendorConfig _getVendorConfig(bool isRestaurant) {
     if (isRestaurant) {
       return VendorConfig(
-        icon: Icons.restaurant,
+        icon: Icons.restaurant_rounded,
         orderLabel: 'Orders',
         productLabel: 'Menu Items',
         preparingLabel: 'Preparing',
@@ -478,7 +480,7 @@ class _VendorMainScreenState extends State<VendorMainScreen> with SingleTickerPr
       );
     }
     return VendorConfig(
-      icon: Icons.shopping_bag,
+      icon: Icons.shopping_bag_rounded,
       orderLabel: 'Orders',
       productLabel: 'Products',
       preparingLabel: 'Packing',
@@ -544,7 +546,7 @@ class _VendorMainScreenState extends State<VendorMainScreen> with SingleTickerPr
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: isDark ? Colors.grey[850] : Colors.white,
+          color: isDark ? const Color(0xFF252525) : Colors.white,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Row(
@@ -587,7 +589,7 @@ class _VendorMainScreenState extends State<VendorMainScreen> with SingleTickerPr
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: isDark ? Colors.grey[850] : Colors.white,
+        color: isDark ? const Color(0xFF252525) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isDark ? Colors.grey[800]! : Colors.grey[300]!,
@@ -783,20 +785,21 @@ class _VendorMainScreenState extends State<VendorMainScreen> with SingleTickerPr
   }
 
   void _showMenuSheet(BuildContext context, AuthProvider authProvider) {
+    final isDark = context.read<ThemeProvider>().isDarkMode;
+    
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
       isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
       builder: (context) => Consumer<ThemeProvider>(
         builder: (context, themeProvider, _) {
           final isDark = themeProvider.isDarkMode;
 
           return Container(
-            decoration: BoxDecoration(
-              color: isDark ? Colors.grey[900] : Colors.white,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-            ),
-            padding: const EdgeInsets.symmetric(vertical: 12),
+            color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
             child: SafeArea(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -819,7 +822,7 @@ class _VendorMainScreenState extends State<VendorMainScreen> with SingleTickerPr
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: isDark
-                            ? [Colors.grey[850]!, Colors.grey[800]!]
+                            ? [const Color(0xFF252525), const Color(0xFF2A2A2A)]
                             : [Colors.grey[100]!, Colors.grey[50]!],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
@@ -1363,7 +1366,7 @@ class _OrdersList extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                Icons.inbox_outlined,
+                Icons.inbox,
                 size: 56,
                 color: isDark ? Colors.grey[600] : Colors.grey[500],
               ),
@@ -1413,7 +1416,7 @@ class _OrdersList extends StatelessWidget {
             margin: const EdgeInsets.only(bottom: 12),
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
             decoration: BoxDecoration(
-              color: isDark ? Colors.grey[850] : Colors.white,
+              color: isDark ? const Color(0xFF252525) : Colors.white,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
                 color: isDark ? Colors.grey[800]! : Colors.grey[300]!,
@@ -1514,106 +1517,6 @@ class _OrdersList extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-class _MinimalNavBar extends StatelessWidget {
-  final int selectedIndex;
-  final Function(int) onTap;
-  const _MinimalNavBar({required this.selectedIndex, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final themeProvider = context.watch<ThemeProvider>();
-    final authProvider = context.watch<AuthProvider>();
-    final isDark = themeProvider.isDarkMode;
-
-    final navItems = [
-      _NavBarItem(icon: Icons.home_outlined, label: 'Home'),
-      _NavBarItem(icon: Icons.inventory_2_outlined, label: 'Products'),
-      _NavBarItem(icon: Icons.receipt_long_outlined, label: 'Orders'),
-      _NavBarItem(icon: Icons.person_outline, label: 'Profile'),
-    ];
-
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
-        border: Border(
-          top: BorderSide(
-            color: isDark ? Colors.grey[800]! : Colors.grey[300]!,
-          ),
-        ),
-      ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: List.generate(navItems.length, (index) {
-              final item = navItems[index];
-              return _NavItem(
-                icon: item.icon,
-                label: item.label,
-                isSelected: selectedIndex == index,
-                onTap: () => onTap(index),
-              );
-            }),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _NavBarItem {
-  final IconData icon;
-  final String label;
-  _NavBarItem({required this.icon, required this.label});
-}
-
-class _NavItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-  const _NavItem({
-    required this.icon,
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final themeProvider = context.watch<ThemeProvider>();
-    final isDark = themeProvider.isDarkMode;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            color: isSelected
-                ? (isDark ? Colors.white : Colors.black)
-                : (isDark ? Colors.grey[600] : Colors.black),
-            size: 24,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              color: isSelected
-                  ? (isDark ? Colors.white : Colors.black)
-                  : (isDark ? Colors.grey[600] : Colors.black),
-              fontSize: 11,
-              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

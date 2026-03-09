@@ -1,4 +1,4 @@
-// lib/screens/rider/rider_all_orders_screen.dart
+﻿// lib/screens/rider/rider_all_orders_screen.dart
 import 'package:flutter/material.dart';
 import '../../models/order.dart';
 import '../../utils/helpers.dart';
@@ -17,7 +17,7 @@ class _RiderAllOrdersScreenState extends State<RiderAllOrdersScreen> {
   String _sortBy = 'time'; // 'time' or 'distance'
   final TextEditingController _searchController = TextEditingController();
 
-  static const Color accentGreen = Color(0xFF4CAF50);
+  static const Color accentGreen = Color(0xFF22C55E);
   static const Color pureBlack = Color(0xFF1A1A1A);
   static const Color pureWhite = Color(0xFFFFFFFF);
   static const Color softBlack = Color(0xFF222222);
@@ -321,7 +321,7 @@ class _RiderAllOrdersScreenState extends State<RiderAllOrdersScreen> {
           // Location
           Row(
             children: [
-              Icon(Icons.location_on_outlined, size: 13, color: subtextColor),
+              Icon(Icons.location_on_rounded, size: 13, color: subtextColor),
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
@@ -355,7 +355,7 @@ class _RiderAllOrdersScreenState extends State<RiderAllOrdersScreen> {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              Icon(Icons.inventory_2_outlined, size: 13, color: subtextColor),
+              Icon(Icons.inventory_2, size: 13, color: subtextColor),
               const SizedBox(width: 4),
               Text(
                 '${order.items.length} items',

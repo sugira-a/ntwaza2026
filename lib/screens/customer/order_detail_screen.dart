@@ -5,6 +5,7 @@ import '../../core/theme/app_theme.dart';
 import '../../models/order.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api/api_service.dart';
+import '../../services/payment_service.dart';
 import '../../utils/helpers.dart';
 import '../../widgets/order_rating_dialog.dart';
 
@@ -22,6 +23,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   bool _isLoading = true;
   String? _error;
   bool _ratingShown = false;
+  bool _isRetryingPayment = false;
 
   @override
   void initState() {
@@ -86,6 +88,47 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  Future<void> _retryPayment() async {
+    if (_order == null || _isRetryingPayment) return;
+    setState(() => _isRetryingPayment = true);
+    try {
+      final paymentService = PaymentService();
+      final result = await paymentService.initiatePayment(
+        orderId: _order!.id,
+        paymentMethod: 'momo',
+        phoneNumber: _order!.customerPhone ?? '',
+      );
+      if (mounted) {
+        if (result['success'] == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('📲 Dial *182# on your phone to approve the payment.'),
+              backgroundColor: Color(0xFF1565C0),
+              duration: Duration(seconds: 8),
+            ),
+          );
+          // Refresh order to reflect new payment status
+          await _loadOrder(showLoader: false);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['error'] ?? 'Failed to initiate payment'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isRetryingPayment = false);
     }
   }
 
@@ -306,13 +349,13 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               ),
             ),
             child: imageUrl == null
-                ? const Icon(Icons.image_outlined, color: Color(0xFF9CA3AF))
+                ? const Icon(Icons.image, color: Color(0xFF9CA3AF))
                 : ClipRRect(
                     borderRadius: BorderRadius.circular(12),
                     child: Image.network(
                       imageUrl,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined, color: Color(0xFF9CA3AF)),
+                      errorBuilder: (_, __, ___) => const Icon(Icons.broken_image, color: Color(0xFF9CA3AF)),
                     ),
                   ),
           ),
@@ -395,12 +438,30 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _SectionHeader(title: 'Payment', subtitle: order.paymentMethod.toUpperCase(), isDark: isDark),
+          _SectionHeader(title: 'Payment', subtitle: order.paymentMethod == 'pay_on_pickup' ? 'PAY ON DELIVERY' : order.paymentMethod.toUpperCase(), isDark: isDark),
           const SizedBox(height: 12),
           _InfoRow(label: 'Subtotal', value: 'RWF ${_formatPrice(order.subtotal)}', isDark: isDark),
           _InfoRow(label: 'Delivery fee', value: 'RWF ${_formatPrice(order.deliveryFee)}', isDark: isDark),
           _InfoRow(label: 'Total', value: 'RWF ${_formatPrice(order.total)}', isDark: isDark),
           _InfoRow(label: 'Payment status', value: order.paymentStatus ?? 'Pending', isDark: isDark),
+          if (order.status == OrderStatus.awaitingPayment && order.paymentMethod == 'momo') ...[            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _isRetryingPayment ? null : _retryPayment,
+                icon: _isRetryingPayment
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Icon(Icons.payment_rounded, size: 18),
+                label: Text(_isRetryingPayment ? 'Processing...' : 'Retry Payment'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1565C0),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -434,7 +495,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(
-                    Icons.cancel_outlined,
+                    Icons.cancel,
                     color: Colors.red,
                     size: 20,
                   ),
@@ -671,6 +732,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
   int _trackingStepIndex(OrderStatus status) {
     switch (status) {
+      case OrderStatus.awaitingPayment:
       case OrderStatus.pending:
       case OrderStatus.confirmed:
         return 0;
@@ -714,16 +776,18 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
   _StatusView _statusInfo(OrderStatus status) {
     switch (status) {
+      case OrderStatus.awaitingPayment:
+        return _StatusView('Awaiting Payment', Icons.payment, const Color(0xFFF97316));
       case OrderStatus.pending:
         return _StatusView('Pending', Icons.schedule, const Color(0xFFF59E0B));
       case OrderStatus.confirmed:
         return _StatusView('Confirmed', Icons.check_circle, AppTheme.primaryBlack);
       case OrderStatus.preparing:
-        return _StatusView('Preparing', Icons.restaurant, AppTheme.primaryBlack);
+        return _StatusView('Preparing', Icons.restaurant_rounded, AppTheme.primaryBlack);
       case OrderStatus.ready:
         return _StatusView('Ready', Icons.done_all, AppTheme.accentGreen);
       case OrderStatus.pickedUp:
-        return _StatusView('On The Way', Icons.delivery_dining, AppTheme.primaryBlack);
+        return _StatusView('On The Way', Icons.two_wheeler_rounded, AppTheme.primaryBlack);
       case OrderStatus.completed:
         return _StatusView('Completed', Icons.check_circle, const Color(0xFF10B981));
       case OrderStatus.cancelled:

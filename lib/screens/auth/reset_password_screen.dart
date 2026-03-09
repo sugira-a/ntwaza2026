@@ -211,7 +211,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                             labelStyle: TextStyle(color: theme.subtextColor, fontSize: 14),
                             suffixIcon: IconButton(
                               icon: Icon(
-                                _showPassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                                _showPassword ? Icons.visibility : Icons.visibility_off,
                                 color: theme.subtextColor,
                                 size: 20,
                               ),
@@ -253,7 +253,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                             labelStyle: TextStyle(color: theme.subtextColor, fontSize: 14),
                             suffixIcon: IconButton(
                               icon: Icon(
-                                _showConfirmPassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                                _showConfirmPassword ? Icons.visibility : Icons.visibility_off,
                                 color: theme.subtextColor,
                                 size: 20,
                               ),

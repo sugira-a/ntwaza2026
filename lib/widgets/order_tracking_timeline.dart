@@ -194,7 +194,7 @@ class OrderTrackingTimeline extends StatelessWidget {
         'timestamp': order.createdAt,
       },
       {
-        'icon': Icons.restaurant,
+        'icon': Icons.restaurant_rounded,
         'title': 'Preparing Food',
         'description': '${order.vendorName} is preparing your order',
         'timestamp': order.status.value == 'pending' ? null : order.createdAt,
@@ -206,13 +206,13 @@ class OrderTrackingTimeline extends StatelessWidget {
         'timestamp': order.readyAt,
       },
       {
-        'icon': Icons.delivery_dining,
+        'icon': Icons.two_wheeler_rounded,
         'title': 'On the Way',
         'description': 'Rider is delivering your order',
         'timestamp': order.acceptedAt,
       },
       {
-        'icon': Icons.home,
+        'icon': Icons.home_rounded,
         'title': 'Delivered',
         'description': 'Order delivered successfully',
         'timestamp': order.completedAt,
@@ -222,6 +222,7 @@ class OrderTrackingTimeline extends StatelessWidget {
 
   int _getCurrentStepIndex() {
     switch (order.status) {
+      case OrderStatus.awaitingPayment:
       case OrderStatus.pending:
         return 0;
       case OrderStatus.confirmed:
@@ -244,6 +245,7 @@ class OrderTrackingTimeline extends StatelessWidget {
     final orderAge = now.difference(orderCreated).inMinutes;
     
     switch (order.status) {
+      case OrderStatus.awaitingPayment:
       case OrderStatus.pending:
       case OrderStatus.confirmed:
       case OrderStatus.preparing:

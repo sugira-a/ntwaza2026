@@ -451,7 +451,7 @@ class _CartScreenState extends State<CartScreen> {
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                Icons.shopping_cart_outlined,
+                Icons.shopping_cart,
                 size: 64,
                 color: isDarkMode ? Colors.grey[600] : Colors.grey[400],
               ),
@@ -693,7 +693,7 @@ class _CartScreenState extends State<CartScreen> {
         if (!isLast)
           Divider(
             height: 1,
-            color: isDarkMode ? Colors.grey[850] : Colors.grey[100],
+            color: isDarkMode ? const Color(0xFF252525) : Colors.grey[100],
           ),
       ],
     );

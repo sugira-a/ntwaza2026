@@ -230,7 +230,7 @@ class _AdminDashboardHomeState extends State<AdminDashboardHome> {
             )),
             const SizedBox(width: 10),
             Expanded(child: _StatCard(
-              icon: Icons.local_shipping_rounded,
+              icon: Icons.two_wheeler_rounded,
               label: 'Active',
               value: '$activeOrders',
               color: const Color(0xFFF59E0B),

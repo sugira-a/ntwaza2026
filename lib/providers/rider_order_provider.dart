@@ -68,7 +68,7 @@ class RiderOrderProvider with ChangeNotifier {
       }
     } catch (e) {
       if (_isDisposed) return;
-      _error = e.toString();
+      _error = e.toString().replaceAll(RegExp(r'^Exception:\s*'), '');
       print('❌ Error fetching available orders: $e');
     } finally {
       if (!_isDisposed) {
@@ -109,7 +109,7 @@ class RiderOrderProvider with ChangeNotifier {
       return false;
     } catch (e) {
       if (_isDisposed) return false;
-      _error = e.toString();
+      _error = e.toString().replaceAll(RegExp(r'^Exception:\s*'), '');
       notifyListeners();
       print('❌ Error accepting order: $e');
       return false;
@@ -144,15 +144,15 @@ class RiderOrderProvider with ChangeNotifier {
       return false;
     } catch (e) {
       if (_isDisposed) return false;
-      _error = e.toString();
+      _error = e.toString().replaceAll(RegExp(r'^Exception:\s*'), '');
       notifyListeners();
       print('❌ Error declining order: $e');
       return false;
     }
   }
 
-  /// Fetch assigned/active orders
-  Future<void> fetchAssignedOrders({bool silent = false}) async {
+  /// Fetch assigned/active orders (with retry for transient failures)
+  Future<void> fetchAssignedOrders({bool silent = false, int retries = 2}) async {
     if (!silent) {
       _isLoading = true;
       _error = null;
@@ -170,7 +170,14 @@ class RiderOrderProvider with ChangeNotifier {
       }
     } catch (e) {
       if (_isDisposed) return;
-      _error = e.toString();
+      // Retry on transient network failures (e.g. browser fetch limit)
+      if (retries > 0 && e.toString().contains('Failed to fetch')) {
+        print('🔄 Retrying fetchAssignedOrders ($retries retries left)...');
+        await Future.delayed(const Duration(seconds: 2));
+        if (_isDisposed) return;
+        return fetchAssignedOrders(silent: silent, retries: retries - 1);
+      }
+      _error = e.toString().replaceAll(RegExp(r'^Exception:\s*'), '');
       print('❌ Error fetching assigned orders: $e');
     } finally {
       if (!_isDisposed) {
@@ -199,7 +206,7 @@ class RiderOrderProvider with ChangeNotifier {
       }
     } catch (e) {
       if (_isDisposed) return;
-      _error = e.toString();
+      _error = e.toString().replaceAll(RegExp(r'^Exception:\s*'), '');
       print('❌ Error fetching delivery history: $e');
     } finally {
       if (!_isDisposed) {
@@ -243,12 +250,26 @@ class RiderOrderProvider with ChangeNotifier {
         
         return true;
       }
-      _error = resp['error']?.toString() ?? 'Failed to update order';
+      
+      // Enhanced error handling for authorization issues
+      final errorMsg = resp['error']?.toString() ?? 'Failed to update order';
+      if (errorMsg.toLowerCase().contains('not authorized') || 
+          errorMsg.toLowerCase().contains('authorization')) {
+        _error = 'You are not assigned to this order. Please ensure you have accepted the order before updating its status.';
+      } else {
+        _error = errorMsg;
+      }
       notifyListeners();
       return false;
     } catch (e) {
       if (_isDisposed) return false;
-      _error = e.toString();
+      final errorStr = e.toString();
+      if (errorStr.toLowerCase().contains('not authorized') || 
+          errorStr.toLowerCase().contains('403')) {
+        _error = 'Authorization Error: This order may not be assigned to you. Please check with support if this persists.';
+      } else {
+        _error = errorStr;
+      }
       notifyListeners();
       print('❌ Error updating order status: $e');
       return false;
@@ -270,7 +291,7 @@ class RiderOrderProvider with ChangeNotifier {
       }
     } catch (e) {
       if (_isDisposed) return;
-      _error = e.toString();
+      _error = e.toString().replaceAll(RegExp(r'^Exception:\s*'), '');
       print('❌ Error fetching earnings: $e');
     } finally {
       if (!_isDisposed) {
@@ -298,9 +319,10 @@ class RiderOrderProvider with ChangeNotifier {
       return resp;
     } catch (e) {
       if (_isDisposed) return null;
-      _error = e.toString();
+      final raw = e.toString().replaceAll(RegExp(r'^Exception:\s*'), '');
+      _error = _friendlyVerificationError(raw, isVendor: true);
       notifyListeners();
-      return null;
+      return {'success': false, 'error': _error};
     }
   }
 
@@ -324,10 +346,30 @@ class RiderOrderProvider with ChangeNotifier {
       return resp;
     } catch (e) {
       if (_isDisposed) return null;
-      _error = e.toString();
+      final raw = e.toString().replaceAll(RegExp(r'^Exception:\s*'), '');
+      _error = _friendlyVerificationError(raw, isVendor: false);
       notifyListeners();
-      return null;
+      return {'success': false, 'error': _error};
     }
+  }
+
+  /// Convert raw verification errors into friendly messages
+  String _friendlyVerificationError(String raw, {required bool isVendor}) {
+    final lower = raw.toLowerCase();
+    final attemptsMatch = RegExp(r'(\d+)\s*attempts?\s*remaining').firstMatch(lower);
+    final who = isVendor ? 'vendor' : 'customer';
+
+    if (lower.contains('invalid') && attemptsMatch != null) {
+      final remaining = attemptsMatch.group(1);
+      return 'Wrong code. Please ask the $who for the correct code. You have $remaining attempt${remaining == '1' ? '' : 's'} left.';
+    }
+    if (lower.contains('invalid')) {
+      return 'The code you entered is incorrect. Please double-check with the $who and try again.';
+    }
+    if (lower.contains('locked') || lower.contains('blocked') || lower.contains('0 attempt')) {
+      return 'Too many failed attempts. Please contact support for help.';
+    }
+    return raw;
   }
 
   /// Release stale orders that are blocking new acceptances
@@ -348,7 +390,7 @@ class RiderOrderProvider with ChangeNotifier {
       return false;
     } catch (e) {
       if (_isDisposed) return false;
-      _error = e.toString();
+      _error = e.toString().replaceAll(RegExp(r'^Exception:\s*'), '');
       notifyListeners();
       return false;
     }
@@ -357,9 +399,9 @@ class RiderOrderProvider with ChangeNotifier {
   /// Auto-refresh available orders periodically
   void startAutoRefresh([int seconds = _defaultAutoRefreshSeconds]) {
     _refreshTimer?.cancel();
-    _refreshTimer = Timer.periodic(Duration(seconds: seconds), (_) {
-      fetchAvailableOrders(silent: true);
-      fetchAssignedOrders(silent: true);
+    _refreshTimer = Timer.periodic(Duration(seconds: seconds), (_) async {
+      await fetchAvailableOrders(silent: true);
+      if (!_isDisposed) await fetchAssignedOrders(silent: true);
     });
 
     _orderUpdatesSub?.cancel();

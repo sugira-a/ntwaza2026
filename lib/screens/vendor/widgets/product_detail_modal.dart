@@ -218,12 +218,12 @@ class _ProductDetailModalState extends State<ProductDetailModal> {
                   context.go('/login');
                 }, Icons.arrow_forward_ios, textColor),
                 Divider(height: 1, color: isDarkMode ? Colors.grey[800]! : Colors.grey[200]!),
-                _buildSettingsItem(Icons.person_add_outlined, 'Sign Up', () {
+                _buildSettingsItem(Icons.person_add, 'Sign Up', () {
                   Navigator.pop(context);
                   context.go('/register');
                 }, Icons.arrow_forward_ios, textColor),
               ] else ...[
-                _buildSettingsItem(Icons.person, 'Profile', () {
+                _buildSettingsItem(Icons.account_circle_rounded, 'Profile', () {
                   Navigator.pop(context);
                   context.go('/profile');
                 }, Icons.arrow_forward_ios, textColor),

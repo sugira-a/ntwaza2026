@@ -1,5 +1,6 @@
 // lib/models/order.dart - COMPLETE FIXED VERSION
 import '../utils/helpers.dart';
+import '../services/api/api_service.dart';
 class Order {
   final String id;
   final String orderNumber;
@@ -9,6 +10,7 @@ class Order {
   final String vendorId;
   final String vendorName;
   final String? vendorPhone;
+  final String? vendorLogo;
   final String? riderId;
   final String? riderName;
   final String? riderPhone;
@@ -41,6 +43,10 @@ class Order {
   final String? customerDeliveryCode;
   final DateTime? vendorPickupCodeVerifiedAt;
   final DateTime? customerDeliveryCodeVerifiedAt;
+  // 🆕 Delivery Conditions
+  final bool isContactless;
+  final bool isExpress;
+  final String? deliveryInstructions;
   // 🆕 Rating & Feedback
   final int? vendorRating;
   final String? vendorReview;
@@ -66,6 +72,7 @@ class Order {
     required this.vendorId,
     required this.vendorName,
     this.vendorPhone,
+    this.vendorLogo,
     this.riderId,
     this.riderName,
     this.riderPhone,
@@ -94,6 +101,9 @@ class Order {
     this.customerDeliveryCode,
     this.vendorPickupCodeVerifiedAt,
     this.customerDeliveryCodeVerifiedAt,
+    this.isContactless = false,
+    this.isExpress = false,
+    this.deliveryInstructions,
     this.vendorRating,
     this.vendorReview,
     this.riderRating,
@@ -155,6 +165,7 @@ class Order {
       vendorId: json['vendorId']?.toString() ?? json['vendor_id']?.toString() ?? vendor?['id']?.toString() ?? '',
       vendorName: json['vendorName'] ?? json['vendor_name'] ?? vendor?['name'] ?? vendor?['business_name'] ?? '',
       vendorPhone: json['vendorPhone'] ?? json['vendor_phone'] ?? vendor?['phone'],
+      vendorLogo: _buildVendorLogoUrl(json['vendorLogo'] ?? json['vendor_logo'] ?? vendor?['logo']),
       riderId: json['riderId']?.toString() ?? json['rider_id']?.toString() ?? rider?['id']?.toString(),
       riderName: json['riderName'] ?? json['rider_name'] ?? rider?['name'],
       riderPhone: json['riderPhone'] ?? json['rider_phone'] ?? rider?['phone'],
@@ -207,6 +218,9 @@ class Order {
       minutesRemaining: json['minutesRemaining'] ?? json['minutes_remaining'],
       isRunningLate: json['isRunningLate'] ?? json['is_running_late'] ?? false,
       deliveryDistanceKm: (json['deliveryDistance'] ?? json['delivery_distance_km'] ?? 0).toDouble(),
+      isContactless: json['isContactless'] ?? json['is_contactless'] ?? false,
+      isExpress: json['isExpress'] ?? json['is_express'] ?? false,
+      deliveryInstructions: json['deliveryInstructions'] ?? json['delivery_instructions'],
       vendorPickupCode: json['vendorPickupCode'] ?? json['vendor_pickup_code'],
       customerDeliveryCode: json['customerDeliveryCode'] ?? json['customer_delivery_code'],
       vendorPickupCodeVerifiedAt: json['vendorPickupCodeVerifiedAt'] != null
@@ -250,6 +264,7 @@ class Order {
       'vendor_id': vendorId,
       'vendor_name': vendorName,
       'vendor_phone': vendorPhone,
+      'vendor_logo': vendorLogo,
       'rider_id': riderId,
       'rider_name': riderName,
       'rider_phone': riderPhone,
@@ -274,6 +289,9 @@ class Order {
       'minutes_remaining': minutesRemaining,
       'is_running_late': isRunningLate,
       'delivery_distance_km': deliveryDistanceKm,
+      'is_contactless': isContactless,
+      'is_express': isExpress,
+      'delivery_instructions': deliveryInstructions,
       'vendor_pickup_code': vendorPickupCode,
       'customer_delivery_code': customerDeliveryCode,
       'vendor_pickup_code_verified_at': vendorPickupCodeVerifiedAt?.toIso8601String(),
@@ -286,11 +304,23 @@ class Order {
       'refund_processed_by': refundProcessedBy,
     };
   }
+
+  static String? _buildVendorLogoUrl(dynamic value) {
+    if (value == null) return null;
+    final s = value.toString().trim();
+    if (s.isEmpty || s.toLowerCase() == 'none' || s.toLowerCase() == 'null') return null;
+    if (s.startsWith('http://') || s.startsWith('https://')) return s;
+    if (s.startsWith('/')) return '${ApiService.baseUrl}$s';
+    if (s.startsWith('static/')) return '${ApiService.baseUrl}/$s';
+    if (s.startsWith('uploads/')) return '${ApiService.baseUrl}/static/$s';
+    return '${ApiService.baseUrl}/static/uploads/vendors/$s';
+  }
 }
 
 // ✅ FIXED: Order Status Enum - matches backend status values
 // ✅ FIXED: Order Status Enum - matches backend status values
 enum OrderStatus {
+  awaitingPayment,
   pending,
   confirmed,
   preparing,
@@ -301,6 +331,7 @@ enum OrderStatus {
   
   String get value {
     switch (this) {
+      case OrderStatus.awaitingPayment: return 'awaiting_payment';
       case OrderStatus.pending: return 'pending';
       case OrderStatus.confirmed: return 'confirmed';
       case OrderStatus.preparing: return 'preparing';
@@ -311,9 +342,9 @@ enum OrderStatus {
     }
   }
   
-  // ✅ Added displayName getter
   String get displayName {
     switch (this) {
+      case OrderStatus.awaitingPayment: return 'Awaiting Payment';
       case OrderStatus.pending: return 'Pending';
       case OrderStatus.confirmed: return 'Confirmed';
       case OrderStatus.preparing: return 'Preparing';
@@ -379,19 +410,33 @@ class OrderItem {
   });
 
   factory OrderItem.fromJson(Map<String, dynamic> json) {
+    final rawImage = json['imageUrl'] ?? json['image_url'] ?? json['product_image'];
     return OrderItem(
       id: json['id']?.toString() ?? '',
       productId: json['productId']?.toString() ?? json['product_id']?.toString() ?? '',
       productName: json['name'] ?? json['productName'] ?? json['product_name'] ?? 'Item',
-      imageUrl: json['imageUrl'] ?? json['image_url'] ?? json['product_image'],
+      imageUrl: _buildOrderItemImageUrl(rawImage),
       quantity: json['quantity'] ?? 1,
-      price: (json['price'] ?? json['unit_price'] ?? 0).toDouble(),
-      total: (json['total'] ?? json['total_price'] ?? (json['price'] ?? 0) * (json['quantity'] ?? 1)).toDouble(),
+      price: (json['price'] ?? json['unitPrice'] ?? json['unit_price'] ?? 0).toDouble(),
+      total: (json['total'] ?? json['totalPrice'] ?? json['total_price'] ?? (json['price'] ?? json['unitPrice'] ?? json['unit_price'] ?? 0) * (json['quantity'] ?? 1)).toDouble(),
       notes: json['notes'] ?? json['special_instructions'],
       modifiers: (json['modifiers'] as List?)
         ?.map((m) => OrderItemModifier.fromJson(m))
         .toList(),
     );
+  }
+
+  static String? _buildOrderItemImageUrl(dynamic value) {
+    if (value == null) return null;
+    final s = value.toString().trim();
+    if (s.isEmpty) return null;
+    // Already a full URL
+    if (s.startsWith('http://') || s.startsWith('https://')) return s;
+    // Relative path — prepend base URL
+    if (s.startsWith('/')) return '${ApiService.baseUrl}$s';
+    if (s.startsWith('static/')) return '${ApiService.baseUrl}/$s';
+    // Just a filename
+    return '${ApiService.baseUrl}/static/uploads/products/$s';
   }
 
   Map<String, dynamic> toJson() {

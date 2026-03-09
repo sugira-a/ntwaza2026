@@ -483,27 +483,20 @@ class _VendorProductsScreenState extends State<VendorProductsScreen> {
   Widget _buildProductCard(Product product, bool isDark, {bool isGrid = false}) {
     final hasImage = product.imageUrl != null && product.imageUrl!.isNotEmpty;
     final isInStock = _isProductAvailable(product);
-    final cardColor = isDark ? const Color(0xFF222222) : Colors.white;
-    final cardBorder = isDark ? Colors.grey[850]! : Colors.grey[300]!;
+    final cardColor = Colors.transparent;
+    final cardBorder = isDark ? const Color(0xFF303030) : Colors.grey[300]!;
     
     return GestureDetector(
       onTap: () => _showProductDetailsSheet(product, isDark),
       child: Container(
-        height: isGrid ? 160 : 96,
+        height: isGrid ? 160 : 112,
         decoration: BoxDecoration(
           color: cardColor,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: cardBorder,
-            width: 1,
+            color: cardBorder.withOpacity(0.3),
+            width: 0.5,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.12),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
         ),
         child: isGrid
             ? Column(
@@ -710,6 +703,7 @@ class _VendorProductsScreenState extends State<VendorProductsScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
                             product.name ?? 'Unknown Product',
@@ -737,35 +731,39 @@ class _VendorProductsScreenState extends State<VendorProductsScreen> {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ],
-                          const Spacer(),
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Rwf ${(product.price ?? 0).toStringAsFixed(0)}',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w900,
-                                      color: isDark ? Colors.white : Colors.black,
-                                      letterSpacing: -0.5,
-                                    ),
-                                  ),
-                                  if (product.unit != null) ...[
-                                    const SizedBox(height: 2),
+                              Flexible(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
                                     Text(
-                                      'per ${product.unit}',
+                                      'Rwf ${(product.price ?? 0).toStringAsFixed(0)}',
                                       style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w600,
-                                        color: isDark ? Colors.grey[600] : Colors.grey[500],
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w900,
+                                        color: isDark ? Colors.white : Colors.black,
+                                        letterSpacing: -0.5,
                                       ),
+                                      overflow: TextOverflow.ellipsis,
                                     ),
+                                    if (product.unit != null) ...[
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'per ${product.unit}',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                          color: isDark ? Colors.grey[600] : Colors.grey[500],
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
                                   ],
-                                ],
+                                ),
                               ),
+                              const SizedBox(width: 8),
                               _buildStockPill(product, isDark, isCompact: true),
                             ],
                           ),
@@ -799,6 +797,7 @@ class _VendorProductsScreenState extends State<VendorProductsScreen> {
         ),
       ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             Icons.inventory_2_rounded,
@@ -1294,7 +1293,7 @@ class _VendorProductsScreenState extends State<VendorProductsScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
-                      onPressed: () => _showComingSoonDialog(context),
+                      onPressed: () => _showDeleteConfirmDialog(context, product),
                       icon: const Icon(Icons.delete_outline_rounded, size: 20),
                       label: const Text('Delete'),
                       style: ElevatedButton.styleFrom(
@@ -1622,6 +1621,146 @@ class _VendorProductsScreenState extends State<VendorProductsScreen> {
         ],
       ),
     );
+  }
+
+  void _showDeleteConfirmDialog(BuildContext sheetContext, Product product) {
+    final isDark = sheetContext.read<ThemeProvider>().isDarkMode;
+    showDialog(
+      context: sheetContext,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF141414) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.delete_outline_rounded,
+                color: Colors.red,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Text(
+              'Delete Product?',
+              style: TextStyle(
+                fontWeight: FontWeight.w900,
+                fontSize: 20,
+                color: isDark ? Colors.white : Colors.black,
+                letterSpacing: -0.5,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Are you sure you want to delete "${product.name}"?',
+              style: TextStyle(
+                color: isDark ? Colors.grey[400] : Colors.grey[700],
+                fontSize: 14,
+                height: 1.6,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'This action cannot be undone.',
+              style: TextStyle(
+                color: Colors.red.withOpacity(0.7),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(
+              'Cancel',
+              style: TextStyle(
+                color: isDark ? Colors.grey[400] : Colors.grey[600],
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              await _deleteProduct(product.id, sheetContext: sheetContext);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              elevation: 0,
+            ),
+            child: const Text(
+              'Delete',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteProduct(String productId, {BuildContext? sheetContext}) async {
+    var usedFallbackArchive = false;
+
+    try {
+      // Primary path: hard delete
+      await ApiService().delete('/api/products/$productId');
+    } catch (deleteError) {
+      // Fallback path for production DBs that reject hard delete due FK constraints.
+      try {
+        await ApiService().put('/api/products/$productId', {
+          'is_available': false,
+          'stock_quantity': 0,
+        });
+        usedFallbackArchive = true;
+      } catch (archiveError) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Delete failed: $deleteError | Archive failed: $archiveError'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+        return;
+      }
+    }
+
+    if (!mounted) return;
+
+    if (sheetContext != null && Navigator.canPop(sheetContext)) {
+      Navigator.pop(sheetContext);
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          usedFallbackArchive
+              ? 'Product archived successfully'
+              : 'Product deleted successfully',
+        ),
+        backgroundColor: Colors.green.withOpacity(0.8),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+
+    await _loadProducts();
   }
 
   void _showComingSoonDialog(BuildContext context) {

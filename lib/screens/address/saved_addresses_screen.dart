@@ -177,10 +177,10 @@ class SavedAddressesScreen extends StatelessWidget {
                 children: [
                   Icon(
                     address.label == 'Home'
-                        ? Icons.home
+                        ? Icons.home_rounded
                         : address.label == 'Work'
                             ? Icons.work
-                            : Icons.location_on,
+                            : Icons.location_on_rounded,
                     color: const Color(0xFF2E7D32),
                   ),
                   const SizedBox(width: 12),

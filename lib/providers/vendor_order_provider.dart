@@ -8,8 +8,11 @@ import 'dart:async';
 class VendorOrderProvider with ChangeNotifier {
   final ApiService _apiService;
   Timer? _autoRefreshTimer;
+  Timer? _rateLimitResumeTimer;
+  DateTime? _rateLimitedUntil;
   static const String _vendorOrdersBase = '/api/orders/vendor';
-  static const int _defaultAutoRefreshSeconds = 30;  // Increased from 15 to 30 seconds
+  static const int _defaultAutoRefreshSeconds = 60;
+  static const Duration _rateLimitCooldown = Duration(minutes: 15);
   StreamSubscription? _orderUpdatesSub;
   
   List<Order> _orders = [];
@@ -28,6 +31,7 @@ class VendorOrderProvider with ChangeNotifier {
   String? get error => _error;
   String get currentFilter => _currentFilter;
   int get unreadNotificationCount => _unreadNotificationCount;
+  bool get isRateLimited => _isInRateLimitCooldown();
   
   int get pendingCount => _orders.where((o) => o.status == OrderStatus.pending).length;
   int get confirmedCount => _orders.where((o) => o.status == OrderStatus.confirmed).length;
@@ -59,7 +63,6 @@ class VendorOrderProvider with ChangeNotifier {
   
   Future<void> initialize({int autoRefreshSeconds = _defaultAutoRefreshSeconds}) async {
     await fetchOrders();
-    await fetchUnreadNotificationCount();
     startAutoRefresh(intervalSeconds: autoRefreshSeconds);
     _startRealtime();
   }
@@ -67,6 +70,7 @@ class VendorOrderProvider with ChangeNotifier {
   void _startRealtime() {
     _orderUpdatesSub?.cancel();
     _orderUpdatesSub = RealtimeService().orderUpdates.listen((payload) {
+      if (_isInRateLimitCooldown()) return;
       try {
         final dynamic orderJson = payload['order'] ?? payload;
         if (orderJson is Map) {
@@ -82,16 +86,26 @@ class VendorOrderProvider with ChangeNotifier {
   }
   
   void startAutoRefresh({int intervalSeconds = _defaultAutoRefreshSeconds}) {
+    final effectiveInterval = intervalSeconds < 60 ? 60 : intervalSeconds;
     _autoRefreshTimer?.cancel();
-    _autoRefreshTimer = Timer.periodic(Duration(seconds: intervalSeconds), (_) {
+    _autoRefreshTimer = Timer.periodic(Duration(seconds: effectiveInterval), (_) {
       fetchOrders(silent: true);
-      fetchUnreadNotificationCount();
     });
   }
   
   void stopAutoRefresh() => _autoRefreshTimer?.cancel();
   
   Future<void> fetchOrders({bool silent = false}) async {
+    if (_isInRateLimitCooldown()) {
+      if (!silent) {
+        final remaining = _rateLimitedUntil!.difference(DateTime.now()).inMinutes + 1;
+        _error = 'Rate limit active. Try again in about $remaining minute(s).';
+        _isLoading = false;
+        notifyListeners();
+      }
+      return;
+    }
+
     // Skip if no auth token is present (prevents 401 spam after logout)
     if ((_apiService.authToken ?? _apiService.token) == null) {
       stopAutoRefresh();
@@ -118,12 +132,22 @@ class VendorOrderProvider with ChangeNotifier {
       
       _orders = ordersList.map((json) => Order.fromJson(json)).toList();
       _applyFilter(_currentFilter);
+      _clearRateLimitCooldown();
       
       if (!silent) _isLoading = false;
       _error = null;
       notifyListeners();
     } catch (e) {
       final err = e.toString().toLowerCase();
+
+      if (_isRateLimitError(err)) {
+        _activateRateLimitCooldown();
+        _error = 'Too many requests. Auto refresh paused for 15 minutes.';
+        if (!silent) _isLoading = false;
+        notifyListeners();
+        return;
+      }
+
       // Stop background polling on auth/permission errors to avoid hammering the backend.
       if (err.contains('error 401') ||
           err.contains('missing authorization') ||
@@ -138,6 +162,35 @@ class VendorOrderProvider with ChangeNotifier {
       notifyListeners();
       print('Error fetching orders: $e');
     }
+  }
+
+  bool _isRateLimitError(String err) {
+    return err.contains('429') || err.contains('too many requests') || err.contains('rate limit');
+  }
+
+  bool _isInRateLimitCooldown() {
+    final until = _rateLimitedUntil;
+    return until != null && DateTime.now().isBefore(until);
+  }
+
+  void _activateRateLimitCooldown() {
+    _rateLimitedUntil = DateTime.now().add(_rateLimitCooldown);
+    stopAutoRefresh();
+    _rateLimitResumeTimer?.cancel();
+    _rateLimitResumeTimer = Timer(_rateLimitCooldown, () {
+      if (_isDisposed) return;
+      _rateLimitedUntil = null;
+      startAutoRefresh();
+      fetchOrders(silent: true);
+    });
+    print('🛑 Order polling paused for ${_rateLimitCooldown.inMinutes} minutes due to 429 rate limit');
+  }
+
+  void _clearRateLimitCooldown() {
+    if (_rateLimitedUntil == null) return;
+    _rateLimitedUntil = null;
+    _rateLimitResumeTimer?.cancel();
+    _rateLimitResumeTimer = null;
   }
   
   void setFilter(String filter) {
@@ -310,6 +363,7 @@ class VendorOrderProvider with ChangeNotifier {
   void dispose() {
     _isDisposed = true;
     stopAutoRefresh();
+    _rateLimitResumeTimer?.cancel();
     _orderUpdatesSub?.cancel();
     _orders.clear();
     _filteredOrders.clear();

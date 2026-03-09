@@ -1,4 +1,4 @@
-﻿// lib/models/user_model.dart
+// lib/models/user_model.dart
 import 'package:flutter/material.dart';
 
 class UserModel {
@@ -278,13 +278,13 @@ class UserModel {
 
   // Get icon for avatar
   IconData get avatarIcon {
-    if (profileImage == 'male1') return Icons.person;
+    if (profileImage == 'male1') return Icons.account_circle_rounded;
     if (profileImage == 'male2') return Icons.face;
     if (profileImage == 'male3') return Icons.boy;
-    if (profileImage == 'female1') return Icons.person_outline;
-    if (profileImage == 'female2') return Icons.face_outlined;
+    if (profileImage == 'female1') return Icons.account_circle_outlined;
+    if (profileImage == 'female2') return Icons.face;
     if (profileImage == 'female3') return Icons.girl;
-    return Icons.person;
+    return Icons.account_circle_rounded;
   }
 
   // Manual copyWith method

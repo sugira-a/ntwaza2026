@@ -29,9 +29,9 @@ extension VendorTypeExtension on VendorType {
   IconData get icon {
     switch (this) {
       case VendorType.restaurant:
-        return Icons.restaurant;
+        return Icons.restaurant_rounded;
       case VendorType.product:
-        return Icons.shopping_bag;
+        return Icons.shopping_bag_rounded;
     }
   }
 }

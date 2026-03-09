@@ -162,7 +162,7 @@ class _PickupOrdersScreenState extends State<PickupOrdersScreen> {
         Center(
           child: Column(
             children: [
-              Icon(Icons.local_shipping_outlined, size: 64, color: textSecondary),
+              Icon(Icons.two_wheeler_rounded, size: 64, color: textSecondary),
               const SizedBox(height: 12),
               Text('No pickup orders yet', style: TextStyle(color: textPrimary, fontSize: 16)),
               const SizedBox(height: 6),
@@ -241,7 +241,7 @@ class _PickupOrdersScreenState extends State<PickupOrdersScreen> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.location_on, size: 18, color: Color(0xFF2E7D32)),
+              const Icon(Icons.location_on_rounded, size: 18, color: Color(0xFF2E7D32)),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(order.pickupLocation.address, style: TextStyle(color: textPrimary)),

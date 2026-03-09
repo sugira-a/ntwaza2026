@@ -83,14 +83,14 @@ class _VendorOrderDetailScreenState extends State<VendorOrderDetailScreen> {
               _buildVendorPickupCodeCard(order, cardColor, textColor, subtextColor, isDark),
             ],
             const SizedBox(height: 16),
-            _buildInfoCard('Customer Information', Icons.person, [
-              _InfoItem(Icons.person_outline, order.customerName),
+            _buildInfoCard('Customer Information', Icons.account_circle_rounded, [
+              _InfoItem(Icons.account_circle_outlined, order.customerName),
               if (order.customerPhone != null) _InfoItem(Icons.phone, order.customerPhone!),
             ], cardColor, textColor, subtextColor, isDark),
             if (order.riderId != null && order.riderName != null) ...[
               const SizedBox(height: 14),
-              _buildInfoCard('Delivery Rider', Icons.two_wheeler, [
-                _InfoItem(Icons.person_outline, order.riderName!),
+              _buildInfoCard('Delivery Rider', Icons.two_wheeler_rounded, [
+                _InfoItem(Icons.account_circle_outlined, order.riderName!),
                 if (order.riderPhone != null) _InfoItem(Icons.phone, order.riderPhone!),
                 _InfoItem(Icons.badge, 'ID: ${order.riderId!.substring(0, 12)}'),
               ], cardColor, const Color(0xFF2E7D32), subtextColor, isDark),
@@ -101,8 +101,8 @@ class _VendorOrderDetailScreenState extends State<VendorOrderDetailScreen> {
             _buildPricingCard(order, cardColor, textColor, subtextColor, isDark),
             if (order.deliveryInfo != null) ...[
               const SizedBox(height: 14),
-              _buildInfoCard('Delivery Information', Icons.location_on, [
-                _InfoItem(Icons.home, order.deliveryInfo!.address),
+              _buildInfoCard('Delivery Information', Icons.location_on_rounded, [
+                _InfoItem(Icons.home_rounded, order.deliveryInfo!.address),
                 if (order.deliveryInfo!.notes != null) 
                   _InfoItem(Icons.note, order.deliveryInfo!.notes!),
               ], cardColor, textColor, subtextColor, isDark),
@@ -294,7 +294,7 @@ class _VendorOrderDetailScreenState extends State<VendorOrderDetailScreen> {
                     color: Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(7),
                   ),
-                  child: const Icon(Icons.local_shipping, color: Colors.white, size: 18),
+                  child: const Icon(Icons.two_wheeler_rounded, color: Colors.white, size: 18),
                 ),
                 const SizedBox(width: 10),
                 const Expanded(
@@ -421,7 +421,7 @@ class _VendorOrderDetailScreenState extends State<VendorOrderDetailScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: isDark ? Colors.grey[850] : Colors.grey[100],
+        color: isDark ? const Color(0xFF252525) : Colors.grey[100],
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: isDark ? Colors.grey[800]! : Colors.grey[300]!),
       ),
@@ -574,14 +574,14 @@ class _VendorOrderDetailScreenState extends State<VendorOrderDetailScreen> {
                         border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
                       ),
                       child: imageUrl == null
-                          ? const Icon(Icons.image_outlined, color: Color(0xFF9CA3AF))
+                          ? const Icon(Icons.image, color: Color(0xFF9CA3AF))
                           : ClipRRect(
                               borderRadius: BorderRadius.circular(12),
                               child: Image.network(
                                 imageUrl,
                                 fit: BoxFit.cover,
                                 errorBuilder: (_, __, ___) => const Icon(
-                                  Icons.broken_image_outlined,
+                                  Icons.broken_image,
                                   color: Color(0xFF9CA3AF),
                                 ),
                               ),
@@ -685,7 +685,7 @@ class _VendorOrderDetailScreenState extends State<VendorOrderDetailScreen> {
                             const SizedBox(height: 4),
                             Row(
                               children: [
-                                Icon(Icons.note_outlined, size: 12, color: subtextColor),
+                                Icon(Icons.note, size: 12, color: subtextColor),
                                 const SizedBox(width: 4),
                                 Expanded(
                                   child: Text(
@@ -1015,31 +1015,58 @@ class _VendorOrderDetailScreenState extends State<VendorOrderDetailScreen> {
   
   Future<String?> _showRejectDialog(BuildContext context) async {
     final controller = TextEditingController();
+    final themeProvider = context.read<ThemeProvider>();
+    final isDark = themeProvider.isDarkMode;
     return showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Reject Order', style: TextStyle(fontSize: 18)),
+        backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Reject Order', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: isDark ? Colors.white : Colors.black)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Provide a reason for rejection:'),
+            Text('Provide a reason for rejection:', style: TextStyle(color: isDark ? Colors.grey[300] : Colors.grey[700])),
             const SizedBox(height: 12),
             TextField(
               controller: controller,
-              decoration: const InputDecoration(hintText: 'Enter reason...', border: OutlineInputBorder()),
+              style: TextStyle(color: isDark ? Colors.white : Colors.black),
+              decoration: InputDecoration(
+                hintText: 'Enter reason...',
+                hintStyle: TextStyle(color: isDark ? Colors.grey[500] : Colors.grey[400]),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: isDark ? Colors.grey[700]! : Colors.grey[300]!),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: Colors.red),
+                ),
+                filled: true,
+                fillColor: isDark ? const Color(0xFF2A2A2A) : Colors.grey[50],
+              ),
               maxLines: 3,
             ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
+          ),
           ElevatedButton(
             onPressed: () {
               if (controller.text.trim().isNotEmpty) {
                 Navigator.pop(context, controller.text.trim());
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
             child: const Text('Reject'),
           ),
         ],
@@ -1048,17 +1075,31 @@ class _VendorOrderDetailScreenState extends State<VendorOrderDetailScreen> {
   }
   
   void _showOrderMenu(Color cardColor) {
+    final themeProvider = context.read<ThemeProvider>();
+    final isDark = themeProvider.isDarkMode;
+    final menuBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final iconColor = isDark ? Colors.white70 : Colors.black87;
+    final textColor = isDark ? Colors.white : Colors.black;
     showModalBottomSheet(
       context: context,
-      backgroundColor: cardColor,
+      backgroundColor: menuBg,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(leading: const Icon(Icons.print), title: const Text('Print Order'), onTap: () => Navigator.pop(context)),
-            ListTile(leading: const Icon(Icons.share), title: const Text('Share Order'), onTap: () => Navigator.pop(context)),
-            ListTile(leading: const Icon(Icons.phone), title: const Text('Call Customer'), onTap: () => Navigator.pop(context)),
+            Container(
+              width: 40, height: 4,
+              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.grey[700] : Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            ListTile(leading: Icon(Icons.print, color: iconColor), title: Text('Print Order', style: TextStyle(color: textColor)), onTap: () => Navigator.pop(context)),
+            ListTile(leading: Icon(Icons.share, color: iconColor), title: Text('Share Order', style: TextStyle(color: textColor)), onTap: () => Navigator.pop(context)),
+            ListTile(leading: Icon(Icons.phone, color: iconColor), title: Text('Call Customer', style: TextStyle(color: textColor)), onTap: () => Navigator.pop(context)),
+            const SizedBox(height: 8),
           ],
         ),
       ),

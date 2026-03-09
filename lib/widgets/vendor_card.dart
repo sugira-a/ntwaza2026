@@ -61,13 +61,13 @@ class VendorCard extends StatelessWidget {
                                 errorBuilder: (context, error, stackTrace) {
                                   return Container(
                                     color: isDarkMode ? const Color(0xFF2A2A2A) : Colors.grey[200],
-                                    child: Icon(Icons.store_outlined, size: 36, color: subtextColor),
+                                    child: Icon(Icons.storefront_rounded, size: 36, color: subtextColor),
                                   );
                                 },
                               )
                             : Container(
                                 color: isDarkMode ? const Color(0xFF2A2A2A) : Colors.grey[200],
-                                child: Icon(Icons.store_outlined, size: 36, color: subtextColor),
+                                child: Icon(Icons.storefront_rounded, size: 36, color: subtextColor),
                               ),
                       ),
                     ),
@@ -136,7 +136,7 @@ class VendorCard extends StatelessWidget {
                       ),
                       Expanded(
                         child: Row(mainAxisSize: MainAxisSize.min, children: [
-                          Icon(Icons.near_me_outlined, size: 11, color: subtextColor),
+                          Icon(Icons.near_me, size: 11, color: subtextColor),
                           const SizedBox(width: 3),
                           Flexible(child: Text(vendor.formattedDistance, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: subtextColor), overflow: TextOverflow.ellipsis)),
                         ]),
@@ -149,7 +149,7 @@ class VendorCard extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Row(mainAxisSize: MainAxisSize.min, children: [
-                          Icon(Icons.schedule_outlined, size: 11, color: subtextColor),
+                          Icon(Icons.schedule, size: 11, color: subtextColor),
                           const SizedBox(width: 3),
                           Flexible(child: Text(vendor.formattedDeliveryTime, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: subtextColor), overflow: TextOverflow.ellipsis)),
                         ]),
@@ -229,10 +229,10 @@ class VendorCardCompact extends StatelessWidget {
                           vendor.logoUrl,
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) {
-                            return Icon(Icons.store_outlined, size: 22, color: subtextColor);
+                            return Icon(Icons.storefront_rounded, size: 22, color: subtextColor);
                           },
                         )
-                      : Icon(Icons.store_outlined, size: 22, color: subtextColor),
+                      : Icon(Icons.storefront_rounded, size: 22, color: subtextColor),
                 ),
               ),
               const SizedBox(width: 12),

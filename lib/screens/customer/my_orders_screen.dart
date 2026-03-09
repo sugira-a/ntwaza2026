@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
@@ -96,7 +96,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
   List<Order> _filtered(String f) {
     switch (f) {
       case 'active':
-        return _orders.where((o) => o.status == OrderStatus.pending || o.status == OrderStatus.confirmed || o.status == OrderStatus.preparing || o.status == OrderStatus.ready || o.status == OrderStatus.pickedUp).toList();
+        return _orders.where((o) => o.status == OrderStatus.awaitingPayment || o.status == OrderStatus.pending || o.status == OrderStatus.confirmed || o.status == OrderStatus.preparing || o.status == OrderStatus.ready || o.status == OrderStatus.pickedUp).toList();
       case 'completed':
         return _orders.where((o) => o.status == OrderStatus.completed).toList();
       case 'cancelled':
@@ -318,17 +318,17 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
     final isDark = Theme.of(context).brightness == Brightness.dark;
     IconData icon; String title;
     switch (filter) {
-      case 'active': icon = Icons.shopping_bag_outlined; title = 'No active orders'; break;
+      case 'active': icon = Icons.shopping_bag_rounded; title = 'No active orders'; break;
       case 'completed': icon = Icons.check_circle_outline_rounded; title = 'No completed orders yet'; break;
-      case 'cancelled': icon = Icons.cancel_outlined; title = 'No cancelled orders'; break;
-      default: icon = Icons.inbox_outlined; title = 'No orders found';
+      case 'cancelled': icon = Icons.cancel; title = 'No cancelled orders'; break;
+      default: icon = Icons.inbox; title = 'No orders found';
     }
     return _emptyBox(icon, title, isDark);
   }
 
   Widget _buildEmptyPickup() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return _emptyBox(Icons.local_shipping_outlined, 'No pickup orders yet', isDark,
+    return _emptyBox(Icons.two_wheeler_rounded, 'No pickup orders yet', isDark,
       action: ElevatedButton.icon(
         onPressed: () => context.push('/create-pickup-order'),
         icon: const Icon(Icons.add_rounded, size: 18),
@@ -464,6 +464,14 @@ class _OrderCard extends StatelessWidget {
   }
 
   Widget _actionButton(OrderStatus status, VoidCallback onTap, bool isDark) {
+    if (status == OrderStatus.awaitingPayment) {
+      return ElevatedButton.icon(
+        onPressed: onTap,
+        icon: const Icon(Icons.payment_rounded, size: 14),
+        label: const Text('Pay Now'),
+        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF6C00), foregroundColor: Colors.white, elevation: 0, padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+      );
+    }
     final isTrackable = status == OrderStatus.pickedUp || status == OrderStatus.ready;
     if (isTrackable) {
       return ElevatedButton.icon(
@@ -482,11 +490,12 @@ class _OrderCard extends StatelessWidget {
 
   _StatusInfo _statusInfo(OrderStatus s) {
     switch (s) {
+      case OrderStatus.awaitingPayment: return _StatusInfo('Awaiting Payment', Icons.payment_rounded, const Color(0xFFEF6C00));
       case OrderStatus.pending: return _StatusInfo('Pending', Icons.schedule_rounded, const Color(0xFFF59E0B));
       case OrderStatus.confirmed: return _StatusInfo('Confirmed', Icons.check_circle_rounded, const Color(0xFF3B82F6));
       case OrderStatus.preparing: return _StatusInfo('Preparing', Icons.restaurant_rounded, const Color(0xFF8B5CF6));
       case OrderStatus.ready: return _StatusInfo('Ready', Icons.done_all_rounded, const Color(0xFF10B981));
-      case OrderStatus.pickedUp: return _StatusInfo('On The Way', Icons.delivery_dining_rounded, const Color(0xFF0EA5E9));
+      case OrderStatus.pickedUp: return _StatusInfo('On The Way', Icons.two_wheeler_rounded, const Color(0xFF0EA5E9));
       case OrderStatus.completed: return _StatusInfo('Completed', Icons.check_circle_rounded, const Color(0xFF10B981));
       case OrderStatus.cancelled: return _StatusInfo('Cancelled', Icons.cancel_rounded, const Color(0xFFEF4444));
     }
@@ -569,7 +578,7 @@ class _PickupCard extends StatelessWidget {
           if (packageDesc.isNotEmpty) ...[
             Row(
               children: [
-                Icon(Icons.inventory_2_outlined, size: 16, color: isDark ? Colors.white60 : Colors.grey[600]),
+                Icon(Icons.inventory_2, size: 16, color: isDark ? Colors.white60 : Colors.grey[600]),
                 const SizedBox(width: 8),
                 Expanded(child: Text(packageDesc, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: pText), maxLines: 2, overflow: TextOverflow.ellipsis)),
               ],
@@ -581,7 +590,7 @@ class _PickupCard extends StatelessWidget {
           Row(
             children: [
               if (totalWeight > 0) ...[
-                Icon(Icons.scale_outlined, size: 14, color: sText),
+                Icon(Icons.scale, size: 14, color: sText),
                 const SizedBox(width: 4),
                 Text('${totalWeight.toStringAsFixed(1)} kg', style: TextStyle(fontSize: 12, color: sText)),
                 const SizedBox(width: 16),
@@ -592,7 +601,7 @@ class _PickupCard extends StatelessWidget {
               const SizedBox(width: 16),
               Icon(Icons.payment_rounded, size: 14, color: sText),
               const SizedBox(width: 4),
-              Text(order.paymentMethod == 'cash' ? 'Cash' : order.paymentMethod.toUpperCase(), style: TextStyle(fontSize: 12, color: sText)),
+              Text(order.paymentMethod == 'cash' ? 'Cash' : order.paymentMethod == 'pay_on_pickup' ? 'Pay on Delivery' : order.paymentMethod.toUpperCase(), style: TextStyle(fontSize: 12, color: sText)),
             ],
           ),
           const SizedBox(height: 10),
@@ -725,7 +734,7 @@ class _PickupCard extends StatelessWidget {
       case PickupOrderStatus.confirmed: return _StatusInfo('Confirmed', Icons.check_circle_rounded, const Color(0xFF3B82F6));
       case PickupOrderStatus.assignedToRider: return _StatusInfo('Assigned', Icons.person_pin_rounded, const Color(0xFF8B5CF6));
       case PickupOrderStatus.pickedUp: return _StatusInfo('Picked Up', Icons.inventory_2_rounded, const Color(0xFF0EA5E9));
-      case PickupOrderStatus.inTransit: return _StatusInfo('In Transit', Icons.delivery_dining_rounded, const Color(0xFF0EA5E9));
+      case PickupOrderStatus.inTransit: return _StatusInfo('In Transit', Icons.two_wheeler_rounded, const Color(0xFF0EA5E9));
       case PickupOrderStatus.delivered: return _StatusInfo('Delivered', Icons.check_circle_rounded, const Color(0xFF10B981));
       case PickupOrderStatus.cancelled: return _StatusInfo('Cancelled', Icons.cancel_rounded, const Color(0xFFEF4444));
     }

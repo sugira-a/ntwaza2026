@@ -82,8 +82,8 @@ class _CodeVerificationWidgetState extends State<CodeVerificationWidget> {
 
   IconData get _icon {
     return widget.codeType == 'vendor_pickup'
-      ? Icons.store
-      : Icons.home;
+      ? Icons.storefront_rounded
+      : Icons.home_rounded;
   }
 
   @override

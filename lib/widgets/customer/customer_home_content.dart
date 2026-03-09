@@ -482,7 +482,7 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
           children: [
             ListTile(leading: const Icon(Icons.email), title: const Text('Email'), subtitle: Text(authProvider.user?.email ?? '')),
             ListTile(leading: const Icon(Icons.badge), title: const Text('Role'), subtitle: Text(authProvider.user?.role ?? 'Customer')),
-            ListTile(leading: const Icon(Icons.person), title: const Text('User ID'), subtitle: Text(authProvider.user?.id?.toString() ?? 'N/A')),
+            ListTile(leading: const Icon(Icons.account_circle_rounded), title: const Text('User ID'), subtitle: Text(authProvider.user?.id?.toString() ?? 'N/A')),
           ]
         ),
         actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
@@ -822,7 +822,7 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
                         child: Row(
                           children: [
                             Icon(
-                              _currentAddress != null ? Icons.location_on : Icons.location_off,
+                              _currentAddress != null ? Icons.location_on_rounded : Icons.location_off,
                               size: 14,
                               color: _currentAddress != null ? Colors.green : Colors.orange,
                             ),
@@ -941,7 +941,7 @@ void _showAddressManagementDialog(BuildContext context, bool isDarkMode, Color c
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.location_on, color: textColor),
+                    Icon(Icons.location_on_rounded, color: textColor),
                     const SizedBox(width: 12),
                     Text('Delivery Addresses', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: textColor)),
                     const Spacer(),
@@ -1010,7 +1010,7 @@ void _showAddressManagementDialog(BuildContext context, bool isDarkMode, Color c
                           },
                           child: ListTile(
                             leading: Icon(
-                              address.isDefault ? Icons.home : Icons.location_on,
+                              address.isDefault ? Icons.home_rounded : Icons.location_on_rounded,
                               color: isSelected ? Colors.green : subtextColor,
                             ),
                             title: Text(
@@ -1083,7 +1083,7 @@ void _showAddressManagementDialog(BuildContext context, bool isDarkMode, Color c
                                   itemBuilder: (_) => [
                                     const PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit, size: 18), SizedBox(width: 8), Text('Edit')])),
                                     if (!address.isDefault)
-                                      const PopupMenuItem(value: 'default', child: Row(children: [Icon(Icons.home, size: 18), SizedBox(width: 8), Text('Set as default')])),
+                                      const PopupMenuItem(value: 'default', child: Row(children: [Icon(Icons.home_rounded, size: 18), SizedBox(width: 8), Text('Set as default')])),
                                     const PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete, size: 18, color: Colors.red), SizedBox(width: 8), Text('Delete', style: TextStyle(color: Colors.red))])),
                                   ],
                                 ),
@@ -1174,11 +1174,11 @@ void _showAddressManagementDialog(BuildContext context, bool isDarkMode, Color c
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              Expanded(child: _buildNavItem(Icons.home_outlined, Icons.home, 'Home', 0, textColor, subtextColor, isDarkMode)),
-              Expanded(child: _buildNavItem(Icons.restaurant_outlined, Icons.restaurant, 'Restaurants', 1, textColor, subtextColor, isDarkMode)),
-              Expanded(child: _buildNavItem(Icons.shopping_bag_outlined, Icons.shopping_bag, 'Markets', 2, textColor, subtextColor, isDarkMode)),
-              Expanded(child: _buildNavItem(Icons.shopping_cart_outlined, Icons.shopping_cart, 'Cart', 3, textColor, subtextColor, isDarkMode)),
-              Expanded(child: _buildNavItem(Icons.person_outline, Icons.person, 'Profile', 4, textColor, subtextColor, isDarkMode)),
+              Expanded(child: _buildNavItem(Icons.home_rounded, Icons.home_rounded, 'Home', 0, textColor, subtextColor, isDarkMode)),
+              Expanded(child: _buildNavItem(Icons.restaurant_rounded, Icons.restaurant_rounded, 'Restaurants', 1, textColor, subtextColor, isDarkMode)),
+              Expanded(child: _buildNavItem(Icons.shopping_bag_rounded, Icons.shopping_bag_rounded, 'Markets', 2, textColor, subtextColor, isDarkMode)),
+              Expanded(child: _buildNavItem(Icons.shopping_cart, Icons.shopping_cart, 'Cart', 3, textColor, subtextColor, isDarkMode)),
+              Expanded(child: _buildNavItem(Icons.account_circle_outlined, Icons.account_circle_rounded, 'Profile', 4, textColor, subtextColor, isDarkMode)),
             ],
           ),
         ),
@@ -1369,7 +1369,7 @@ void _showAddressManagementDialog(BuildContext context, bool isDarkMode, Color c
                       Container(
                         width: 64, height: 64,
                         decoration: BoxDecoration(shape: BoxShape.circle, color: const Color(0xFF4CAF50).withOpacity(0.1)),
-                        child: const Icon(Icons.store_outlined, color: Color(0xFF4CAF50), size: 30),
+                        child: const Icon(Icons.storefront_rounded, color: Color(0xFF4CAF50), size: 30),
                       ),
                       const SizedBox(height: 14),
                       Text('No vendors found', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: pText)),
@@ -1411,7 +1411,7 @@ void _showAddressManagementDialog(BuildContext context, bool isDarkMode, Color c
                                           errorBuilder: (_, __, ___) => Container(
                                             width: 72, height: 72,
                                             color: isDarkMode ? Colors.grey[900] : Colors.grey[200],
-                                            child: Icon(isRestaurant ? Icons.restaurant : Icons.store, color: Colors.grey[400], size: 28),
+                                            child: Icon(isRestaurant ? Icons.restaurant_rounded : Icons.storefront_rounded, color: Colors.grey[400], size: 28),
                                           ))
                                       : Container(
                                           width: 72, height: 72,
@@ -1419,7 +1419,7 @@ void _showAddressManagementDialog(BuildContext context, bool isDarkMode, Color c
                                             color: isDarkMode ? Colors.grey[900] : Colors.grey[200],
                                             borderRadius: BorderRadius.circular(12),
                                           ),
-                                          child: Icon(isRestaurant ? Icons.restaurant : Icons.store, color: Colors.grey[400], size: 28),
+                                          child: Icon(isRestaurant ? Icons.restaurant_rounded : Icons.storefront_rounded, color: Colors.grey[400], size: 28),
                                         ),
                                 ),
                                 const SizedBox(width: 12),
@@ -1434,12 +1434,12 @@ void _showAddressManagementDialog(BuildContext context, bool isDarkMode, Color c
                                       const SizedBox(width: 3),
                                       Text(v.totalRatings == 0 ? 'New' : v.formattedRating, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: sText)),
                                       const SizedBox(width: 12),
-                                      Icon(Icons.schedule_outlined, size: 13, color: sText),
+                                      Icon(Icons.schedule, size: 13, color: sText),
                                       const SizedBox(width: 3),
                                       Text(v.formattedDeliveryTime, style: TextStyle(fontSize: 12, color: sText)),
                                       if (v.formattedDistance != 'D/U') ...[
                                         const SizedBox(width: 12),
-                                        Icon(Icons.near_me_outlined, size: 13, color: sText),
+                                        Icon(Icons.near_me, size: 13, color: sText),
                                         const SizedBox(width: 3),
                                         Text(v.formattedDistance, style: TextStyle(fontSize: 12, color: sText)),
                                       ],
@@ -1510,7 +1510,7 @@ void _showAddressManagementDialog(BuildContext context, bool isDarkMode, Color c
           Container(
             width: 44, height: 44,
             decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withOpacity(0.15), border: Border.all(color: Colors.white.withOpacity(0.3), width: 1.5)),
-            child: const Icon(Icons.local_shipping, color: Colors.white, size: 22),
+            child: const Icon(Icons.two_wheeler_rounded, color: Colors.white, size: 22),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -1576,7 +1576,7 @@ void _showAddressManagementDialog(BuildContext context, bool isDarkMode, Color c
                 ),
               ),
               child: const Icon(
-                Icons.local_shipping,
+                Icons.two_wheeler_rounded,
                 color: Colors.white,
                 size: 24,
               ),
@@ -1893,10 +1893,10 @@ void _showAddressManagementDialog(BuildContext context, bool isDarkMode, Color c
             : '');
     
     final businessType = vendor.category.toLowerCase();
-    IconData businessIcon = Icons.store;
+    IconData businessIcon = Icons.storefront_rounded;
     String typeLabel = 'Store';
     if (businessType.contains('restaurant')) {
-      businessIcon = Icons.restaurant;
+      businessIcon = Icons.restaurant_rounded;
       typeLabel = 'Restaurant';
     } else if (businessType.contains('supermarket') || businessType.contains('market')) {
       businessIcon = Icons.shopping_cart;
@@ -2040,7 +2040,7 @@ void _showAddressManagementDialog(BuildContext context, bool isDarkMode, Color c
                         if (distanceText != 'D/U')
                           Expanded(
                             child: Row(mainAxisSize: MainAxisSize.min, children: [
-                              Icon(Icons.near_me_outlined, size: 12, color: subtextColor),
+                              Icon(Icons.near_me, size: 12, color: subtextColor),
                               const SizedBox(width: 3),
                               Flexible(child: Text(distanceText, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: subtextColor), overflow: TextOverflow.ellipsis)),
                             ]),
@@ -2051,7 +2051,7 @@ void _showAddressManagementDialog(BuildContext context, bool isDarkMode, Color c
                         // Delivery time (left)
                         Expanded(
                           child: Row(mainAxisSize: MainAxisSize.min, children: [
-                            Icon(Icons.schedule_outlined, size: 12, color: subtextColor),
+                            Icon(Icons.schedule, size: 12, color: subtextColor),
                             const SizedBox(width: 3),
                             Flexible(child: Text(deliveryTime, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: subtextColor), overflow: TextOverflow.ellipsis)),
                           ]),
@@ -2122,7 +2122,7 @@ void _showAddressManagementDialog(BuildContext context, bool isDarkMode, Color c
             child: _buildVendorImage(
               imageUrl,
               isDarkMode: isDarkMode,
-              businessIcon: Icons.store,
+              businessIcon: Icons.storefront_rounded,
               width: 56,
               height: 56,
               showText: false,
@@ -2140,13 +2140,13 @@ void _showAddressManagementDialog(BuildContext context, bool isDarkMode, Color c
                   ? Text('New', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: subtextColor))
                   : Text(vendor.formattedRating, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: subtextColor)),
                 Text('  ·  ', style: TextStyle(color: subtextColor.withOpacity(0.5), fontSize: 11)),
-                Icon(Icons.schedule_outlined, size: 12, color: subtextColor),
+                Icon(Icons.schedule, size: 12, color: subtextColor),
                 const SizedBox(width: 3),
                 Text(deliveryTime, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: subtextColor)),
               ]),
               const SizedBox(height: 3),
               Row(children: [
-                Icon(Icons.near_me_outlined, size: 11, color: subtextColor),
+                Icon(Icons.near_me, size: 11, color: subtextColor),
                 const SizedBox(width: 3),
                 Text(distanceText, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: subtextColor)),
               ]),
@@ -2900,13 +2900,13 @@ Widget _buildNoVendorsOverlay(bool isDarkMode, Color cardColor, Color textColor,
 
   if (_selectedCategory == 'All' || _selectedCategory.isEmpty) {
     label = 'No vendors in this area';
-    icon = Icons.storefront_outlined;
+    icon = Icons.storefront;
   } else if (_selectedCategory == 'Others') {
     label = 'Coming soon';
-    icon = Icons.schedule_outlined;
+    icon = Icons.schedule;
   } else {
     label = 'No ${_selectedCategory.toLowerCase()} available';
-    icon = Icons.storefront_outlined;
+    icon = Icons.storefront;
   }
 
   return Center(

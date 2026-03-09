@@ -309,7 +309,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                       ],
                     ),
                     child: const Icon(
-                      Icons.shield_moon_outlined,
+                      Icons.shield_moon,
                       color: Color(0xFFEDEFF2),
                       size: 28,
                     ),

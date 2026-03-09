@@ -138,27 +138,27 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
             labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
             destinations: const [
               NavigationDestination(
-                icon: Icon(Icons.dashboard_outlined),
+                icon: Icon(Icons.dashboard),
                 selectedIcon: Icon(Icons.dashboard_rounded),
                 label: 'Dashboard',
               ),
               NavigationDestination(
-                icon: Icon(Icons.receipt_long_outlined),
+                icon: Icon(Icons.receipt_long),
                 selectedIcon: Icon(Icons.receipt_long_rounded),
                 label: 'Orders',
               ),
               NavigationDestination(
-                icon: Icon(Icons.account_balance_wallet_outlined),
+                icon: Icon(Icons.account_balance_wallet),
                 selectedIcon: Icon(Icons.account_balance_wallet_rounded),
                 label: 'Finance',
               ),
               NavigationDestination(
-                icon: Icon(Icons.insights_outlined),
+                icon: Icon(Icons.insights),
                 selectedIcon: Icon(Icons.insights_rounded),
                 label: 'Performance',
               ),
               NavigationDestination(
-                icon: Icon(Icons.person_outline),
+                icon: Icon(Icons.account_circle_outlined),
                 selectedIcon: Icon(Icons.person_rounded),
                 label: 'Profile',
               ),
@@ -186,7 +186,7 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
                 color: const Color(0xFF2E7D32).withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.exit_to_app, color: Color(0xFF2E7D32), size: 22),
+              child: const Icon(Icons.logout_rounded, color: Color(0xFF2E7D32), size: 22),
             ),
             const SizedBox(width: 12),
             const Text('Exit App?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 18)),

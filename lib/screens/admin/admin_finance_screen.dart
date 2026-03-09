@@ -222,7 +222,7 @@ class _AdminFinanceScreenState extends State<AdminFinanceScreen> {
               child: _SummaryMiniCard(
                 label: feeLabel,
                 value: '${_formatCurrency(feeValue)} RWF',
-                icon: Icons.local_shipping_rounded,
+                icon: Icons.two_wheeler_rounded,
                 color: const Color(0xFF3B82F6),
                 isDark: isDark,
               ),

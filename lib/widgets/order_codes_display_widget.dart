@@ -48,7 +48,7 @@ class OrderCodesDisplayWidget extends StatelessWidget {
                 Row(
                   children: [
                     Icon(
-                      Icons.store,
+                      Icons.storefront_rounded,
                       color: Colors.orange,
                       size: 20,
                     ),
@@ -158,7 +158,7 @@ class OrderCodesDisplayWidget extends StatelessWidget {
                 Row(
                   children: [
                     Icon(
-                      Icons.home,
+                      Icons.home_rounded,
                       color: Colors.blue,
                       size: 20,
                     ),

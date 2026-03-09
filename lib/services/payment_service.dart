@@ -55,4 +55,23 @@ class PaymentService {
       return {'success': false, 'error': e.toString()};
     }
   }
+
+  /// Initiate a mobile money payment for a pickup order.
+  Future<Map<String, dynamic>> initiatePickupPayment({
+    required String pickupOrderId,
+    required String phoneNumber,
+  }) async {
+    try {
+      final result = await _api.post('/api/payments/pickup/initiate', {
+        'pickup_order_id': pickupOrderId,
+        'phone_number': phoneNumber,
+      });
+      return result;
+    } catch (e) {
+      return {
+        'success': false,
+        'error': e.toString().replaceAll('Exception: ', ''),
+      };
+    }
+  }
 }

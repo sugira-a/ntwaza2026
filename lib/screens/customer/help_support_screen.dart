@@ -28,42 +28,42 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
     _FAQ(
       q: 'How do I place an order?',
       a: 'Browse vendors near you, add items to your cart, confirm your delivery address, and proceed to checkout. You will receive real-time updates once the order is accepted.',
-      icon: Icons.shopping_bag_outlined,
+      icon: Icons.shopping_bag_rounded,
     ),
     _FAQ(
       q: 'What payment methods are accepted?',
-      a: 'We accept Mobile Money (MTN MoMo, Airtel Money), Visa / Mastercard, and Cash on Delivery for orders within Kigali.',
-      icon: Icons.account_balance_wallet_outlined,
+      a: 'We accept Mobile Money (MTN MoMo, Airtel Money) and Visa / Mastercard.',
+      icon: Icons.account_balance_wallet,
     ),
     _FAQ(
       q: 'How long does delivery take?',
       a: 'Most deliveries within Kigali are completed in 20–60 minutes depending on distance, traffic, and vendor preparation time. You can track your rider in real time.',
-      icon: Icons.schedule_outlined,
+      icon: Icons.schedule,
     ),
     _FAQ(
       q: 'Can I cancel or modify my order?',
       a: 'You may cancel within 5 minutes of placing your order, provided the vendor has not yet started preparing it. Modifications can be made by contacting our support team before preparation begins.',
-      icon: Icons.edit_note_outlined,
+      icon: Icons.edit_note,
     ),
     _FAQ(
       q: 'What is your refund policy?',
       a: 'Full refunds are issued for cancelled orders and undelivered items. Partial refunds may apply for missing or incorrect items. Refunds are processed within 2–3 business days to the original payment method.',
-      icon: Icons.currency_exchange_outlined,
+      icon: Icons.currency_exchange,
     ),
     _FAQ(
       q: 'How do I report a problem with my order?',
       a: 'Navigate to your order history, select the order, and tap "Report an Issue". Alternatively, submit a support ticket below or email us at $_email. Please include photos where applicable.',
-      icon: Icons.flag_outlined,
+      icon: Icons.flag,
     ),
     _FAQ(
       q: 'Is my personal data secure?',
       a: 'Absolutely. All data is encrypted in transit and at rest. Location data is shared only with your assigned rider during active deliveries and is never sold to third parties. See our Privacy Policy for details.',
-      icon: Icons.shield_outlined,
+      icon: Icons.shield,
     ),
     _FAQ(
       q: 'Do you deliver outside Kigali?',
       a: 'We currently operate within Kigali and its surrounding areas. We are actively expanding to other cities in Rwanda and will notify you when new areas become available.',
-      icon: Icons.location_on_outlined,
+      icon: Icons.location_on_rounded,
     ),
   ];
 
@@ -184,13 +184,13 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
             const SizedBox(height: 24),
 
             // ── Contact Channels ──
-            _sectionHeader('Contact Us', Icons.headset_mic_outlined, text),
+            _sectionHeader('Contact Us', Icons.headset_mic, text),
             const SizedBox(height: 4),
             Text('Reach our support team through any of the channels below.',
                 style: TextStyle(fontSize: 13, color: sub, height: 1.4)),
             const SizedBox(height: 12),
             _contactCard(
-              icon: Icons.phone_outlined,
+              icon: Icons.phone,
               title: 'Phone',
               subtitle: _phoneDisplay,
               trailing: 'Mon-Sat 7AM-9PM',
@@ -202,7 +202,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
             ),
             const SizedBox(height: 8),
             _contactCard(
-              icon: Icons.email_outlined,
+              icon: Icons.email,
               title: 'Email',
               subtitle: _email,
               trailing: 'Within 24hrs',
@@ -214,7 +214,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
             ),
             const SizedBox(height: 8),
             _contactCard(
-              icon: Icons.chat_outlined,
+              icon: Icons.chat,
               title: 'WhatsApp',
               subtitle: 'Chat with us instantly',
               trailing: 'Open WhatsApp',
@@ -228,7 +228,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
             const SizedBox(height: 28),
 
                   // ── FAQ ──
-                  _sectionHeader('Frequently Asked Questions', Icons.quiz_outlined, text),
+                  _sectionHeader('Frequently Asked Questions', Icons.quiz, text),
                   const SizedBox(height: 4),
                   Text('Quick answers to common questions.',
                       style: TextStyle(fontSize: 13, color: sub, height: 1.4)),
@@ -239,7 +239,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                   const SizedBox(height: 32),
 
                   // ── Submit Ticket ──
-                  _sectionHeader('Submit a Support Ticket', Icons.confirmation_number_outlined, text),
+                  _sectionHeader('Submit a Support Ticket', Icons.confirmation_number, text),
                   const SizedBox(height: 4),
                   Text('Can\'t find your answer? Describe your issue and our team will respond promptly.',
                       style: TextStyle(fontSize: 13, color: sub, height: 1.4)),
@@ -249,7 +249,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                   const SizedBox(height: 32),
 
                   // ── Office Info ──
-                  _sectionHeader('Company Information', Icons.business_outlined, text),
+                  _sectionHeader('Company Information', Icons.business, text),
                   const SizedBox(height: 16),
                   Container(
                     width: double.infinity,
@@ -264,13 +264,13 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                         Text('NTWAZA Ltd.',
                             style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: text)),
                         const SizedBox(height: 12),
-                        _infoRow(Icons.location_on_outlined, 'Kigali, Rwanda', sub),
+                        _infoRow(Icons.location_on_rounded, 'Kigali, Rwanda', sub),
                         const SizedBox(height: 8),
-                        _infoRow(Icons.phone_outlined, _phoneDisplay, sub),
+                        _infoRow(Icons.phone, _phoneDisplay, sub),
                         const SizedBox(height: 8),
-                        _infoRow(Icons.email_outlined, _email, sub),
+                        _infoRow(Icons.email, _email, sub),
                         const SizedBox(height: 8),
-                        _infoRow(Icons.access_time_outlined, _workingHours, sub),
+                        _infoRow(Icons.access_time, _workingHours, sub),
                         const SizedBox(height: 16),
                         Divider(color: divider, height: 1),
                         const SizedBox(height: 16),
