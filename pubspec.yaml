@@ -75,4 +75,4 @@ flutter_launcher_icons:
 flutter:
   uses-material-design: true
   assets:
-    - assets/images/ntwaza_splash.png
+    - assets/images/app_icon.png
