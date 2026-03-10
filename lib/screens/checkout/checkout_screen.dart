@@ -574,6 +574,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         throw Exception('No authentication token available');
       }
       final List<String> orderIds = [];
+      bool anyMomoPaymentSucceeded = false;
       for (var entry in itemsByVendor.entries) {
         final vendorId = entry.key;
         final items = entry.value;
@@ -617,6 +618,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         if (response['success'] == true) {
           final orderId = response['order']['id'].toString();
           orderIds.add(orderId);
+          // Backend auto-initiates MoMo payment — check the result
+          final paymentData = response['payment'];
+          if (paymentData != null && paymentData['success'] == true) {
+            anyMomoPaymentSucceeded = true;
+          }
         } else {
           throw Exception(response['error'] ?? 'Failed to create order');
         }
@@ -628,26 +634,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         cart.removeCartItem(item);
       }
 
-      // For momo: initiate payment for each order individually
+      // For momo: payment was already initiated by backend during order creation
       if (_paymentMethod == 'momo') {
-        final phoneNumber = _phoneController.text.trim();
-        final paymentService = PaymentService();
-        bool anyPaymentSucceeded = false;
-        for (final oid in orderIds) {
-          try {
-            final result = await paymentService.initiatePayment(
-              orderId: oid,
-              paymentMethod: 'momo',
-              phoneNumber: phoneNumber,
-            );
-            if (result['success'] == true) anyPaymentSucceeded = true;
-          } catch (_) {}
-        }
-
         if (mounted) {
           setState(() => _isProcessing = false);
           final lastOrderId = orderIds.last;
-          if (anyPaymentSucceeded) {
+          if (anyMomoPaymentSucceeded) {
             await showDialog(
               context: context,
               barrierDismissible: false,
