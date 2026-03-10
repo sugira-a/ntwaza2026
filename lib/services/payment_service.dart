@@ -74,4 +74,17 @@ class PaymentService {
       };
     }
   }
+
+  /// Reconcile pending payments with IntouchPay.
+  /// Checks if any pending payment has been approved on the telco side.
+  Future<Map<String, dynamic>> reconcilePayments({String? orderId}) async {
+    try {
+      final body = <String, dynamic>{};
+      if (orderId != null) body['order_id'] = orderId;
+      final result = await _api.post('/api/payments/reconcile', body);
+      return result;
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
 }

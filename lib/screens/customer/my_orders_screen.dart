@@ -469,7 +469,7 @@ class _OrderCard extends StatelessWidget {
         onPressed: onTap,
         icon: const Icon(Icons.payment_rounded, size: 14),
         label: const Text('Pay Now'),
-        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF6C00), foregroundColor: Colors.white, elevation: 0, padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFFF3E0), foregroundColor: const Color(0xFFE65100), elevation: 0, padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
       );
     }
     final isTrackable = status == OrderStatus.pickedUp || status == OrderStatus.ready;

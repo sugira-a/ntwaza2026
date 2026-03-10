@@ -617,61 +617,103 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         if (response['success'] == true) {
           final orderId = response['order']['id'].toString();
           orderIds.add(orderId);
-          // Check if payment was auto-initiated by backend
-          if (response['payment'] != null) {
-            final paymentResult = response['payment'] as Map<String, dynamic>;
-            if (paymentResult['success'] == true) {
-              // Payment USSD push sent — clear cart and go to order tracking
-              final cart = context.read<CartProvider>();
-              for (var item in selectedItems) {
-                cart.removeCartItem(item);
-              }
-              if (mounted) {
-                setState(() => _isProcessing = false);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('📲 Dial *182# on your phone to approve the payment. Order will be confirmed after payment.'),
-                    backgroundColor: Color(0xFF1565C0),
-                    duration: Duration(seconds: 8),
-                  ),
-                );
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (mounted) context.go('/order/track/$orderId');
-                });
-              }
-              return;
-            } else {
-              // Payment failed but order was created — clear cart and go to order tracking
-              final cart = context.read<CartProvider>();
-              for (var item in selectedItems) {
-                cart.removeCartItem(item);
-              }
-              if (mounted) {
-                setState(() => _isProcessing = false);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Payment could not be initiated. You can retry from order details.'),
-                    backgroundColor: Color(0xFFE65100),
-                    duration: Duration(seconds: 5),
-                  ),
-                );
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (mounted) context.go('/order/track/$orderId');
-                });
-              }
-              return;
-            }
-          }
         } else {
           throw Exception(response['error'] ?? 'Failed to create order');
         }
       }
 
-      // Non-momo payment — clear cart and go to orders
+      // All orders created — clear cart
       final cart = context.read<CartProvider>();
       for (var item in selectedItems) {
         cart.removeCartItem(item);
       }
+
+      // For momo: initiate payment for each order individually
+      if (_paymentMethod == 'momo') {
+        final phoneNumber = _phoneController.text.trim();
+        final paymentService = PaymentService();
+        bool anyPaymentSucceeded = false;
+        for (final oid in orderIds) {
+          try {
+            final result = await paymentService.initiatePayment(
+              orderId: oid,
+              paymentMethod: 'momo',
+              phoneNumber: phoneNumber,
+            );
+            if (result['success'] == true) anyPaymentSucceeded = true;
+          } catch (_) {}
+        }
+
+        if (mounted) {
+          setState(() => _isProcessing = false);
+          final lastOrderId = orderIds.last;
+          if (anyPaymentSucceeded) {
+            await showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (ctx) => AlertDialog(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                title: Row(
+                  children: [
+                    const Icon(Icons.phone_android, color: Color(0xFF1565C0), size: 28),
+                    const SizedBox(width: 10),
+                    const Text('Approve Payment', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                  ],
+                ),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Dial *182*7*1# when paying',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Follow the USSD prompts on your phone to confirm payment.',
+                      style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+                actions: [
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1565C0),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      child: const Text('OK, Got it'),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Payment could not be initiated. You can retry from order details.'),
+                backgroundColor: Color(0xFFE65100),
+                duration: Duration(seconds: 5),
+              ),
+            );
+          }
+          if (mounted) {
+            if (orderIds.length == 1) {
+              context.go('/order/$lastOrderId');
+            } else {
+              context.go('/my-orders');
+            }
+          }
+        }
+        return;
+      }
+
+      // Non-momo payment — go to orders
       if (mounted) {
         setState(() => _isProcessing = false);
         final lastOrderId = orderIds.isNotEmpty ? orderIds.last : null;

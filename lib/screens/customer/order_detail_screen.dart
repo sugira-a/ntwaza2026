@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'dart:async';
 import '../../core/theme/app_theme.dart';
 import '../../models/order.dart';
 import '../../providers/auth_provider.dart';
@@ -24,6 +26,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   String? _error;
   bool _ratingShown = false;
   bool _isRetryingPayment = false;
+  Timer? _paymentPollTimer;
 
   @override
   void initState() {
@@ -37,18 +40,58 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     }
   }
 
+  @override
+  void dispose() {
+    _paymentPollTimer?.cancel();
+    super.dispose();
+  }
+
+  /// Start polling for payment status when order is awaiting payment
+  void _startPaymentPolling() {
+    _paymentPollTimer?.cancel();
+    if (_order?.status != OrderStatus.awaitingPayment) return;
+    if (!mounted) return;
+
+    // First, trigger a reconcile to check IntouchPay immediately
+    PaymentService().reconcilePayments(orderId: _order!.id).catchError((_) {});
+
+    _paymentPollTimer = Timer.periodic(const Duration(seconds: 10), (timer) async {
+      if (!mounted || _order?.status != OrderStatus.awaitingPayment) {
+        timer.cancel();
+        return;
+      }
+      try {
+        await _loadOrder(showLoader: false);
+      } catch (_) {}
+      if (_order?.status != OrderStatus.awaitingPayment) {
+        timer.cancel();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Payment confirmed! Your order is being processed.'),
+              backgroundColor: Color(0xFF2E7D32),
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
+      }
+    });
+  }
+
   Future<void> _loadOrder({bool showLoader = true}) async {
-    if (mounted && showLoader) {
+    if (!mounted) return;
+    if (showLoader) {
       setState(() {
         _isLoading = true;
         _error = null;
       });
-    } else if (mounted) {
+    } else {
       setState(() {
         _error = null;
       });
     }
     try {
+      if (!mounted) return;
       final authProvider = context.read<AuthProvider>();
       final apiService = authProvider.apiService;
       final hasToken = (apiService.authToken ?? apiService.token) != null;
@@ -72,6 +115,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             _isLoading = false;
           });
           _maybeShowRating();
+          _startPaymentPolling();
         }
       } else {
         if (mounted) {
@@ -95,22 +139,61 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     if (_order == null || _isRetryingPayment) return;
     setState(() => _isRetryingPayment = true);
     try {
+      final authProvider = context.read<AuthProvider>();
+      final phone = _order!.customerPhone ?? authProvider.user?.phone ?? '';
       final paymentService = PaymentService();
       final result = await paymentService.initiatePayment(
         orderId: _order!.id,
         paymentMethod: 'momo',
-        phoneNumber: _order!.customerPhone ?? '',
+        phoneNumber: phone,
       );
       if (mounted) {
         if (result['success'] == true) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('📲 Dial *182# on your phone to approve the payment.'),
-              backgroundColor: Color(0xFF1565C0),
-              duration: Duration(seconds: 8),
+          showDialog(
+            context: context,
+            barrierDismissible: true,
+            builder: (ctx) => AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Row(
+                children: [
+                  Icon(Icons.phone_android, color: Color(0xFF1565C0), size: 28),
+                  const SizedBox(width: 10),
+                  const Text('Approve Payment', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Dial *182*7*1# on your phone when paying',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Follow the USSD prompts to confirm the payment of RWF ${_order!.total.toStringAsFixed(0)}',
+                    style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+              actions: [
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1565C0),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    child: const Text('OK, Got it'),
+                  ),
+                ),
+              ],
             ),
           );
-          // Refresh order to reflect new payment status
           await _loadOrder(showLoader: false);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -140,6 +223,16 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0A0A0A) : const Color(0xFFF1F2F4),
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            } else {
+              context.go('/my-orders');
+            }
+          },
+        ),
         title: Text(
           _order == null ? 'Order Details' : 'Order #${_shortOrderId(_order!.orderNumber)}',
           style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
@@ -355,6 +448,21 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     child: Image.network(
                       imageUrl,
                       fit: BoxFit.cover,
+                      loadingBuilder: (context, child, progress) {
+                        if (progress == null) return child;
+                        return Center(
+                          child: SizedBox(
+                            width: 18, height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              value: progress.expectedTotalBytes != null
+                                  ? progress.cumulativeBytesLoaded / progress.expectedTotalBytes!
+                                  : null,
+                              color: isDark ? Colors.white38 : Colors.grey[400],
+                            ),
+                          ),
+                        );
+                      },
                       errorBuilder: (_, __, ___) => const Icon(Icons.broken_image, color: Color(0xFF9CA3AF)),
                     ),
                   ),
