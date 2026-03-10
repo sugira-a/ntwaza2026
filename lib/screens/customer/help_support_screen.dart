@@ -113,7 +113,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
 
       final api = ApiService();
       final response = await api.post(
-        '/api/admin/dashboard/complaints',
+        '/api/admin/dashboard/complaints/submit',
         {
           'subject': _subjectCtrl.text.trim(),
           'description': _descCtrl.text.trim(),
