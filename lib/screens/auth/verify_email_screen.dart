@@ -118,7 +118,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
   }
 
   String _parseError(String e) {
-    if (e.contains('Connection') || e.contains('Network')) return 'No internet connection.';
+    if (e.contains('Connection') || e.contains('Network') || e.contains('No internet')) return 'No internet connection. Please check your Wi-Fi or mobile data.';
     return e.replaceAll('Exception: ', '').replaceAll('Failed to perform POST request: ', '');
   }
 

@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Ntwaza</string>
+	<string>NTWAZA Delivery</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -48,19 +48,19 @@
 	
 	<!-- 📍 LOCATION PERMISSIONS -->
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Ntwaza needs your location to show nearby drivers and provide accurate pickup and dropoff services.</string>
+	<string>NTWAZA Delivery needs your location to show nearby drivers and provide accurate pickup and dropoff services.</string>
 
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Ntwaza needs your location to track your ride and provide real-time updates.</string>
+	<string>NTWAZA Delivery needs your location to track your ride and provide real-time updates.</string>
 
 	<key>NSLocationAlwaysUsageDescription</key>
-	<string>Ntwaza needs your location to track your ride even when the app is in the background.</string>
+	<string>NTWAZA Delivery needs your location to track your ride even when the app is in the background.</string>
 	
 	<!-- 🎯 iOS 14+ PRECISE LOCATION (REQUIRED FOR ACCURATE MAPS) -->
 	<key>NSLocationTemporaryUsageDescriptionDictionary</key>
 	<dict>
 		<key>PreciseLocationAlwaysUsage</key>
-		<string>Ntwaza needs precise location for accurate pickup and dropoff.</string>
+		<string>NTWAZA Delivery needs precise location for accurate pickup and dropoff.</string>
 	</dict>
 	
 	<!-- Google Maps API Key (loaded from Secrets.xcconfig) -->

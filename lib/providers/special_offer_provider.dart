@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
-import '../services/api/api_service.dart';
+import '../services/api/api_service.dart' show ApiService, NoInternetException;
 import '../models/special_offer.dart';
 
 class SpecialOfferProvider with ChangeNotifier {
@@ -48,7 +48,9 @@ class SpecialOfferProvider with ChangeNotifier {
       notifyListeners();
     } catch (e) {
       _logger.e('Error in fetchSpecialOffers: $e');
-      _error = e.toString();
+      _error = e is NoInternetException
+          ? 'No internet connection'
+          : e.toString();
       _isLoading = false;
       notifyListeners();
       rethrow;
@@ -76,7 +78,9 @@ class SpecialOfferProvider with ChangeNotifier {
       notifyListeners();
     } catch (e) {
       _logger.e('Error in fetchHomepageOffers: $e');
-      _error = e.toString();
+      _error = e is NoInternetException
+          ? 'No internet connection'
+          : e.toString();
       _isLoading = false;
       // Keep old offers on error so they don't disappear
       notifyListeners();

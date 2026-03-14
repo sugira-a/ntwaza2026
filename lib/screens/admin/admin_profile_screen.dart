@@ -8,9 +8,8 @@ import '../../providers/theme_provider.dart';
 class AdminProfileScreen extends StatelessWidget {
   const AdminProfileScreen({super.key});
 
-  static const Color accentGreen = Color(0xFF4CAF50);
+  static const Color accentGreen = Color(0xFF22C55E);
   static const Color primaryColor = Color(0xFF111111);
-  static const Color darkGray = Color(0xFF0B0B0B);
 
   @override
   Widget build(BuildContext context) {
@@ -19,22 +18,23 @@ class AdminProfileScreen extends StatelessWidget {
     final isDark = themeProvider.isDarkMode;
     final user = authProvider.user;
 
-    final backgroundColor = isDark ? const Color(0xFF0B0B0B) : const Color(0xFFDADDE2);
-    final cardColor = isDark ? Colors.black : const Color(0xFFDADDE2);
-    final textColor = isDark ? Colors.white : darkGray;
+    final backgroundColor = isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF1F2F4);
+    final cardColor = isDark ? const Color(0xFF222222) : Colors.white;
+    final textColor = isDark ? Colors.white : Colors.black;
     final subtextColor = isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280);
 
     if (user == null) {
       return Scaffold(
         backgroundColor: backgroundColor,
         appBar: AppBar(
-          backgroundColor: Colors.black,
+          backgroundColor: backgroundColor,
           surfaceTintColor: Colors.transparent,
           elevation: 0,
-          centerTitle: true,
-          title: const Text(
+          automaticallyImplyLeading: false,
+          centerTitle: false,
+          title: Text(
             'Profile',
-            style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: -0.5),
+            style: TextStyle(color: textColor, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: -0.5),
           ),
         ),
         body: Center(child: Text('No user data available', style: TextStyle(color: subtextColor, fontSize: 16))),
@@ -44,13 +44,14 @@ class AdminProfileScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: backgroundColor,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        centerTitle: true,
-        title: const Text(
+        automaticallyImplyLeading: false,
+        centerTitle: false,
+        title: Text(
           'Profile & Settings',
-          style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: -0.5),
+          style: TextStyle(color: textColor, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: -0.5),
         ),
       ),
       body: SingleChildScrollView(
@@ -215,18 +216,18 @@ class AdminProfileScreen extends StatelessWidget {
                   builder: (context) => AlertDialog(
                     backgroundColor: cardColor,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                    title: Text('About Ntwaza', style: TextStyle(color: textColor, fontWeight: FontWeight.w900, fontSize: 20)),
+                    title: Text('About NTWAZA Delivery', style: TextStyle(color: textColor, fontWeight: FontWeight.w900, fontSize: 20)),
                     content: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.admin_panel_settings_rounded, size: 64, color: primaryColor),
                         const SizedBox(height: 16),
-                        Text('Ntwaza Admin Panel', style: TextStyle(color: textColor, fontSize: 18, fontWeight: FontWeight.w900), textAlign: TextAlign.center),
+                        Text('NTWAZA Delivery Admin Panel', style: TextStyle(color: textColor, fontSize: 18, fontWeight: FontWeight.w900), textAlign: TextAlign.center),
                         const SizedBox(height: 8),
                         Text('Version 1.0.0', style: TextStyle(color: subtextColor, fontSize: 14)),
                         const SizedBox(height: 16),
                         Text(
-                          'Manage vendors, riders, orders and finances with the Ntwaza Admin Dashboard.',
+                          'Manage vendors, riders, orders and finances with the NTWAZA Delivery Admin Dashboard.',
                           style: TextStyle(color: subtextColor, fontSize: 13, height: 1.5),
                           textAlign: TextAlign.center,
                         ),
@@ -334,7 +335,7 @@ class AdminProfileScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? Colors.transparent : const Color(0xFFDADDE2),
+        color: isDark ? Colors.transparent : Colors.transparent,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -376,9 +377,9 @@ class AdminProfileScreen extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: isDark ? Colors.black : const Color(0xFFDADDE2),
+          color: isDark ? const Color(0xFF222222) : Colors.white,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: isDark ? const Color(0xFF1F1F1F) : const Color(0xFFE5E7EB), width: 0.5),
+          border: Border.all(color: isDark ? Colors.grey[800]! : const Color(0xFFE3E5E8), width: 0.5),
         ),
         child: Row(
           children: [

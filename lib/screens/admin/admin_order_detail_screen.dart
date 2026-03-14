@@ -193,37 +193,12 @@ class _AdminOrderDetailScreenState extends State<AdminOrderDetailScreen>
                         '${_timeBreakdown['elapsedMinutes']} min ago',
                         style: TextStyle(
                           fontSize: 11, fontWeight: FontWeight.w600,
-                          color: _isStale ? red : Colors.white38,
+                          color: Colors.white38,
                         ),
                       ),
                     ],
                   ),
                 ),
-                // Stale warning banner
-                if (_isStale) ...[
-                  const SizedBox(height: 10),
-                  Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 16),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: red.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: red.withOpacity(0.3)),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.warning_amber_rounded, size: 18, color: Color(0xFFEF4444)),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            _staleMessage,
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFFEF4444)),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
                 const SizedBox(height: 12),
                 // Tabs
                 Container(
@@ -469,33 +444,60 @@ class _AdminOrderDetailScreenState extends State<AdminOrderDetailScreen>
                       ),
                       child: Row(
                         children: [
+                          // Product image or quantity badge
                           Container(
-                            width: 28, height: 28,
+                            width: 48, height: 48,
                             decoration: BoxDecoration(
                               color: accentGreen.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(6),
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                            child: Center(
-                              child: Text(
-                                '${item.quantity}x',
-                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF4CAF50)),
-                              ),
-                            ),
+                            child: item.imageUrl != null && item.imageUrl!.isNotEmpty
+                                ? ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.network(
+                                      item.imageUrl!,
+                                      width: 48, height: 48,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) => Center(
+                                        child: Text(
+                                          '${item.quantity}x',
+                                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Color(0xFF4CAF50)),
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                : Center(
+                                    child: Text(
+                                      '${item.quantity}x',
+                                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Color(0xFF4CAF50)),
+                                    ),
+                                  ),
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 12),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(item.productName, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: textColor)),
-                                if (item.notes != null && item.notes!.isNotEmpty)
+                                Text(item.productName, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: textColor)),
+                                const SizedBox(height: 2),
+                                Row(
+                                  children: [
+                                    Text(
+                                      '${item.quantity} × ${item.price.toStringAsFixed(0)} RWF',
+                                      style: TextStyle(fontSize: 12, color: subtextColor),
+                                    ),
+                                  ],
+                                ),
+                                if (item.notes != null && item.notes!.isNotEmpty) ...[
+                                  const SizedBox(height: 4),
                                   Text(item.notes!, style: TextStyle(fontSize: 11, color: subtextColor, fontStyle: FontStyle.italic)),
+                                ],
                               ],
                             ),
                           ),
                           Text(
                             '${item.total.toStringAsFixed(0)} RWF',
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: textColor),
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: accentGreen),
                           ),
                         ],
                       ),
@@ -611,7 +613,7 @@ class _AdminOrderDetailScreenState extends State<AdminOrderDetailScreen>
                 _formatMinutes(totalMin),
                 style: TextStyle(
                   fontSize: 36, fontWeight: FontWeight.w900,
-                  color: _isStale ? red : (isComplete ? accentGreen : textColor),
+                  color: isComplete ? accentGreen : textColor,
                   letterSpacing: -1,
                 ),
               ),
@@ -1126,12 +1128,22 @@ class _AdminOrderDetailScreenState extends State<AdminOrderDetailScreen>
   // ═══════════════════════════════════════════════════════════════════
 
   Widget _sectionHeader(String title, IconData icon, Color textColor) {
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: accentGreen),
-        const SizedBox(width: 8),
-        Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: textColor, letterSpacing: -0.3)),
-      ],
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: accentGreen.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, size: 14, color: accentGreen),
+          ),
+          const SizedBox(width: 10),
+          Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: textColor, letterSpacing: -0.3)),
+        ],
+      ),
     );
   }
 
@@ -1140,32 +1152,50 @@ class _AdminOrderDetailScreenState extends State<AdminOrderDetailScreen>
     required bool isDark, required Color textColor, required Color subtextColor, required Color borderColor, required Color cardColor,
   }) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: cardColor,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: borderColor, width: 0.5),
+        boxShadow: isDark ? null : [
+          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 2)),
+        ],
       ),
       child: Row(
         children: [
           Container(
-            width: 42, height: 42,
-            decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(10)),
-            child: Icon(icon, size: 20, color: color),
+            width: 44, height: 44,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [color.withOpacity(0.15), color.withOpacity(0.08)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, size: 22, color: color),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(role, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: color, letterSpacing: 1)),
-                const SizedBox(height: 2),
-                Text(name, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: textColor)),
+                Text(role, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: color, letterSpacing: 0.8)),
+                const SizedBox(height: 3),
+                Text(name, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: textColor, letterSpacing: -0.2)),
+                const SizedBox(height: 1),
                 Text(phone, style: TextStyle(fontSize: 12, color: subtextColor)),
               ],
             ),
           ),
-          Icon(Icons.phone_rounded, size: 18, color: subtextColor.withOpacity(0.4)),
+          Container(
+            width: 36, height: 36,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(Icons.phone_rounded, size: 16, color: color),
+          ),
         ],
       ),
     );
@@ -1174,39 +1204,49 @@ class _AdminOrderDetailScreenState extends State<AdminOrderDetailScreen>
   Widget _riderCard(bool isDark, Color textColor, Color subtextColor, Color cardColor, Color borderColor) {
     final hasRider = _order.riderName != null && _order.riderName!.isNotEmpty;
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: cardColor,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: !hasRider && _order.status != OrderStatus.cancelled ? red.withOpacity(0.3) : borderColor,
-          width: !hasRider && _order.status != OrderStatus.cancelled ? 1 : 0.5,
+          color: !hasRider && _order.status != OrderStatus.cancelled ? red.withOpacity(0.4) : borderColor,
+          width: !hasRider && _order.status != OrderStatus.cancelled ? 1.5 : 0.5,
         ),
+        boxShadow: isDark ? null : [
+          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 2)),
+        ],
       ),
       child: Row(
         children: [
           Container(
-            width: 42, height: 42,
+            width: 44, height: 44,
             decoration: BoxDecoration(
-              color: hasRider ? purple.withOpacity(0.12) : red.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(10),
+              gradient: LinearGradient(
+                colors: hasRider 
+                    ? [purple.withOpacity(0.15), purple.withOpacity(0.08)]
+                    : [red.withOpacity(0.12), red.withOpacity(0.06)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
-              Icons.two_wheeler_rounded, size: 20,
+              Icons.two_wheeler_rounded, size: 22,
               color: hasRider ? purple : red,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('RIDER', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: hasRider ? purple : red, letterSpacing: 1)),
-                const SizedBox(height: 2),
+                Text('RIDER', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: hasRider ? purple : red, letterSpacing: 0.8)),
+                const SizedBox(height: 3),
                 Text(
                   hasRider ? _order.riderName! : 'No Rider Assigned',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: hasRider ? textColor : red),
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: hasRider ? textColor : red, letterSpacing: -0.2),
                 ),
+                const SizedBox(height: 1),
                 Text(
                   hasRider ? (_order.riderPhone ?? 'No phone') : 'Tap Actions tab to assign',
                   style: TextStyle(fontSize: 12, color: subtextColor),
@@ -1216,9 +1256,22 @@ class _AdminOrderDetailScreenState extends State<AdminOrderDetailScreen>
           ),
           if (!hasRider && _order.status != OrderStatus.cancelled)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(color: red.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
-              child: const Text('NEEDED', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Color(0xFFEF4444))),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: red.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: red.withOpacity(0.2)),
+              ),
+              child: const Text('ASSIGN', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFFEF4444))),
+            )
+          else if (hasRider)
+            Container(
+              width: 36, height: 36,
+              decoration: BoxDecoration(
+                color: purple.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(Icons.phone_rounded, size: 16, color: purple),
             ),
         ],
       ),

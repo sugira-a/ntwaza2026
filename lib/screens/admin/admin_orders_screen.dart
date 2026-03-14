@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/admin_order_provider.dart';
+import '../../providers/theme_provider.dart';
 import '../../services/admin_dashboard_service.dart';
 import '../../models/order.dart';
 import '../../utils/helpers.dart';
@@ -17,7 +18,7 @@ class AdminOrdersScreen extends StatefulWidget {
 }
 
 class _AdminOrdersScreenState extends State<AdminOrdersScreen> with SingleTickerProviderStateMixin {
-  static const Color accentGreen = Color(0xFF4CAF50);
+  static const Color accentGreen = Color(0xFF22C55E);
   static const Color mutedGray = Color(0xFF6B7280);
 
   late TabController _tabController;
@@ -55,6 +56,24 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> with SingleTicker
     }
   }
 
+  String _getVendorName(String id) {
+    final vendor = _vendors.firstWhere(
+      (v) => v['id']?.toString() == id,
+      orElse: () => {},
+    );
+    if (vendor.isEmpty) return 'Vendor';
+    return (vendor['business_name'] ?? vendor['name'] ?? 'Vendor').toString();
+  }
+
+  String _getRiderName(String id) {
+    final rider = _riders.firstWhere(
+      (r) => r['id']?.toString() == id,
+      orElse: () => {},
+    );
+    if (rider.isEmpty) return 'Rider';
+    return (rider['name'] ?? rider['full_name'] ?? 'Rider').toString();
+  }
+
   @override
   void dispose() {
     _tabController.dispose();
@@ -65,27 +84,24 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> with SingleTicker
   List<Order> _applyFilters(List<Order> orders) {
     var filtered = List<Order>.from(orders);
 
-    // Status filter
-    if (_selectedFilter == 'stale') {
-      filtered = filtered.where((o) => _isOrderStale(o)).toList();
-    } else if (_selectedFilter == 'pending_refunds') {
-      // Filter for cancelled orders that need refunds (paid/completed payment status)
-      filtered = filtered.where((o) => 
-        o.status == OrderStatus.cancelled && 
-        (o.paymentStatus == 'paid' || o.paymentStatus == 'completed')
-      ).toList();
-    } else if (_selectedFilter != 'all') {
-      final statusMap = {
-        'pending': OrderStatus.pending,
-        'preparing': OrderStatus.preparing,
-        'ready': OrderStatus.ready,
-        'picked_up': OrderStatus.pickedUp,
-        'on_the_way': OrderStatus.pickedUp,
-        'delivered': OrderStatus.completed,
-        'cancelled': OrderStatus.cancelled,
-      };
-      final target = statusMap[_selectedFilter];
-      if (target != null) filtered = filtered.where((o) => o.status == target).toList();
+    // Status filter - simplified to match workflow: Confirmed -> Ready -> Completed
+    if (_selectedFilter != 'all') {
+      if (_selectedFilter == 'confirmed') {
+        // Confirmed includes: pending, confirmed, preparing
+        filtered = filtered.where((o) => 
+          o.status == OrderStatus.pending || 
+          o.status == OrderStatus.confirmed || 
+          o.status == OrderStatus.preparing
+        ).toList();
+      } else if (_selectedFilter == 'ready') {
+        filtered = filtered.where((o) => o.status == OrderStatus.ready).toList();
+      } else if (_selectedFilter == 'picked_up') {
+        filtered = filtered.where((o) => o.status == OrderStatus.pickedUp).toList();
+      } else if (_selectedFilter == 'completed') {
+        filtered = filtered.where((o) => o.status == OrderStatus.completed).toList();
+      } else if (_selectedFilter == 'cancelled') {
+        filtered = filtered.where((o) => o.status == OrderStatus.cancelled).toList();
+      }
     }
 
     // Vendor filter
@@ -132,12 +148,12 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> with SingleTicker
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? const Color(0xFF0B0B0B) : const Color(0xFFDADDE2);
-    final textColor = isDark ? Colors.white : const Color(0xFF0B0B0B);
-    final subtextColor = isDark ? Colors.white70 : mutedGray;
-    final cardColor = isDark ? Colors.black : const Color(0xFFDADDE2);
-    final borderColor = isDark ? const Color(0xFF1F1F1F) : const Color(0xFFE5E7EB);
+    final isDark = context.watch<ThemeProvider>().isDarkMode;
+    final bg = isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF1F2F4);
+    final textColor = isDark ? Colors.white : Colors.black;
+    final subtextColor = isDark ? const Color(0xFF9CA3AF) : mutedGray;
+    final cardColor = isDark ? const Color(0xFF252525) : Colors.white;
+    final borderColor = isDark ? Colors.grey[800]! : const Color(0xFFE3E5E8);
     final statusBarHeight = MediaQuery.of(context).padding.top;
 
     return Scaffold(
@@ -238,19 +254,27 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> with SingleTicker
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         children: [
           _FilterChip(label: 'All', selected: _selectedFilter == 'all', onTap: () => setState(() => _selectedFilter = 'all'), chipBg: chipBg, chipBorder: chipBorder),
-          _FilterChip(label: '⚠ Stale', selected: _selectedFilter == 'stale', onTap: () => setState(() => _selectedFilter = 'stale'), chipBg: chipBg, chipBorder: chipBorder, isWarning: true),
-          _FilterChip(label: 'Pending', selected: _selectedFilter == 'pending', onTap: () => setState(() => _selectedFilter = 'pending'), chipBg: chipBg, chipBorder: chipBorder),
-          _FilterChip(label: 'Preparing', selected: _selectedFilter == 'preparing', onTap: () => setState(() => _selectedFilter = 'preparing'), chipBg: chipBg, chipBorder: chipBorder),
+          _FilterChip(label: 'Confirmed', selected: _selectedFilter == 'confirmed', onTap: () => setState(() => _selectedFilter = 'confirmed'), chipBg: chipBg, chipBorder: chipBorder),
           _FilterChip(label: 'Ready', selected: _selectedFilter == 'ready', onTap: () => setState(() => _selectedFilter = 'ready'), chipBg: chipBg, chipBorder: chipBorder),
-          _FilterChip(label: 'On the Way', selected: _selectedFilter == 'on_the_way', onTap: () => setState(() => _selectedFilter = 'on_the_way'), chipBg: chipBg, chipBorder: chipBorder),
-          _FilterChip(label: 'Delivered', selected: _selectedFilter == 'delivered', onTap: () => setState(() => _selectedFilter = 'delivered'), chipBg: chipBg, chipBorder: chipBorder),
+          _FilterChip(label: 'Picked Up', selected: _selectedFilter == 'picked_up', onTap: () => setState(() => _selectedFilter = 'picked_up'), chipBg: chipBg, chipBorder: chipBorder),
+          _FilterChip(label: 'Completed', selected: _selectedFilter == 'completed', onTap: () => setState(() => _selectedFilter = 'completed'), chipBg: chipBg, chipBorder: chipBorder),
           _FilterChip(label: 'Cancelled', selected: _selectedFilter == 'cancelled', onTap: () => setState(() => _selectedFilter = 'cancelled'), chipBg: chipBg, chipBorder: chipBorder),
-          _FilterChip(label: '💳 Refunds', selected: _selectedFilter == 'pending_refunds', onTap: () => setState(() => _selectedFilter = 'pending_refunds'), chipBg: chipBg, chipBorder: chipBorder, isWarning: true),
           const SizedBox(width: 8),
           // Vendor dropdown
           _buildDropdownChip(
-            label: _selectedVendor == null ? 'Vendor' : _vendors.firstWhere((v) => v['id']?.toString() == _selectedVendor, orElse: () => {'business_name': 'Vendor'})['business_name'] ?? 'Vendor',
-            items: _vendors.map((v) => DropdownMenuItem(value: v['id']?.toString(), child: Text(v['business_name']?.toString() ?? 'Unknown', style: TextStyle(fontSize: 12)))).toList(),
+            label: _selectedVendor == null 
+                ? 'Vendor' 
+                : _getVendorName(_selectedVendor!),
+            items: _vendors
+                .where((v) => v['id'] != null)
+                .map((v) => DropdownMenuItem(
+                  value: v['id']?.toString(), 
+                  child: Text(
+                    (v['business_name'] ?? v['name'] ?? 'Unnamed Vendor').toString(),
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                )).toList(),
             value: _selectedVendor,
             onChanged: (val) => setState(() => _selectedVendor = val),
             isDark: isDark,
@@ -260,8 +284,19 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> with SingleTicker
           const SizedBox(width: 6),
           // Rider dropdown
           _buildDropdownChip(
-            label: _selectedRider == null ? 'Rider' : _riders.firstWhere((r) => r['id']?.toString() == _selectedRider, orElse: () => {'name': 'Rider'})['name'] ?? 'Rider',
-            items: _riders.map((r) => DropdownMenuItem(value: r['id']?.toString(), child: Text(r['name']?.toString() ?? 'Unknown', style: TextStyle(fontSize: 12)))).toList(),
+            label: _selectedRider == null 
+                ? 'Rider' 
+                : _getRiderName(_selectedRider!),
+            items: _riders
+                .where((r) => r['id'] != null)
+                .map((r) => DropdownMenuItem(
+                  value: r['id']?.toString(), 
+                  child: Text(
+                    (r['name'] ?? r['full_name'] ?? 'Unnamed Rider').toString(),
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                )).toList(),
             value: _selectedRider,
             onChanged: (val) => setState(() => _selectedRider = val),
             isDark: isDark,
@@ -328,37 +363,109 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> with SingleTicker
 
   Widget _buildPickerSheet(String title, List<DropdownMenuItem<String>> items, ValueChanged<String?> onChanged, bool isDark, BuildContext ctx) {
     final textColor = isDark ? Colors.white : Colors.black;
+    final subtextColor = isDark ? Colors.grey[400] : Colors.grey[600];
+    
     return Container(
-      constraints: const BoxConstraints(maxHeight: 400),
+      constraints: const BoxConstraints(maxHeight: 450),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Handle bar
           Container(
-            padding: const EdgeInsets.all(16),
+            margin: const EdgeInsets.only(top: 12),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: isDark ? Colors.grey[700] : Colors.grey[300],
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.fromLTRB(20, 16, 16, 12),
             child: Row(
               children: [
-                Text('Select $title', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: textColor)),
-                const Spacer(),
-                IconButton(icon: Icon(Icons.close, color: textColor), onPressed: () => Navigator.pop(ctx)),
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: accentGreen.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    title == 'Vendor' ? Icons.store_rounded : Icons.two_wheeler_rounded,
+                    color: accentGreen,
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Select $title', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: textColor)),
+                      Text('${items.length} available', style: TextStyle(fontSize: 12, color: subtextColor)),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.close_rounded, color: subtextColor, size: 22),
+                  onPressed: () => Navigator.pop(ctx),
+                ),
               ],
             ),
           ),
-          Flexible(
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: items.length,
-              itemBuilder: (context, i) {
-                final item = items[i];
-                return ListTile(
-                  title: item.child,
-                  onTap: () {
-                    onChanged(item.value);
-                    Navigator.pop(ctx);
-                  },
-                );
-              },
+          Divider(height: 1, color: isDark ? Colors.grey[800] : Colors.grey[200]),
+          if (items.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(40),
+              child: Column(
+                children: [
+                  Icon(
+                    title == 'Vendor' ? Icons.store_outlined : Icons.directions_bike_outlined,
+                    size: 48,
+                    color: isDark ? Colors.grey[700] : Colors.grey[300],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'No ${title.toLowerCase()}s found',
+                    style: TextStyle(fontSize: 14, color: subtextColor, fontWeight: FontWeight.w500),
+                  ),
+                ],
+              ),
+            )
+          else
+            Flexible(
+              child: ListView.builder(
+                shrinkWrap: true,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                itemCount: items.length,
+                itemBuilder: (context, i) {
+                  final item = items[i];
+                  return ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
+                    leading: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: accentGreen.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        title == 'Vendor' ? Icons.store_rounded : Icons.two_wheeler_rounded,
+                        color: accentGreen,
+                        size: 20,
+                      ),
+                    ),
+                    title: item.child,
+                    trailing: Icon(Icons.chevron_right_rounded, color: subtextColor, size: 20),
+                    onTap: () {
+                      onChanged(item.value);
+                      Navigator.pop(ctx);
+                    },
+                  );
+                },
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -410,13 +517,44 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> with SingleTicker
 
   Widget _buildEmptyState(String msg, bool isDark) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.inbox_rounded, size: 48, color: isDark ? Colors.white24 : Colors.black26),
-          const SizedBox(height: 12),
-          Text(msg, style: TextStyle(color: isDark ? Colors.white54 : Colors.black45, fontSize: 14)),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: isDark ? Colors.grey[800]!.withOpacity(0.5) : Colors.grey[100],
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Icon(
+                Icons.receipt_long_outlined,
+                size: 40,
+                color: isDark ? Colors.grey[600] : Colors.grey[400],
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              msg,
+              style: TextStyle(
+                color: isDark ? Colors.grey[400] : Colors.grey[600],
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Pull down to refresh',
+              style: TextStyle(
+                color: isDark ? Colors.grey[600] : Colors.grey[400],
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -462,7 +600,7 @@ class _FilterChip extends StatelessWidget {
     this.isWarning = false,
   });
 
-  static const Color accentGreen = Color(0xFF4CAF50);
+  static const Color accentGreen = Color(0xFF22C55E);
   static const Color warningRed = Color(0xFFEF4444);
 
   @override
@@ -522,7 +660,7 @@ class _ExpandableGroup extends StatefulWidget {
 class _ExpandableGroupState extends State<_ExpandableGroup> {
   bool _expanded = false;
 
-  static const Color accentGreen = Color(0xFF4CAF50);
+  static const Color accentGreen = Color(0xFF22C55E);
 
   String _formatCurrency(double amount) {
     return amount.toStringAsFixed(0).replaceAllMapped(
@@ -533,10 +671,10 @@ class _ExpandableGroupState extends State<_ExpandableGroup> {
 
   @override
   Widget build(BuildContext context) {
-    final cardColor = widget.isDark ? Colors.black : const Color(0xFFDADDE2);
-    final borderColor = widget.isDark ? const Color(0xFF1F1F1F) : const Color(0xFFE5E7EB);
-    final textColor = widget.isDark ? Colors.white : const Color(0xFF0B0B0B);
-    final subtextColor = widget.isDark ? Colors.white70 : const Color(0xFF6B7280);
+    final cardColor = widget.isDark ? const Color(0xFF252525) : Colors.white;
+    final borderColor = widget.isDark ? Colors.grey[800]! : const Color(0xFFE3E5E8);
+    final textColor = widget.isDark ? Colors.white : Colors.black;
+    final subtextColor = widget.isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -640,7 +778,7 @@ class _OrderCard extends StatelessWidget {
     this.onTap,
   });
 
-  static const Color accentGreen = Color(0xFF4CAF50);
+  static const Color accentGreen = Color(0xFF22C55E);
   static const Color warningRed = Color(0xFFEF4444);
 
   Color _getStatusColor(OrderStatus status) {
@@ -658,9 +796,9 @@ class _OrderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textColor = isDark ? Colors.white : const Color(0xFF0B0B0B);
-    final subtextColor = isDark ? Colors.white70 : const Color(0xFF6B7280);
-    final borderColor = isDark ? const Color(0xFF1F1F1F) : const Color(0xFFE5E7EB);
+    final textColor = isDark ? Colors.white : Colors.black;
+    final subtextColor = isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280);
+    final borderColor = isDark ? Colors.grey[800]! : const Color(0xFFE3E5E8);
     final statusColor = _getStatusColor(order.status);
     final time = order.createdAt != null
         ? DateFormat('MMM d, HH:mm').format(toRwandaTime(order.createdAt!))
@@ -679,7 +817,7 @@ class _OrderCard extends StatelessWidget {
             : BoxDecoration(
                 color: isStale
                     ? (isDark ? warningRed.withOpacity(0.08) : warningRed.withOpacity(0.04))
-                    : (isDark ? Colors.black : const Color(0xFFDADDE2)),
+                    : (isDark ? const Color(0xFF252525) : Colors.white),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
                   color: isStale ? warningRed.withOpacity(0.5) : borderColor,

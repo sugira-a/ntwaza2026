@@ -69,7 +69,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
                   // Preamble
                   _buildCard(card, divider, [
                     Text(
-                      'NTWAZA Ltd. ("Company", "we", "us", "our") is committed to protecting your privacy. This Privacy Policy describes how we collect, use, disclose, and safeguard your personal information when you use the Ntwaza platform ("Service").',
+                      'NTWAZA Delivery Ltd. ("Company", "we", "us", "our") is committed to protecting your privacy. This Privacy Policy describes how we collect, use, disclose, and safeguard your personal information when you use the NTWAZA Delivery platform ("Service").',
                       style: TextStyle(fontSize: 13.5, color: sub, height: 1.7),
                     ),
                     const SizedBox(height: 10),
@@ -84,7 +84,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
                   _numberedSection('1', 'Information We Collect', card, text, sub, divider, [
                     'Account Information: Full name, email address, phone number, profile photo, and delivery addresses provided during registration.',
                     'Order Data: Items ordered, order history, delivery preferences, vendor interactions, and transaction records.',
-                    'Payment Information: Payment method details (processed and stored securely by our PCI-compliant payment partners — we do not store your full card or mobile money PIN).',
+                    'Payment Information: Payment method details (processed and stored securely by our PCI-compliant payment partners — we do not store your full mobile money PIN).',
                     'Location Data: Real-time GPS location (with your permission) to facilitate delivery tracking, estimate distances, and connect you with nearby vendors.',
                     'Device & Technical Data: Device type, operating system, app version, IP address, browser type, crash logs, and performance diagnostics.',
                     'Usage Analytics: Pages viewed, features used, search queries, session duration, and interaction patterns to improve our Service.',
@@ -103,9 +103,9 @@ class PrivacyPolicyScreen extends StatelessWidget {
                   _numberedSection('3', 'Information Sharing & Disclosure', card, text, sub, divider, [
                     'Vendors: We share your name, delivery address, and order details with Vendors solely for the purpose of fulfilling your order.',
                     'Riders: We share your delivery address, contact name, and order pickup/drop-off details with assigned delivery riders.',
-                    'Payment Processors: Transaction data is shared with our secure, PCI-compliant payment partners (e.g., MTN MoMo, Airtel Money, Stripe) to process payments.',
+                    'Payment Processors: Transaction data is shared with our secure, PCI-compliant payment partners (e.g., MTN MoMo, Airtel Money) to process payments.',
                     'Service Providers: We may engage third-party providers (cloud hosting, analytics, email delivery) who process data on our behalf under strict confidentiality agreements.',
-                    'Legal Compliance: We may disclose information when required by law, court order, or governmental authority, or to protect the rights, safety, or property of Ntwaza, our users, or the public.',
+                    'Legal Compliance: We may disclose information when required by law, court order, or governmental authority, or to protect the rights, safety, or property of NTWAZA Delivery, our users, or the public.',
                     'We never sell, rent, or trade your personal information to third parties for marketing purposes.',
                   ]),
                   _numberedSection('4', 'Data Retention', card, text, sub, divider, [
@@ -144,7 +144,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
                     'You can manage cookie preferences via your browser settings. Disabling essential cookies may impair Platform functionality.',
                   ]),
                   _numberedSection('9', 'Children\'s Privacy', card, text, sub, divider, [
-                    'The Ntwaza Service is not directed at individuals under the age of 13. We do not knowingly collect personal information from children under 13.',
+                    'The NTWAZA Delivery Service is not directed at individuals under the age of 13. We do not knowingly collect personal information from children under 13.',
                     'If we learn that we have inadvertently collected information from a child under 13, we will take steps to delete it promptly. If you believe a child has provided us with personal data, please contact us at $_privacyEmail.',
                   ]),
                   _numberedSection('10', 'International Data Transfers', card, text, sub, divider, [
@@ -189,7 +189,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
                         const SizedBox(height: 6),
                         _contactRow(Icons.phone, 'Phone: $_phone', sub),
                         const SizedBox(height: 6),
-                        _contactRow(Icons.location_on_rounded, 'NTWAZA Ltd., Kigali, Rwanda', sub),
+                        _contactRow(Icons.location_on_rounded, 'NTWAZA Delivery Ltd., Kigali, Rwanda', sub),
                         const SizedBox(height: 16),
                         Row(
                           children: [
@@ -239,7 +239,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
                     child: Padding(
                       padding: const EdgeInsets.only(bottom: 32),
                       child: Text(
-                        '\u00a9 ${DateTime.now().year} NTWAZA Ltd. All rights reserved.',
+                        '\u00a9 ${DateTime.now().year} NTWAZA Delivery Ltd. All rights reserved.',
                         style: TextStyle(fontSize: 11.5, color: sub),
                       ),
                     ),

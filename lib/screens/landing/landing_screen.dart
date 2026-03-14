@@ -41,7 +41,7 @@ class LandingScreen extends StatelessWidget {
           ],
         ),
         content: Text(
-          'Are you sure you want to exit Ntwaza?',
+          'Are you sure you want to exit NTWAZA?',
           style: TextStyle(
             color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
             fontSize: 14,

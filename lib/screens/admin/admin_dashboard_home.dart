@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/admin_order_provider.dart';
 import '../../providers/notification_provider.dart';
+import '../../providers/theme_provider.dart';
 import '../../services/admin_dashboard_service.dart';
 import '../../models/order.dart';
 import '../../utils/helpers.dart';
@@ -18,13 +19,8 @@ class AdminDashboardHome extends StatefulWidget {
 }
 
 class _AdminDashboardHomeState extends State<AdminDashboardHome> {
-  // Palette — matches rider
-  static const Color pureBlack = Color(0xFF0B0B0B);
-  static const Color pureWhite = Color(0xFFFFFFFF);
-  static const Color softBlack = Colors.black;
-  static const Color borderGray = Color(0xFFE5E7EB);
-  static const Color mutedGray = Color(0xFF6B7280);
-  static const Color accentGreen = Color(0xFF4CAF50);
+  // Palette — matches rider/vendor exactly
+  static const Color accentGreen = Color(0xFF22C55E);
 
   Map<String, dynamic>? _stats;
   bool _isLoadingStats = true;
@@ -48,12 +44,12 @@ class _AdminDashboardHomeState extends State<AdminDashboardHome> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? pureBlack : const Color(0xFFDADDE2);
-    final textColor = isDark ? pureWhite : pureBlack;
-    final subtextColor = isDark ? Colors.white70 : mutedGray;
-    final cardColor = isDark ? softBlack : const Color(0xFFDADDE2);
-    final borderColor = isDark ? const Color(0xFF1F1F1F) : borderGray;
+    final isDark = context.watch<ThemeProvider>().isDarkMode;
+    final bg = isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF1F2F4);
+    final textColor = isDark ? Colors.white : Colors.black;
+    final subtextColor = isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280);
+    final cardColor = isDark ? const Color(0xFF252525) : Colors.white;
+    final borderColor = isDark ? Colors.grey[800]! : const Color(0xFFE3E5E8);
     final authProvider = context.watch<AuthProvider>();
     final greeting = _getGreeting();
     final name = authProvider.user?.fullName ?? 'Admin';
@@ -68,7 +64,7 @@ class _AdminDashboardHomeState extends State<AdminDashboardHome> {
             await _loadStats();
             await context.read<AdminOrderProvider>().fetchOrders();
           },
-          color: isDark ? pureWhite : pureBlack,
+          color: accentGreen,
           child: ListView(
               padding: EdgeInsets.zero,
               children: [
@@ -110,45 +106,58 @@ class _AdminDashboardHomeState extends State<AdminDashboardHome> {
       child: Padding(
         padding: EdgeInsets.only(top: statusBarHeight),
         child: SizedBox(
-          height: 80,
+          height: 70,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(
               children: [
-                // Admin avatar
+                // NTWAZA Logo
                 Container(
                   width: 42,
                   height: 42,
                   decoration: BoxDecoration(
-                    color: accentGreen.withOpacity(0.15),
+                    gradient: LinearGradient(
+                      colors: [accentGreen.withOpacity(0.2), accentGreen.withOpacity(0.08)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
                     borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: accentGreen.withOpacity(0.3)),
                   ),
-                  child: const Icon(Icons.admin_panel_settings_rounded, color: accentGreen, size: 22),
+                  child: Center(
+                    child: Text(
+                      'N',
+                      style: TextStyle(
+                        color: accentGreen,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        '$greeting,',
+                        'NTWAZA',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          letterSpacing: 3,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Admin Dashboard',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
                           color: Colors.white.withOpacity(0.5),
                         ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        name,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                          letterSpacing: -0.5,
-                        ),
-                        maxLines: 1, overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
@@ -436,7 +445,7 @@ class _AdminDashboardHomeState extends State<AdminDashboardHome> {
       case OrderStatus.confirmed:
         return const Color(0xFF3B82F6);
       default:
-        return mutedGray;
+        return const Color(0xFF6B7280);
     }
   }
 
@@ -470,10 +479,10 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardColor = isDark ? Colors.black : const Color(0xFFDADDE2);
-    final borderColor = isDark ? const Color(0xFF1F1F1F) : const Color(0xFFE5E7EB);
-    final textColor = isDark ? Colors.white : const Color(0xFF0B0B0B);
-    final subtextColor = isDark ? Colors.white70 : const Color(0xFF6B7280);
+    final cardColor = isDark ? const Color(0xFF252525) : Colors.white;
+    final borderColor = isDark ? Colors.grey[800]! : const Color(0xFFE3E5E8);
+    final textColor = isDark ? Colors.white : Colors.black;
+    final subtextColor = isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280);
 
     return Container(
       width: fullWidth ? double.infinity : null,
@@ -555,9 +564,9 @@ class _InsightChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardColor = isDark ? Colors.black : const Color(0xFFDADDE2);
-    final borderColor = isDark ? const Color(0xFF1F1F1F) : const Color(0xFFE5E7EB);
-    final textColor = isDark ? Colors.white : const Color(0xFF0B0B0B);
+    final cardColor = isDark ? const Color(0xFF252525) : Colors.white;
+    final borderColor = isDark ? Colors.grey[800]! : const Color(0xFFE3E5E8);
+    final textColor = isDark ? Colors.white : Colors.black;
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),

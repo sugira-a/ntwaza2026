@@ -3,6 +3,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../models/vendor.dart';
+import '../services/api/api_service.dart' show NoInternetException;
 import '../models/delivery_address.dart';
 import '../services/api/api_service.dart';
 import '../services/vendor_service.dart';
@@ -24,7 +25,7 @@ class VendorProvider with ChangeNotifier {
   DateTime? _lastFetchTime;
   double? _cachedLatitude;
   double? _cachedLongitude;
-  static const int _cacheMinutes = 30;  // Cache for 30 minutes
+  static const int _cacheMinutes = 5;  // Cache for 5 minutes (was 30) so web changes show quickly
   static const double _locationThreshold = 0.5;  // 500m threshold for refetch
   static const String _cacheKey = 'cached_vendors';
   static const String _cacheTimeKey = 'vendors_cache_time';
@@ -326,7 +327,11 @@ class VendorProvider with ChangeNotifier {
       print('✅ Loaded ${_vendors.length} vendors from server');
       
     } catch (e) {
-      _error = 'Failed to load vendors: $e';
+      if (e is NoInternetException) {
+        _error = 'No internet connection. Showing cached data.';
+      } else {
+        _error = 'Failed to load vendors: $e';
+      }
       print('❌ Error: $e');
       
       // Try to load from cache on error

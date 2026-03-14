@@ -295,15 +295,15 @@ class RiderProfileScreen extends StatelessWidget {
       builder: (c) => AlertDialog(
         backgroundColor: card,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('About Ntwaza', style: TextStyle(color: text, fontWeight: FontWeight.w900, fontSize: 20)),
+        title: Text('About NTWAZA Delivery', style: TextStyle(color: text, fontWeight: FontWeight.w900, fontSize: 20)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
           Icon(Icons.two_wheeler_rounded, size: 64, color: text),
           const SizedBox(height: 16),
-          Text('Ntwaza Rider App', style: TextStyle(color: text, fontSize: 18, fontWeight: FontWeight.w900), textAlign: TextAlign.center),
+          Text('NTWAZA Delivery Rider App', style: TextStyle(color: text, fontSize: 18, fontWeight: FontWeight.w900), textAlign: TextAlign.center),
           const SizedBox(height: 8),
           Text('Version 1.0.0', style: TextStyle(color: sub, fontSize: 14)),
           const SizedBox(height: 16),
-          Text('Deliver with confidence and earn more with Ntwaza.',
+          Text('Deliver with confidence and earn more with NTWAZA Delivery.',
               style: TextStyle(color: sub, fontSize: 13, height: 1.5), textAlign: TextAlign.center),
         ]),
         actions: [

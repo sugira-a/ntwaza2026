@@ -28,6 +28,8 @@ import '../../services/location_service.dart';
 import '../../services/realtime/realtime_service.dart';
 import '../loading/shimmer_loading.dart';
 import 'draggable_ai_assistant.dart';
+import '../../services/connectivity_service.dart';
+import '../common/no_internet_widget.dart';
 
 class CustomerHomeContent extends StatefulWidget {
   const CustomerHomeContent({super.key});
@@ -36,7 +38,8 @@ class CustomerHomeContent extends StatefulWidget {
   State<CustomerHomeContent> createState() => _CustomerHomeContentState();
 }
 
-class _CustomerHomeContentState extends State<CustomerHomeContent> {
+class _CustomerHomeContentState extends State<CustomerHomeContent>
+    with WidgetsBindingObserver {
   final List<String> _categories = ['All', 'Restaurants', 'Supermarkets', 'Others'];
   String _selectedCategory = 'All';
   int? _hoveredCardIndex;
@@ -48,6 +51,10 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
   DeliveryAddress? _currentAddress;
   final Map<String, Future<Uint8List?>> _vendorImageFutureCache = {};
 
+  // Connectivity
+  bool _isOffline = false;
+  StreamSubscription<bool>? _connectivitySub;
+
   // Real-time listeners for auto-refresh (WhatsApp-style)
   StreamSubscription<Map<String, dynamic>>? _orderUpdatesSub;
   StreamSubscription<Map<String, dynamic>>? _notificationsSub;
@@ -57,10 +64,62 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _initConnectivity();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeApp();
       _setupRealtimeListeners();
     });
+  }
+
+  void _initConnectivity() {
+    final connectivity = ConnectivityService();
+    // Initial check
+    connectivity.checkConnectivity().then((online) {
+      if (mounted && !online) {
+        setState(() => _isOffline = true);
+      }
+    });
+    // Listen for changes
+    _connectivitySub = connectivity.onConnectivityChanged.listen((online) {
+      if (!mounted) return;
+      setState(() => _isOffline = !online);
+      if (online) {
+        // Auto-refresh when connection comes back
+        _autoRefreshContent();
+      }
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // App came back to foreground — refresh data so web changes show immediately
+      ConnectivityService().checkConnectivity().then((online) {
+        if (mounted) {
+          setState(() => _isOffline = !online);
+          if (online) {
+            // If no address yet (user returned from location settings), retry detection
+            if (_currentAddress == null) {
+              _retryLocationDetection();
+            } else {
+              _autoRefreshContent();
+            }
+          }
+        }
+      });
+    }
+  }
+
+  /// Retry location detection after returning from settings
+  Future<void> _retryLocationDetection() async {
+    if (!mounted) return;
+    final addressProvider = context.read<AddressProvider>();
+    final detected = await _autoDetectLocation(addressProvider);
+    if (detected != null && mounted) {
+      setState(() => _currentAddress = detected);
+      await _loadVendorsForAddress(detected);
+    }
   }
 
   /// Listen to real-time socket events and auto-refresh data when changes occur
@@ -195,10 +254,23 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
   /// Auto-detect current location and create address
   Future<DeliveryAddress?> _autoDetectLocation(AddressProvider addressProvider) async {
     try {
-      final permission = await Geolocator.checkPermission();
+      var permission = await Geolocator.checkPermission();
       if (permission != LocationPermission.whileInUse &&
           permission != LocationPermission.always) {
-        return null;
+        // Proactively request permission instead of silently failing
+        final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+        if (!serviceEnabled) {
+          // Location services off — prompt user
+          if (mounted) {
+            _showEnableLocationDialog();
+          }
+          return null;
+        }
+        permission = await Geolocator.requestPermission();
+        if (permission != LocationPermission.whileInUse &&
+            permission != LocationPermission.always) {
+          return null;
+        }
       }
       
       final locationService = LocationService();
@@ -301,6 +373,8 @@ class _CustomerHomeContentState extends State<CustomerHomeContent> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _connectivitySub?.cancel();
     _orderUpdatesSub?.cancel();
     _notificationsSub?.cancel();
     _contentUpdatesSub?.cancel();
@@ -2789,6 +2863,85 @@ Future<void> _handleSetLocation() async {
   }
 }
 
+// Show dialog when location services are turned off
+void _showEnableLocationDialog() {
+  final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+  showDialog(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFF2E7D32).withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.location_off_rounded, color: Color(0xFF2E7D32), size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Enable Location',
+              style: TextStyle(
+                color: isDarkMode ? Colors.white : Colors.black87,
+                fontWeight: FontWeight.w700,
+                fontSize: 16,
+              ),
+            ),
+          ),
+        ],
+      ),
+      content: Text(
+        'Turn on location services so we can find nearby vendors and calculate delivery for you.',
+        style: TextStyle(
+          color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
+          fontSize: 14,
+          height: 1.4,
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            Navigator.pop(ctx);
+            // Let user pick location manually
+            _handleSearchLocation();
+          },
+          child: Text(
+            'Pick Manually',
+            style: TextStyle(color: isDarkMode ? Colors.grey[400] : Colors.grey[600]),
+          ),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+            Navigator.pop(ctx);
+            await Geolocator.openLocationSettings();
+            // After returning from settings, try to detect again
+            await Future.delayed(const Duration(milliseconds: 500));
+            if (!mounted) return;
+            final addressProvider = context.read<AddressProvider>();
+            final detected = await _autoDetectLocation(addressProvider);
+            if (detected != null && mounted) {
+              setState(() => _currentAddress = detected);
+              await _loadVendorsForAddress(detected);
+            }
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF2E7D32),
+            foregroundColor: Colors.white,
+            elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+          child: const Text('Enable Location'),
+        ),
+      ],
+    ),
+  );
+}
+
 // Show permission denied dialog
 void _showLocationPermissionDeniedDialog() {
   final isDarkMode = Theme.of(context).brightness == Brightness.dark;
@@ -3182,6 +3335,18 @@ Widget build(BuildContext context) {
   if (_currentAddress == null) {
     // Show location selection WITH app chrome
     mainContent = _buildLocationSelectionOverlay(isDarkMode, cardColor, textColor, subtextColor);
+  } else if (_isOffline && vendorProvider.vendors.isEmpty && !vendorProvider.isLoading) {
+    // Offline with no cached data — show full no-internet screen
+    mainContent = NoInternetWidget(
+      onRetry: () {
+        ConnectivityService().checkConnectivity().then((online) {
+          if (mounted) {
+            setState(() => _isOffline = !online);
+            if (online) _autoRefreshContent();
+          }
+        });
+      },
+    );
   } else if (vendorProvider.vendors.isEmpty && !vendorProvider.isLoading && !isSearching && vendorProvider.error == null) {
     // Show no vendors only when there's no error (not a temporary failure)
     mainContent = _buildNoVendorsOverlay(isDarkMode, cardColor, textColor, subtextColor);
@@ -3204,6 +3369,19 @@ Widget build(BuildContext context) {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildSearchHeader(context, isDarkMode, cardColor, textColor, subtextColor, vendorProvider, authProvider, themeProvider),
+            // No internet banner
+            if (_isOffline)
+              NoInternetWidget(
+                compact: true,
+                onRetry: () {
+                  ConnectivityService().checkConnectivity().then((online) {
+                    if (mounted) {
+                      setState(() => _isOffline = !online);
+                      if (online) _autoRefreshContent();
+                    }
+                  });
+                },
+              ),
             Expanded(child: mainContent),
           ],
         ),

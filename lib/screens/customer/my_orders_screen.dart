@@ -89,7 +89,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
   String _parseError(String e) {
     final c = e.replaceAll('Exception: Failed to perform GET request: ', '').replaceAll('Exception: API Error: ', '').replaceAll('Exception: ', '');
     if (c.contains('401') || c.toLowerCase().contains('unauthorized')) return 'Session expired. Please log in again.';
-    if (c.toLowerCase().contains('network') || c.toLowerCase().contains('connection')) return 'Network error. Check your connection.';
+    if (c.toLowerCase().contains('network') || c.toLowerCase().contains('connection') || c.toLowerCase().contains('no internet')) return 'No internet connection. Please check your Wi-Fi or mobile data.';
     return c.isEmpty ? 'Failed to load orders.' : c;
   }
 

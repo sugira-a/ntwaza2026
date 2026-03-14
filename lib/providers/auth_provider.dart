@@ -196,8 +196,8 @@ class AuthProvider extends ChangeNotifier {
       return 'An account with this email already exists. Try logging in instead.';
     }
     
-    if (error.contains('Network') || error.contains('Connection') || error.contains('Failed host lookup')) {
-      return 'Network error. Please check your internet connection and try again.';
+    if (error.contains('Network') || error.contains('Connection') || error.contains('Failed host lookup') || error.contains('No internet')) {
+      return 'No internet connection. Please check your Wi-Fi or mobile data and try again.';
     }
     
     if (error.contains('timeout') || error.contains('Timeout')) {

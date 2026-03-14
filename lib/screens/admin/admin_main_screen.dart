@@ -6,11 +6,12 @@ import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/admin_order_provider.dart';
 import '../../providers/notification_provider.dart';
+import '../../providers/theme_provider.dart';
 import '../../services/notification_service.dart';
 import 'admin_dashboard_home.dart';
 import 'admin_orders_screen.dart';
 import 'admin_finance_screen.dart';
-import 'admin_performance_screen.dart';
+import 'admin_users_screen.dart';
 import 'admin_profile_screen.dart';
 
 class AdminMainScreen extends StatefulWidget {
@@ -22,7 +23,8 @@ class AdminMainScreen extends StatefulWidget {
 
 class _AdminMainScreenState extends State<AdminMainScreen> {
   int _selectedIndex = 0;
-  static const int _pollSeconds = 30;  // Increased from 10 for cost savings
+  static const int _pollSeconds = 30;
+  bool _initialized = false;
 
   @override
   void initState() {
@@ -31,6 +33,9 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
   }
 
   Future<void> _initialize() async {
+    if (_initialized) return;
+    _initialized = true;
+
     final authProvider = context.read<AuthProvider>();
     if (authProvider.token == null || authProvider.user == null) {
       if (mounted) context.go('/login');
@@ -48,7 +53,7 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
             autoRefreshSeconds: _pollSeconds,
           );
     } catch (e) {
-      debugPrint('❌ Admin init error: $e');
+      debugPrint('Admin init error: $e');
       if (e.toString().contains('401') && mounted) {
         context.read<AuthProvider>().logout();
         context.go('/login');
@@ -68,15 +73,17 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
+    final isDark = context.watch<ThemeProvider>().isDarkMode;
+    final bg = isDark ? const Color(0xFF1A1A1A) : Colors.white;
 
     if (!authProvider.isAuthenticated || authProvider.token == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) context.go('/login');
       });
-      return const Scaffold(
-        backgroundColor: Colors.black,
+      return Scaffold(
+        backgroundColor: bg,
         body: Center(
-          child: CircularProgressIndicator(color: Colors.white),
+          child: CircularProgressIndicator(color: isDark ? Colors.white : Colors.black),
         ),
       );
     }
@@ -85,10 +92,11 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) context.go('/');
       });
-      return const Scaffold(
-        backgroundColor: Colors.black,
+      return Scaffold(
+        backgroundColor: bg,
         body: Center(
-          child: Text('Admin access only', style: TextStyle(color: Colors.white)),
+          child: Text('Admin access only',
+              style: TextStyle(color: isDark ? Colors.white : Colors.black)),
         ),
       );
     }
@@ -97,85 +105,77 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
       AdminDashboardHome(),
       AdminOrdersScreen(),
       AdminFinanceScreen(),
-      AdminPerformanceScreen(),
+      AdminUsersScreen(),
       AdminProfileScreen(),
     ];
 
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
-        if (!didPop) {
-          _showExitConfirmation(context);
-        }
+        if (!didPop) _showExitConfirmation(context, isDark);
       },
       child: Scaffold(
-      backgroundColor: Colors.black,
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: screens,
-      ),
-      bottomNavigationBar: Container(
-        color: Colors.black,
-        padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
-        child: NavigationBarTheme(
-          data: NavigationBarThemeData(
-            backgroundColor: Colors.transparent,
-            indicatorColor: const Color(0xFF1F2937),
-            height: 64,
-            iconTheme: WidgetStateProperty.resolveWith((states) {
-              if (states.contains(WidgetState.selected)) {
-                return const IconThemeData(color: Colors.white);
-              }
-              return const IconThemeData(color: Color(0xFF9CA3AF));
-            }),
-            labelTextStyle: WidgetStateProperty.all(
-              const TextStyle(fontSize: 11, color: Colors.transparent),
-            ),
+        backgroundColor: bg,
+        body: IndexedStack(
+          index: _selectedIndex,
+          children: screens,
+        ),
+        bottomNavigationBar: Theme(
+          data: Theme.of(context).copyWith(
+            splashColor: Colors.transparent,
+            highlightColor: Colors.transparent,
           ),
-          child: NavigationBar(
-            selectedIndex: _selectedIndex,
-            onDestinationSelected: (i) => setState(() => _selectedIndex = i),
-            labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
-            destinations: const [
-              NavigationDestination(
-                icon: Icon(Icons.dashboard),
-                selectedIcon: Icon(Icons.dashboard_rounded),
-                label: 'Dashboard',
+          child: BottomNavigationBar(
+            currentIndex: _selectedIndex,
+            onTap: (i) => setState(() => _selectedIndex = i),
+            type: BottomNavigationBarType.fixed,
+            backgroundColor: bg,
+            selectedItemColor: isDark ? Colors.white : Colors.black,
+            unselectedItemColor: isDark ? const Color(0xFF6B7280) : const Color(0xFF9CA3AF),
+            selectedFontSize: 11,
+            unselectedFontSize: 11,
+            selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700),
+            unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500),
+            elevation: 0,
+            items: const [
+              BottomNavigationBarItem(
+                icon: Icon(Icons.dashboard_rounded),
+                activeIcon: Icon(Icons.dashboard_rounded),
+                label: 'Home',
               ),
-              NavigationDestination(
+              BottomNavigationBarItem(
                 icon: Icon(Icons.receipt_long),
-                selectedIcon: Icon(Icons.receipt_long_rounded),
+                activeIcon: Icon(Icons.receipt_long_rounded),
                 label: 'Orders',
               ),
-              NavigationDestination(
-                icon: Icon(Icons.account_balance_wallet),
-                selectedIcon: Icon(Icons.account_balance_wallet_rounded),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.account_balance_wallet_outlined),
+                activeIcon: Icon(Icons.account_balance_wallet_rounded),
                 label: 'Finance',
               ),
-              NavigationDestination(
-                icon: Icon(Icons.insights),
-                selectedIcon: Icon(Icons.insights_rounded),
-                label: 'Performance',
+              BottomNavigationBarItem(
+                icon: Icon(Icons.people_outline),
+                activeIcon: Icon(Icons.people_rounded),
+                label: 'Users',
               ),
-              NavigationDestination(
+              BottomNavigationBarItem(
                 icon: Icon(Icons.account_circle_outlined),
-                selectedIcon: Icon(Icons.person_rounded),
-                label: 'Profile',
+                activeIcon: Icon(Icons.person_rounded),
+                label: 'Account',
               ),
             ],
           ),
         ),
       ),
-    ),
     );
   }
 
-  Future<void> _showExitConfirmation(BuildContext context) async {
+  Future<void> _showExitConfirmation(BuildContext context, bool isDark) async {
     final result = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E1E),
+        backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
@@ -183,30 +183,36 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: const Color(0xFF2E7D32).withOpacity(0.1),
+                color: const Color(0xFF22C55E).withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.logout_rounded, color: Color(0xFF2E7D32), size: 22),
+              child: const Icon(Icons.logout_rounded, color: Color(0xFF22C55E), size: 22),
             ),
             const SizedBox(width: 12),
-            const Text('Exit App?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 18)),
+            Text('Exit App?',
+                style: TextStyle(
+                    color: isDark ? Colors.white : Colors.black,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 18)),
           ],
         ),
-        content: Text('Are you sure you want to exit Ntwaza?', style: TextStyle(color: Colors.grey[300], fontSize: 14)),
+        content: Text('Are you sure you want to exit NTWAZA?',
+            style: TextStyle(color: isDark ? Colors.grey[300] : Colors.grey[600], fontSize: 14)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: Text('Cancel', style: TextStyle(color: Colors.grey[400])),
+            child: Text('Cancel',
+                style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600])),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2E7D32),
+              backgroundColor: const Color(0xFF22C55E),
               foregroundColor: Colors.white,
               elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
-            child: const Text('Exit'),
+            child: const Text('Exit', style: TextStyle(fontWeight: FontWeight.w700)),
           ),
         ],
       ),

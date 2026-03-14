@@ -65,8 +65,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (error.contains('password') && error.contains('weak')) {
       return 'Password is too weak. Use at least 6 characters.';
     }
-    if (error.contains('Network') || error.contains('Connection') || error.contains('Failed host lookup')) {
-      return 'Network error. Please check your internet connection.';
+    if (error.contains('Network') || error.contains('Connection') || error.contains('Failed host lookup') || error.contains('No internet')) {
+      return 'No internet connection. Please check your Wi-Fi or mobile data.';
     }
     if (error.contains('timeout') || error.contains('Timeout')) {
       return 'Request timeout. Please try again.';
@@ -219,9 +219,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     'NTWAZA',
                     style: TextStyle(
                       color: theme.textColor,
-                      fontSize: 18,
+                      fontSize: 20,
                       fontWeight: FontWeight.w900,
-                      letterSpacing: 2,
+                      letterSpacing: 4,
                     ),
                   ),
                   const Spacer(),

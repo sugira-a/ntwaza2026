@@ -185,7 +185,7 @@ class MyApp extends StatelessWidget {
         SystemChrome.setSystemUIOverlayStyle(systemUiStyle);
         
         return MaterialApp.router(
-          title: 'Ntwaza',
+          title: 'NTWAZA',
           debugShowCheckedModeBanner: false,
           theme: themeProvider.lightTheme,
           darkTheme: themeProvider.darkTheme,

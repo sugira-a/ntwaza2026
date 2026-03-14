@@ -80,9 +80,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     'NTWAZA',
                     style: TextStyle(
                       color: theme.textColor,
-                      fontSize: 18,
+                      fontSize: 20,
                       fontWeight: FontWeight.w900,
-                      letterSpacing: 2,
+                      letterSpacing: 4,
                     ),
                   ),
                   const Spacer(),

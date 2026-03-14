@@ -325,7 +325,7 @@ class ProfileScreen extends StatelessWidget {
               child: const Icon(Icons.restaurant_menu, color: accentGreen, size: 24),
             ),
             const SizedBox(width: 12),
-            Text('Ntwaza', style: TextStyle(color: textColor, fontWeight: FontWeight.w700)),
+            Text('NTWAZA Delivery', style: TextStyle(color: textColor, fontWeight: FontWeight.w700)),
           ],
         ),
         content: Column(
@@ -335,11 +335,11 @@ class ProfileScreen extends StatelessWidget {
             Text('Version 1.0.0', style: TextStyle(color: subtextColor, fontSize: 14)),
             const SizedBox(height: 12),
             Text(
-              'Ntwaza is your go-to food delivery app in Kigali. Order from your favorite restaurants and get fast delivery to your doorstep.',
+              'NTWAZA Delivery is your go-to food delivery app in Kigali. Order from your favorite restaurants and get fast delivery to your doorstep.',
               style: TextStyle(color: textColor, fontSize: 13, height: 1.5),
             ),
             const SizedBox(height: 16),
-            Text('© 2026 Ntwaza. All rights reserved.', style: TextStyle(color: subtextColor, fontSize: 11)),
+            Text('© 2026 NTWAZA Delivery. All rights reserved.', style: TextStyle(color: subtextColor, fontSize: 11)),
           ],
         ),
         actions: [

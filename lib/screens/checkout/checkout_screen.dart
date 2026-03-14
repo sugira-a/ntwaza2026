@@ -13,6 +13,7 @@ import '../../services/payment_service.dart';
 import '../../models/vendor.dart';
 import '../../models/delivery_address.dart';
 import '../../models/special_offer.dart';
+import '../../utils/location_validator.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final Map<String, List<String>>? selectedItems;
@@ -554,10 +555,29 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       _showError('Please select a delivery address');
       return;
     }
+
+    // Validate address is within Kigali service area
+    final selectedAddr = addressProvider.selectedAddress!;
+    if (!LocationValidator.isWithinServiceArea(selectedAddr.latitude, selectedAddr.longitude)) {
+      _showError('This delivery address is outside our service area (Kigali). Please choose a different address.');
+      return;
+    }
+
+    // Validate address has real coordinates (not 0,0)
+    if (selectedAddr.latitude == 0 && selectedAddr.longitude == 0) {
+      _showError('Delivery address is invalid. Please select a proper location on the map.');
+      return;
+    }
+
     if (_paymentMethod == 'momo' && _phoneController.text.trim().isEmpty) {
       _showError('Please enter your phone number for Mobile Money');
       return;
     }
+
+    // Confirm delivery location before placing order
+    final confirmed = await _confirmDeliveryAddress(selectedAddr);
+    if (confirmed != true) return;
+
     setState(() => _isProcessing = true);
     try {
       await addressProvider.markAddressAsUsed(addressProvider.selectedAddress!.id);
@@ -735,6 +755,94 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         setState(() => _isProcessing = false);
       }
     }
+  }
+
+  /// Show a confirmation dialog with the delivery address before placing the order
+  Future<bool?> _confirmDeliveryAddress(DeliveryAddress address) async {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final accent = const Color(0xFF2E7D32);
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.location_on_rounded, color: accent, size: 22),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Confirm Delivery Location',
+                style: TextStyle(
+                  color: isDarkMode ? Colors.white : Colors.black87,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Deliver to:',
+              style: TextStyle(color: isDarkMode ? Colors.grey[400] : Colors.grey[600], fontSize: 12),
+            ),
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: accent.withOpacity(0.06),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.place_rounded, color: accent, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      address.fullAddress,
+                      style: TextStyle(
+                        color: isDarkMode ? Colors.white : Colors.black87,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Is this the correct address?',
+              style: TextStyle(color: isDarkMode ? Colors.grey[300] : Colors.grey[700], fontSize: 13),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx, false);
+              _navigateToLocationPicker();
+            },
+            child: Text('Change', style: TextStyle(color: isDarkMode ? Colors.grey[400] : Colors.grey[600])),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: accent,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Confirm & Order'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showError(String message) {

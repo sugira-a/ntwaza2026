@@ -40,7 +40,7 @@ class App extends StatelessWidget {
 
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
-      title: "Ntwaza",
+      title: "NTWAZA",
       theme: themeWithSwipeBack,
       scrollBehavior: const _NoScrollbarBehavior(),
       routerConfig: AppRouter.router,

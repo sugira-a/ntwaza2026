@@ -69,7 +69,7 @@ class TermsOfServiceScreen extends StatelessWidget {
                   // Preamble
                   _buildCard(card, divider, [
                     Text(
-                      'Please read these Terms of Service ("Terms", "Agreement") carefully before using the Ntwaza platform ("Service") operated by NTWAZA Ltd. ("Company", "we", "us", "our").',
+                      'Please read these Terms of Service ("Terms", "Agreement") carefully before using the NTWAZA Delivery platform ("Service") operated by NTWAZA Delivery Ltd. ("Company", "we", "us", "our").',
                       style: TextStyle(fontSize: 13.5, color: sub, height: 1.7),
                     ),
                     const SizedBox(height: 10),
@@ -82,15 +82,15 @@ class TermsOfServiceScreen extends StatelessWidget {
                   const SizedBox(height: 20),
 
                   _numberedSection('1', 'Definitions', card, text, sub, divider, [
-                    '"Platform" refers to the Ntwaza mobile application and website.',
+                    '"Platform" refers to the NTWAZA Delivery mobile application and website.',
                     '"User" refers to any individual who accesses or uses the Platform, including customers, vendors, and delivery riders.',
                     '"Vendor" refers to any business or individual that lists products or services on the Platform.',
                     '"Rider" refers to an independent delivery partner who fulfils delivery orders.',
                     '"Order" refers to a request placed by a User to purchase and have goods delivered.',
                   ]),
                   _numberedSection('2', 'Service Description', card, text, sub, divider, [
-                    'Ntwaza is a technology-enabled delivery platform that connects customers with local vendors, shops, and service providers. We facilitate the ordering, payment, and last-mile delivery of goods — including but not limited to food, groceries, retail products, and packages.',
-                    'Ntwaza acts as an intermediary between Users and Vendors. We do not manufacture, store, or directly sell any products listed on the Platform. Vendors are solely responsible for the quality, accuracy, and safety of their offerings.',
+                    'NTWAZA Delivery is a technology-enabled delivery platform that connects customers with local vendors, shops, and service providers. We facilitate the ordering, payment, and last-mile delivery of goods — including but not limited to food, groceries, retail products, and packages.',
+                    'NTWAZA Delivery acts as an intermediary between Users and Vendors. We do not manufacture, store, or directly sell any products listed on the Platform. Vendors are solely responsible for the quality, accuracy, and safety of their offerings.',
                   ]),
                   _numberedSection('3', 'Eligibility & Account Registration', card, text, sub, divider, [
                     'You must be at least 18 years of age, or have verifiable parental or guardian consent, to create an account.',
@@ -101,10 +101,10 @@ class TermsOfServiceScreen extends StatelessWidget {
                   _numberedSection('4', 'Orders, Pricing & Payment', card, text, sub, divider, [
                     'All orders placed through the Platform are subject to acceptance by the relevant Vendor.',
                     'Prices are displayed in Rwandan Francs (RWF) and include applicable taxes unless otherwise stated.',
-                    'We accept Mobile Money (MTN MoMo, Airtel Money) and debit/credit cards (Visa, Mastercard).',
+                    'We accept Mobile Money (MTN MoMo and Airtel Money).',
                     'Delivery fees are calculated based on distance and may vary by location, time of day, and demand.',
                     'Promotional offers and discount codes are subject to specific terms and may be revoked at any time.',
-                    'Payment is processed through secure, PCI-compliant third-party payment processors. Ntwaza does not store your full payment credentials.',
+                    'Payment is processed through secure, PCI-compliant third-party payment processors. NTWAZA Delivery does not store your full payment credentials.',
                   ]),
                   _numberedSection('5', 'Cancellations & Refunds', card, text, sub, divider, [
                     'You may cancel an order within 5 minutes of placement and before the Vendor begins preparation, at no charge.',
@@ -117,12 +117,12 @@ class TermsOfServiceScreen extends StatelessWidget {
                     'Estimated delivery times are provided for informational purposes and are not guaranteed. Actual times depend on traffic, weather, vendor preparation, and rider availability.',
                     'You must provide an accurate and accessible delivery address. Failed deliveries due to incorrect addresses may result in additional charges.',
                     'Our riders are independent contractors. They are responsible for safe handling of goods during transit.',
-                    'Ntwaza is not liable for delays caused by force majeure events including, but not limited to, natural disasters, civil unrest, or government-imposed restrictions.',
+                    'NTWAZA Delivery is not liable for delays caused by force majeure events including, but not limited to, natural disasters, civil unrest, or government-imposed restrictions.',
                   ]),
                   _numberedSection('7', 'Vendor & Rider Responsibilities', card, text, sub, divider, [
                     'Vendors are responsible for: accurate product listings and descriptions, food safety and hygiene compliance, timely order preparation, and maintaining adequate stock levels.',
                     'Riders are responsible for: timely pickup and delivery, safe handling of packages, professional and courteous conduct, and compliance with traffic laws.',
-                    'Ntwaza does not employ Vendors or Riders. They operate as independent partners under their own terms.',
+                    'NTWAZA Delivery does not employ Vendors or Riders. They operate as independent partners under their own terms.',
                   ]),
                   _numberedSection('8', 'Prohibited Conduct', card, text, sub, divider, [
                     'You shall not use the Platform for any unlawful purpose or to facilitate illegal activity.',
@@ -132,15 +132,15 @@ class TermsOfServiceScreen extends StatelessWidget {
                     'Any attempt to reverse-engineer, decompile, or interfere with the Platform\'s infrastructure is prohibited and may result in legal action.',
                   ]),
                   _numberedSection('9', 'Intellectual Property', card, text, sub, divider, [
-                    'All content on the Platform — including logos, trademarks, text, graphics, software, and design elements — is the property of NTWAZA Ltd. or its licensors and is protected under applicable intellectual property laws.',
+                    'All content on the Platform — including logos, trademarks, text, graphics, software, and design elements — is the property of NTWAZA Delivery Ltd. or its licensors and is protected under applicable intellectual property laws.',
                     'You are granted a limited, non-exclusive, non-transferable licence to use the Platform for personal, non-commercial purposes. Any unauthorised reproduction or distribution of Platform content is strictly prohibited.',
                   ]),
                   _numberedSection('10', 'Limitation of Liability', card, text, sub, divider, [
-                    'TO THE FULLEST EXTENT PERMITTED BY APPLICABLE LAW, NTWAZA SHALL NOT BE LIABLE FOR: product quality or safety issues attributable to Vendors; delivery delays beyond our reasonable control; allergic reactions or dietary concerns arising from Vendor-prepared items; loss, theft, or damage of goods during transit; or any indirect, incidental, special, consequential, or punitive damages.',
+                    'TO THE FULLEST EXTENT PERMITTED BY APPLICABLE LAW, NTWAZA DELIVERY SHALL NOT BE LIABLE FOR: product quality or safety issues attributable to Vendors; delivery delays beyond our reasonable control; allergic reactions or dietary concerns arising from Vendor-prepared items; loss, theft, or damage of goods during transit; or any indirect, incidental, special, consequential, or punitive damages.',
                     'Our total aggregate liability for any claims arising from or related to the Service shall not exceed the total fees paid by you in the 12 months preceding the claim.',
                   ]),
                   _numberedSection('11', 'Indemnification', card, text, sub, divider, [
-                    'You agree to indemnify, defend, and hold harmless NTWAZA Ltd., its officers, directors, employees, and agents from and against any and all claims, damages, losses, liabilities, and expenses (including reasonable legal fees) arising out of your use of the Service or violation of these Terms.',
+                    'You agree to indemnify, defend, and hold harmless NTWAZA Delivery Ltd., its officers, directors, employees, and agents from and against any and all claims, damages, losses, liabilities, and expenses (including reasonable legal fees) arising out of your use of the Service or violation of these Terms.',
                   ]),
                   _numberedSection('12', 'Governing Law & Dispute Resolution', card, text, sub, divider, [
                     'These Terms are governed by and construed in accordance with the laws of the Republic of Rwanda.',
@@ -189,7 +189,7 @@ class TermsOfServiceScreen extends StatelessWidget {
                         const SizedBox(height: 6),
                         _contactRow(Icons.phone, 'Phone: $_phone', sub),
                         const SizedBox(height: 6),
-                        _contactRow(Icons.location_on_rounded, 'NTWAZA Ltd., Kigali, Rwanda', sub),
+                        _contactRow(Icons.location_on_rounded, 'NTWAZA Delivery Ltd., Kigali, Rwanda', sub),
                         const SizedBox(height: 16),
                         Row(
                           children: [
@@ -239,7 +239,7 @@ class TermsOfServiceScreen extends StatelessWidget {
                     child: Padding(
                       padding: const EdgeInsets.only(bottom: 32),
                       child: Text(
-                        '\u00a9 ${DateTime.now().year} NTWAZA Ltd. All rights reserved.',
+                        '\u00a9 ${DateTime.now().year} NTWAZA Delivery Ltd. All rights reserved.',
                         style: TextStyle(fontSize: 11.5, color: sub),
                       ),
                     ),

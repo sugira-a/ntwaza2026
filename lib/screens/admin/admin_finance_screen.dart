@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/admin_order_provider.dart';
+import '../../providers/theme_provider.dart';
 import '../../services/admin_dashboard_service.dart';
 import '../../models/order.dart';
 import '../../utils/helpers.dart';
@@ -16,7 +17,7 @@ class AdminFinanceScreen extends StatefulWidget {
 }
 
 class _AdminFinanceScreenState extends State<AdminFinanceScreen> {
-  static const Color accentGreen = Color(0xFF4CAF50);
+  static const Color accentGreen = Color(0xFF22C55E);
   static const Color mutedGray = Color(0xFF6B7280);
 
   String _selectedPeriod = 'today';
@@ -90,12 +91,12 @@ class _AdminFinanceScreenState extends State<AdminFinanceScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? const Color(0xFF0B0B0B) : const Color(0xFFDADDE2);
-    final textColor = isDark ? Colors.white : const Color(0xFF0B0B0B);
-    final subtextColor = isDark ? Colors.white70 : mutedGray;
-    final cardColor = isDark ? Colors.black : const Color(0xFFDADDE2);
-    final borderColor = isDark ? const Color(0xFF1F1F1F) : const Color(0xFFE5E7EB);
+    final isDark = context.watch<ThemeProvider>().isDarkMode;
+    final bg = isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF1F2F4);
+    final textColor = isDark ? Colors.white : Colors.black;
+    final subtextColor = isDark ? const Color(0xFF9CA3AF) : mutedGray;
+    final cardColor = isDark ? const Color(0xFF252525) : Colors.white;
+    final borderColor = isDark ? Colors.grey[800]! : const Color(0xFFE3E5E8);
     final statusBarHeight = MediaQuery.of(context).padding.top;
 
     final allOrders = context.watch<AdminOrderProvider>().orders;
@@ -418,9 +419,9 @@ class _PeriodChip extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
-            color: selected ? const Color(0xFF4CAF50).withOpacity(0.2) : Colors.white.withOpacity(0.06),
+            color: selected ? const Color(0xFF22C55E).withOpacity(0.2) : Colors.white.withOpacity(0.06),
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: selected ? const Color(0xFF4CAF50).withOpacity(0.4) : Colors.transparent),
+            border: Border.all(color: selected ? const Color(0xFF22C55E).withOpacity(0.4) : Colors.transparent),
           ),
           child: Center(
             child: Text(
@@ -428,7 +429,7 @@ class _PeriodChip extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: selected ? const Color(0xFF4CAF50) : Colors.white.withOpacity(0.5),
+                color: selected ? const Color(0xFF22C55E) : Colors.white.withOpacity(0.5),
               ),
             ),
           ),
@@ -449,7 +450,7 @@ class _ViewToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accentGreen = const Color(0xFF4CAF50);
+    final accentGreen = const Color(0xFF22C55E);
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
@@ -459,7 +460,7 @@ class _ViewToggle extends StatelessWidget {
             color: selected ? accentGreen.withOpacity(0.15) : (isDark ? Colors.white.withOpacity(0.04) : Colors.white),
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: selected ? accentGreen.withOpacity(0.4) : (isDark ? const Color(0xFF1F1F1F) : const Color(0xFFE5E7EB)),
+              color: selected ? accentGreen.withOpacity(0.4) : (isDark ? Colors.grey[800]! : const Color(0xFFE3E5E8)),
               width: 0.5,
             ),
           ),
@@ -491,10 +492,10 @@ class _SummaryMiniCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardColor = isDark ? Colors.black : const Color(0xFFDADDE2);
-    final borderColor = isDark ? const Color(0xFF1F1F1F) : const Color(0xFFE5E7EB);
-    final textColor = isDark ? Colors.white : const Color(0xFF0B0B0B);
-    final subtextColor = isDark ? Colors.white70 : const Color(0xFF6B7280);
+    final cardColor = isDark ? const Color(0xFF252525) : Colors.white;
+    final borderColor = isDark ? Colors.grey[800]! : const Color(0xFFE3E5E8);
+    final textColor = isDark ? Colors.white : Colors.black;
+    final subtextColor = isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280);
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -531,10 +532,10 @@ class _StatusRevenueCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardColor = isDark ? Colors.black : const Color(0xFFDADDE2);
-    final borderColor = isDark ? const Color(0xFF1F1F1F) : const Color(0xFFE5E7EB);
-    final textColor = isDark ? Colors.white : const Color(0xFF0B0B0B);
-    final subtextColor = isDark ? Colors.white70 : const Color(0xFF6B7280);
+    final cardColor = isDark ? const Color(0xFF252525) : Colors.white;
+    final borderColor = isDark ? Colors.grey[800]! : const Color(0xFFE3E5E8);
+    final textColor = isDark ? Colors.white : Colors.black;
+    final subtextColor = isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280);
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -577,11 +578,11 @@ class _VendorFinanceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accentGreen = const Color(0xFF4CAF50);
-    final cardColor = isDark ? Colors.black : const Color(0xFFDADDE2);
-    final borderColor = isDark ? const Color(0xFF1F1F1F) : const Color(0xFFE5E7EB);
-    final textColor = isDark ? Colors.white : const Color(0xFF0B0B0B);
-    final subtextColor = isDark ? Colors.white70 : const Color(0xFF6B7280);
+    final accentGreen = const Color(0xFF22C55E);
+    final cardColor = isDark ? const Color(0xFF252525) : Colors.white;
+    final borderColor = isDark ? Colors.grey[800]! : const Color(0xFFE3E5E8);
+    final textColor = isDark ? Colors.white : Colors.black;
+    final subtextColor = isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -644,11 +645,11 @@ class _RiderFinanceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accentGreen = const Color(0xFF4CAF50);
-    final cardColor = isDark ? Colors.black : const Color(0xFFDADDE2);
-    final borderColor = isDark ? const Color(0xFF1F1F1F) : const Color(0xFFE5E7EB);
-    final textColor = isDark ? Colors.white : const Color(0xFF0B0B0B);
-    final subtextColor = isDark ? Colors.white70 : const Color(0xFF6B7280);
+    final accentGreen = const Color(0xFF22C55E);
+    final cardColor = isDark ? const Color(0xFF252525) : Colors.white;
+    final borderColor = isDark ? Colors.grey[800]! : const Color(0xFFE3E5E8);
+    final textColor = isDark ? Colors.white : Colors.black;
+    final subtextColor = isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280);
     // Show delivery fees if non-zero, otherwise show total revenue handled
     final hasDeliveryFees = finance.deliveryFees > 0;
     final displayAmount = hasDeliveryFees ? finance.deliveryFees : finance.totalRevenue;

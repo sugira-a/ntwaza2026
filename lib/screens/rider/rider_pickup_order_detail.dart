@@ -98,7 +98,7 @@ class _RiderPickupOrderDetailScreenState
                       onCall: () => _call(_currentOrder.customerPhone),
                       onWhatsApp: () => _whatsApp(
                           _currentOrder.customerPhone,
-                          'Hello, I am your Ntwaza delivery rider for pickup order #${_currentOrder.orderNumber}.')),
+                          'Hello, I am your NTWAZA Delivery rider for pickup order #${_currentOrder.orderNumber}.')),
                   const SizedBox(height: 10),
                   _locationCard(
                     d,

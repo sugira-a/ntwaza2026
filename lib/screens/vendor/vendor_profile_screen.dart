@@ -354,7 +354,7 @@ class VendorProfileScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     title: Text(
-                      'About Ntwaza Vendor',
+                      'About NTWAZA Delivery Vendor',
                       style: TextStyle(
                         color: textColor,
                         fontWeight: FontWeight.w900,
@@ -371,7 +371,7 @@ class VendorProfileScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'Ntwaza Vendor App',
+                          'NTWAZA Delivery Vendor App',
                           style: TextStyle(
                             color: textColor,
                             fontSize: 18,
@@ -389,7 +389,7 @@ class VendorProfileScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'Manage your business, track orders, and grow your revenue with Ntwaza.',
+                          'Manage your business, track orders, and grow your revenue with NTWAZA Delivery.',
                           style: TextStyle(
                             color: subtextColor,
                             fontSize: 13,

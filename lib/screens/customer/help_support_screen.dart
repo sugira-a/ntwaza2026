@@ -32,7 +32,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
     ),
     _FAQ(
       q: 'What payment methods are accepted?',
-      a: 'We accept Mobile Money (MTN MoMo, Airtel Money) and Visa / Mastercard.',
+      a: 'We accept Mobile Money (MTN MoMo and Airtel Money).',
       icon: Icons.account_balance_wallet,
     ),
     _FAQ(
@@ -92,7 +92,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
   }
 
   Future<void> _launchWhatsApp() async {
-    final uri = Uri.parse('https://wa.me/$_whatsApp?text=Hello%20Ntwaza%20Support');
+    final uri = Uri.parse('https://wa.me/$_whatsApp?text=Hello%20NTWAZA%20Delivery%20Support');
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
@@ -124,10 +124,9 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
 
       // response is already decoded by ApiService._handleResponse
       if (response is Map && response['success'] == true) {
-        final ticketNum = response['data']?['ticket_number'] ?? '';
         _subjectCtrl.clear();
         _descCtrl.clear();
-        _showSnack('Ticket $ticketNum submitted successfully. We\'ll respond within 24 hours.');
+        _showSnack('Your support request has been submitted. We\'ll get back to you within 24 hours.');
       } else {
         final errMsg = (response is Map) ? (response['error'] ?? 'Failed to submit ticket') : 'Failed to submit ticket';
         _showSnack(errMsg.toString(), isError: true);
@@ -261,7 +260,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('NTWAZA Ltd.',
+                        Text('NTWAZA Delivery',
                             style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: text)),
                         const SizedBox(height: 12),
                         _infoRow(Icons.location_on_rounded, 'Kigali, Rwanda', sub),
@@ -275,7 +274,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                         Divider(color: divider, height: 1),
                         const SizedBox(height: 16),
                         Text(
-                          'Ntwaza is a technology-driven delivery platform connecting customers with local vendors and service providers across Rwanda.',
+                          'NTWAZA Delivery is a technology-driven delivery platform connecting customers with local vendors and service providers across Rwanda.',
                           style: TextStyle(fontSize: 12.5, color: sub, height: 1.5),
                         ),
                       ],

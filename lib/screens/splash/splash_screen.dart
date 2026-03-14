@@ -373,32 +373,33 @@ class _SplashScreenState extends State<SplashScreen>
                   children: [
                     Text(
                       'NTWAZA',
+                      textAlign: TextAlign.center,
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 44,
+                        fontSize: 48,
                         fontWeight: FontWeight.w900,
-                        letterSpacing: 10,
+                        letterSpacing: 14,
                         shadows: [
                           Shadow(
-                            color: const Color(0xFF66D36E).withOpacity(0.45),
-                            blurRadius: 30,
+                            color: const Color(0xFF66D36E).withOpacity(0.6),
+                            blurRadius: 40,
                           ),
                           Shadow(
-                            color: const Color(0xFF66D36E).withOpacity(0.15),
-                            blurRadius: 80,
+                            color: const Color(0xFF66D36E).withOpacity(0.25),
+                            blurRadius: 100,
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 16),
                     FadeTransition(
                       opacity: _taglineFade,
                       child: const Text(
                         'Fast.  Fresh.  On time.',
                         style: TextStyle(
-                          color: Color(0xFFAAAAAA),
+                          color: Color(0xFF888888),
                           fontSize: 14,
-                          letterSpacing: 3,
+                          letterSpacing: 4,
                           fontWeight: FontWeight.w300,
                         ),
                       ),

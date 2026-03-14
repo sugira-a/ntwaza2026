@@ -4,6 +4,15 @@ import 'dart:convert';
 import 'package:http_parser/http_parser.dart';
 import '../../models/special_offer.dart';
 import 'package:flutter/foundation.dart';
+import '../connectivity_service.dart';
+
+/// Thrown when a request fails due to no internet connection.
+class NoInternetException implements Exception {
+  final String message;
+  const NoInternetException([this.message = 'No internet connection. Please check your Wi-Fi or mobile data and try again.']);
+  @override
+  String toString() => message;
+}
 
 class ApiService {
   // Singleton pattern
@@ -65,6 +74,7 @@ class ApiService {
       return _handleResponse(response);
     } catch (e) {
       print('❌ GET Error: $e');
+      _throwIfNoInternet(e);
       throw Exception('Failed to perform GET request: $e');
     }
   }
@@ -83,6 +93,7 @@ class ApiService {
       return _handleResponse(response);
     } catch (e) {
       print('❌ POST Error: $e');
+      _throwIfNoInternet(e);
       throw Exception('Failed to perform POST request: $e');
     }
   }
@@ -100,6 +111,7 @@ class ApiService {
       return _handleResponse(response);
     } catch (e) {
       print('❌ PUT Error: $e');
+      _throwIfNoInternet(e);
       throw Exception('Failed to perform PUT request: $e');
     }
   }
@@ -116,7 +128,16 @@ class ApiService {
       return _handleResponse(response);
     } catch (e) {
       print('❌ DELETE Error: $e');
+      _throwIfNoInternet(e);
       throw Exception('Failed to perform DELETE request: $e');
+    }
+  }
+
+  /// Rethrows as [NoInternetException] when the error is a network issue.
+  void _throwIfNoInternet(dynamic e) {
+    if (e is NoInternetException) throw e;
+    if (ConnectivityService.isNetworkError(e)) {
+      throw const NoInternetException();
     }
   }
 

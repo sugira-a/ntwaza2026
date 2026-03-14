@@ -1577,7 +1577,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('NTWAZA', style: TextStyle(
-                        color: tp, fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: 1.0,
+                        color: tp, fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 2.0,
                       )),
                       Text(
                         _isSending ? 'Thinking...' : 'Smart Food & Health Guide',
