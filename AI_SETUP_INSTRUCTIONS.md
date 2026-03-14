@@ -41,7 +41,7 @@ The AI Assistant feature has been successfully implemented with the following im
    ```
 3. Replace `your-gemini-api-key-here` with your actual API key:
    ```
-   GEMINI_API_KEY=AIzaSyD...your-actual-key-here
+    GEMINI_API_KEY=your-actual-gemini-key-here
    ```
 
 ### Step 3: Restart the Backend Server

@@ -55,13 +55,21 @@ To enable:
 
 The API key should be in `android/local.properties`:
 ```properties
-GOOGLE_MAPS_ANDROID_KEY=AIzaSyCp462I4jqd5li6x4bhgnS7Gu87pV2XBsk
+GOOGLE_MAPS_ANDROID_KEY=your-google-maps-android-key
 ```
 
 ⚠️ **Important**: This key is currently in `local.properties` which is gitignored. For production:
 - Consider using environment variables
 - Or hardcode it in `AndroidManifest.xml` (less secure)
 - Or use Google's recommended secrets management
+
+For web builds, keep the browser key out of Git as well:
+
+```bash
+copy web\maps-config.example.js web\maps-config.js
+```
+
+Then set `googleMapsWebKey` in `web/maps-config.js` locally before building or deploying web.
 
 ### 5. Test the Release Build
 

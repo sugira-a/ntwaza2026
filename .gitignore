@@ -47,6 +47,8 @@ config.py
 logs/
 *.log
 flutter_*.log
+*.apk
+*.aab
 
 # Build artifacts
 build/
@@ -106,6 +108,7 @@ Thumbs.db
 **/temp/
 **/tmp/
 *.tmp
+temp_old_*
 
 # Backup and old files
 *_old.*
@@ -138,6 +141,7 @@ ios/Flutter/Secrets.xcconfig
 *.env.local
 .env.local
 lib/.env.dart
+web/maps-config.js
 
 # OS files
 .DS_Store
