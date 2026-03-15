@@ -11,6 +11,7 @@ class PickupOrderProvider extends ChangeNotifier {
   List<PickupOrder> _pickupOrders = [];
   List<PickupOrder> _pendingOrders = [];
   List<PickupOrder> _assignedOrders = [];
+  List<PickupOrder> _availablePickupOrders = [];
   PickupOrder? _selectedOrder;
   bool _isLoading = false;
   String? _error;
@@ -29,10 +30,11 @@ class PickupOrderProvider extends ChangeNotifier {
   // Getters
   List<PickupOrder> get pickupOrders => _pickupOrders;
   List<PickupOrder> get pendingOrders =>
-      _pickupOrders.where((o) => o.status == PickupOrderStatus.pending).toList();
+      _pickupOrders.where((o) => o.status == PickupOrderStatus.pending || o.status == PickupOrderStatus.awaitingPayment).toList();
   List<PickupOrder> get assignedOrders =>
       _pickupOrders.where((o) => o.riderId != null && o.status != PickupOrderStatus.delivered).toList();
     List<PickupOrder> get riderAssignedOrders => _assignedOrders;
+  List<PickupOrder> get availablePickupOrders => _availablePickupOrders;
   PickupOrder? get selectedOrder => _selectedOrder;
   bool get isLoading => _isLoading;
   String? get error => _error;
@@ -131,6 +133,56 @@ class PickupOrderProvider extends ChangeNotifier {
     }
   }
 
+  // Fetch available (unassigned) pickup orders for riders
+  Future<void> fetchAvailablePickupOrders() async {
+    _clearError();
+
+    try {
+      final response =
+          await _apiService.get('/api/rider/available-pickup-orders');
+
+      if (response['success'] != null && response['success'] as bool) {
+        final ordersList = response['orders'] as List<dynamic>? ?? [];
+        _availablePickupOrders = ordersList
+            .map((json) => PickupOrder.fromJson(json as Map<String, dynamic>))
+            .toList();
+
+        notifyListeners();
+      } else {
+        _setError('Failed to fetch available pickup orders');
+      }
+    } catch (e) {
+      _setError('Error fetching available pickup orders: ${e.toString()}');
+    }
+  }
+
+  // Rider accepts an available pickup order
+  Future<bool> acceptPickupOrder(String orderId) async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      final response = await _apiService.post(
+        '/api/rider/pickup-orders/$orderId/accept',
+        {},
+      );
+
+      if (response['success'] != null && response['success'] as bool) {
+        _availablePickupOrders.removeWhere((o) => o.id == orderId);
+        notifyListeners();
+        return true;
+      } else {
+        _setError(response['error']?.toString() ?? 'Failed to accept pickup order');
+        return false;
+      }
+    } catch (e) {
+      _setError('Error accepting pickup order: ${e.toString()}');
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   // Create a new pickup order
   Future<Map<String, dynamic>?> createPickupOrder({
     required String customerId,
@@ -162,7 +214,6 @@ class PickupOrderProvider extends ChangeNotifier {
         'deliveryFee': deliveryFee,
         'totalAmount': amount + deliveryFee,
         'scheduledPickupTime': scheduledPickupTime.toIso8601String(),
-        'status': PickupOrderStatus.pending.name,
         'paymentMethod': paymentMethod,
         'notes': notes,
         'createdAt': nowInRwanda().toIso8601String(),

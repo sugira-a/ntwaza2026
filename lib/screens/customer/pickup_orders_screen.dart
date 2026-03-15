@@ -218,13 +218,13 @@ class _PickupOrdersScreenState extends State<PickupOrdersScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF2E7D32).withOpacity(0.12),
+                  color: _pickupStatusColor(order.status).withOpacity(0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   order.statusDisplay,
-                  style: const TextStyle(
-                    color: Color(0xFF2E7D32),
+                  style: TextStyle(
+                    color: _pickupStatusColor(order.status),
                     fontWeight: FontWeight.w600,
                     fontSize: 12,
                   ),
@@ -275,5 +275,18 @@ class _PickupOrdersScreenState extends State<PickupOrdersScreen> {
         ],
       ),
     );
+  }
+
+  Color _pickupStatusColor(PickupOrderStatus status) {
+    switch (status) {
+      case PickupOrderStatus.awaitingPayment: return const Color(0xFF1565C0);
+      case PickupOrderStatus.pending: return const Color(0xFFEF6C00);
+      case PickupOrderStatus.confirmed: return const Color(0xFF2E7D32);
+      case PickupOrderStatus.assignedToRider: return const Color(0xFF7B1FA2);
+      case PickupOrderStatus.pickedUp: return const Color(0xFF00838F);
+      case PickupOrderStatus.inTransit: return const Color(0xFF2E7D32);
+      case PickupOrderStatus.delivered: return const Color(0xFF2E7D32);
+      case PickupOrderStatus.cancelled: return const Color(0xFFC62828);
+    }
   }
 }

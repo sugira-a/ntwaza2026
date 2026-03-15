@@ -23,7 +23,7 @@ class _AdminFinanceScreenState extends State<AdminFinanceScreen> {
   String _selectedPeriod = 'today';
   Map<String, dynamic>? _revenueReport;
   bool _isLoading = true;
-  String _viewMode = 'overview'; // overview, vendor, rider
+  String _viewMode = 'overview'; // overview, vendor, rider, pickup
 
   @override
   void initState() {
@@ -101,10 +101,18 @@ class _AdminFinanceScreenState extends State<AdminFinanceScreen> {
 
     final allOrders = context.watch<AdminOrderProvider>().orders;
     final filteredOrders = _filterOrdersByPeriod(allOrders);
-    final totalRevenue = filteredOrders.fold<double>(0, (s, o) => s + o.total);
-    final totalDeliveryFees = filteredOrders.fold<double>(0, (s, o) => s + o.deliveryFee);
-    final riderRevenue = filteredOrders.where((o) => o.riderName != null && o.riderName!.isNotEmpty).fold<double>(0, (s, o) => s + o.total);
-    final deliveredCount = filteredOrders.where((o) => o.status == OrderStatus.completed).length;
+    // Only count completed/delivered orders for revenue (not pending/cancelled)
+    final completedOrders = filteredOrders.where((o) => o.status == OrderStatus.completed).toList();
+    final totalRevenue = completedOrders.fold<double>(0, (s, o) => s + o.total);
+    final totalDeliveryFees = completedOrders.fold<double>(0, (s, o) => s + o.deliveryFee);
+    final riderRevenue = completedOrders.where((o) => o.riderName != null && o.riderName!.isNotEmpty).fold<double>(0, (s, o) => s + o.total);
+    final deliveredCount = completedOrders.length;
+
+    // Pickup revenue from backend report
+    final pickupSummary = _revenueReport?['pickup_summary'] as Map<String, dynamic>?;
+    final pickupRevenue = (pickupSummary?['total_revenue'] ?? 0).toDouble();
+    final combinedData = _revenueReport?['combined'] as Map<String, dynamic>?;
+    final combinedRevenue = (combinedData?['total_revenue'] ?? totalRevenue).toDouble();
 
     return Scaffold(
       backgroundColor: bg,
@@ -140,7 +148,7 @@ class _AdminFinanceScreenState extends State<AdminFinanceScreen> {
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
                   children: [
                   // Summary cards
-                  _buildSummaryCards(totalRevenue, totalDeliveryFees, riderRevenue, deliveredCount, filteredOrders.length, isDark, textColor, subtextColor, cardColor, borderColor),
+                  _buildSummaryCards(combinedRevenue, totalDeliveryFees, pickupRevenue, deliveredCount, filteredOrders.length, isDark, textColor, subtextColor, cardColor, borderColor),
                   const SizedBox(height: 20),
 
                   // View mode toggle
@@ -154,6 +162,8 @@ class _AdminFinanceScreenState extends State<AdminFinanceScreen> {
                     _buildVendorBreakdown(filteredOrders, isDark, textColor, subtextColor, cardColor, borderColor),
                   if (_viewMode == 'rider')
                     _buildRiderBreakdown(filteredOrders, isDark, textColor, subtextColor, cardColor, borderColor),
+                  if (_viewMode == 'pickup')
+                    _buildPickupBreakdown(isDark, textColor, subtextColor, cardColor, borderColor),
                 ],
               ),
             ),
@@ -180,11 +190,7 @@ class _AdminFinanceScreenState extends State<AdminFinanceScreen> {
     );
   }
 
-  Widget _buildSummaryCards(double revenue, double deliveryFees, double riderRevenue, int delivered, int total, bool isDark, Color textColor, Color subtextColor, Color cardColor, Color borderColor) {
-    // If delivery fees are 0, show rider-handled revenue instead
-    final hasDeliveryFees = deliveryFees > 0;
-    final feeLabel = hasDeliveryFees ? 'Delivery Fees' : 'Rider Revenue';
-    final feeValue = hasDeliveryFees ? deliveryFees : riderRevenue;
+  Widget _buildSummaryCards(double revenue, double deliveryFees, double pickupRevenue, int delivered, int total, bool isDark, Color textColor, Color subtextColor, Color cardColor, Color borderColor) {
     return Column(
       children: [
         // Main revenue card
@@ -221,20 +227,20 @@ class _AdminFinanceScreenState extends State<AdminFinanceScreen> {
           children: [
             Expanded(
               child: _SummaryMiniCard(
-                label: feeLabel,
-                value: '${_formatCurrency(feeValue)} RWF',
-                icon: Icons.two_wheeler_rounded,
-                color: const Color(0xFF3B82F6),
+                label: 'Pickup Revenue',
+                value: '${_formatCurrency(pickupRevenue)} RWF',
+                icon: Icons.local_shipping_rounded,
+                color: const Color(0xFF8B5CF6),
                 isDark: isDark,
               ),
             ),
             const SizedBox(width: 10),
             Expanded(
               child: _SummaryMiniCard(
-                label: 'Avg / Order',
-                value: total > 0 ? '${_formatCurrency(revenue / total)} RWF' : '0 RWF',
-                icon: Icons.trending_up_rounded,
-                color: const Color(0xFF8B5CF6),
+                label: 'Delivery Fees',
+                value: '${_formatCurrency(deliveryFees)} RWF',
+                icon: Icons.two_wheeler_rounded,
+                color: const Color(0xFF3B82F6),
                 isDark: isDark,
               ),
             ),
@@ -248,24 +254,27 @@ class _AdminFinanceScreenState extends State<AdminFinanceScreen> {
     return Row(
       children: [
         _ViewToggle(label: 'Overview', selected: _viewMode == 'overview', onTap: () => setState(() => _viewMode = 'overview'), isDark: isDark),
-        const SizedBox(width: 8),
-        _ViewToggle(label: 'By Vendor', selected: _viewMode == 'vendor', onTap: () => setState(() => _viewMode = 'vendor'), isDark: isDark),
-        const SizedBox(width: 8),
-        _ViewToggle(label: 'By Rider', selected: _viewMode == 'rider', onTap: () => setState(() => _viewMode = 'rider'), isDark: isDark),
+        const SizedBox(width: 6),
+        _ViewToggle(label: 'Vendor', selected: _viewMode == 'vendor', onTap: () => setState(() => _viewMode = 'vendor'), isDark: isDark),
+        const SizedBox(width: 6),
+        _ViewToggle(label: 'Rider', selected: _viewMode == 'rider', onTap: () => setState(() => _viewMode = 'rider'), isDark: isDark),
+        const SizedBox(width: 6),
+        _ViewToggle(label: 'Pickup', selected: _viewMode == 'pickup', onTap: () => setState(() => _viewMode = 'pickup'), isDark: isDark),
       ],
     );
   }
 
   Widget _buildOverview(List<Order> orders, bool isDark, Color textColor, Color subtextColor, Color cardColor, Color borderColor) {
-    // Revenue by status
+    // Revenue by status — only completed orders generate real revenue
     final delivered = orders.where((o) => o.status == OrderStatus.completed);
     final cancelled = orders.where((o) => o.status == OrderStatus.cancelled);
     final active = orders.where((o) =>
         o.status != OrderStatus.completed && o.status != OrderStatus.cancelled);
 
     final deliveredRevenue = delivered.fold<double>(0, (s, o) => s + o.total);
-    final cancelledRevenue = cancelled.fold<double>(0, (s, o) => s + o.total);
-    final activeRevenue = active.fold<double>(0, (s, o) => s + o.total);
+    // Show potential value of cancelled/active (informational, not counted as revenue)
+    final cancelledValue = cancelled.fold<double>(0, (s, o) => s + o.total);
+    final activeValue = active.fold<double>(0, (s, o) => s + o.total);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -274,9 +283,9 @@ class _AdminFinanceScreenState extends State<AdminFinanceScreen> {
         const SizedBox(height: 12),
         _StatusRevenueCard(label: 'Delivered', count: delivered.length, revenue: deliveredRevenue, color: accentGreen, isDark: isDark),
         const SizedBox(height: 8),
-        _StatusRevenueCard(label: 'Active', count: active.length, revenue: activeRevenue, color: const Color(0xFF3B82F6), isDark: isDark),
+        _StatusRevenueCard(label: 'Active', count: active.length, revenue: activeValue, color: const Color(0xFF3B82F6), isDark: isDark),
         const SizedBox(height: 8),
-        _StatusRevenueCard(label: 'Cancelled', count: cancelled.length, revenue: cancelledRevenue, color: const Color(0xFFEF4444), isDark: isDark),
+        _StatusRevenueCard(label: 'Cancelled', count: cancelled.length, revenue: cancelledValue, color: const Color(0xFFEF4444), isDark: isDark),
         const SizedBox(height: 20),
 
         // Payment methods
@@ -355,6 +364,200 @@ class _AdminFinanceScreenState extends State<AdminFinanceScreen> {
         Text('Rider Earnings', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: textColor, letterSpacing: -0.3)),
         const SizedBox(height: 12),
         ...groups.entries.map((e) => _RiderFinanceCard(finance: e.value, isDark: isDark)),
+      ],
+    );
+  }
+
+  Widget _buildPickupBreakdown(bool isDark, Color textColor, Color subtextColor, Color cardColor, Color borderColor) {
+    final pickupSummary = _revenueReport?['pickup_summary'] as Map<String, dynamic>?;
+    final pickupRiders = _revenueReport?['pickup_rider_breakdown'] as List<dynamic>?;
+
+    if (pickupSummary == null) {
+      return _isLoading
+          ? Center(child: Padding(padding: const EdgeInsets.all(40), child: CircularProgressIndicator(color: accentGreen)))
+          : _emptyState('No pickup data available', isDark);
+    }
+
+    final totalRevenue = (pickupSummary['total_revenue'] ?? 0).toDouble();
+    final deliveryFees = (pickupSummary['delivery_fees'] ?? 0).toDouble();
+    final completedCount = pickupSummary['total_orders'] ?? 0;
+    final allCount = pickupSummary['all_orders_count'] ?? 0;
+    final riderPayouts = (pickupSummary['rider_payouts'] ?? 0).toDouble();
+    final platformEarnings = (pickupSummary['platform_earnings'] ?? 0).toDouble();
+    final paymentMethods = (pickupSummary['payment_methods'] as Map<String, dynamic>?) ?? {};
+    final paymentMethodCounts = (pickupSummary['payment_method_counts'] as Map<String, dynamic>?) ?? {};
+    final statusCounts = (pickupSummary['orders_by_status'] as Map<String, dynamic>?) ?? {};
+    final revenueByStatus = (pickupSummary['revenue_by_status'] as Map<String, dynamic>?) ?? {};
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Pickup revenue header
+        Text('Pickup Package Revenue', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: textColor, letterSpacing: -0.3)),
+        const SizedBox(height: 12),
+
+        // Pickup summary card
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [const Color(0xFF8B5CF6).withOpacity(0.15), const Color(0xFF8B5CF6).withOpacity(0.05)],
+              begin: Alignment.topLeft, end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFF8B5CF6).withOpacity(0.3)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Pickup Revenue', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: subtextColor)),
+              const SizedBox(height: 4),
+              Text(
+                '${_formatCurrency(totalRevenue)} RWF',
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF8B5CF6), letterSpacing: -0.5),
+              ),
+              const SizedBox(height: 6),
+              Text('$completedCount delivered of $allCount total', style: TextStyle(fontSize: 11, color: subtextColor)),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // Financial split
+        Row(
+          children: [
+            Expanded(
+              child: _SummaryMiniCard(
+                label: 'Rider Payouts',
+                value: '${_formatCurrency(riderPayouts)} RWF',
+                icon: Icons.two_wheeler_rounded,
+                color: const Color(0xFF06B6D4),
+                isDark: isDark,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _SummaryMiniCard(
+                label: 'Platform Earnings',
+                value: '${_formatCurrency(platformEarnings)} RWF',
+                icon: Icons.account_balance_rounded,
+                color: accentGreen,
+                isDark: isDark,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+
+        // Status breakdown
+        if (statusCounts.isNotEmpty) ...[
+          Text('Orders by Status', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: textColor)),
+          const SizedBox(height: 10),
+          ...statusCounts.entries.map((e) {
+            final statusRevenue = (revenueByStatus[e.key] ?? 0).toDouble();
+            final color = e.key == 'delivered' ? accentGreen
+                : e.key == 'cancelled' ? const Color(0xFFEF4444)
+                : const Color(0xFF3B82F6);
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _StatusRevenueCard(
+                label: e.key[0].toUpperCase() + e.key.substring(1),
+                count: (e.value as num).toInt(),
+                revenue: statusRevenue,
+                color: color,
+                isDark: isDark,
+              ),
+            );
+          }),
+          const SizedBox(height: 14),
+        ],
+
+        // Payment methods
+        if (paymentMethods.isNotEmpty) ...[
+          Text('Payment Methods', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: textColor)),
+          const SizedBox(height: 10),
+          ...paymentMethods.entries.map((e) => Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: cardColor,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: borderColor, width: 0.5),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  e.key.toLowerCase().contains('momo') || e.key.toLowerCase().contains('mobile')
+                      ? Icons.phone_android_rounded
+                      : e.key.toLowerCase().contains('cash')
+                          ? Icons.payments_rounded
+                          : Icons.credit_card_rounded,
+                  color: const Color(0xFF8B5CF6), size: 20,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(e.key, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: textColor)),
+                      Text('${paymentMethodCounts[e.key] ?? 0} orders', style: TextStyle(fontSize: 11, color: subtextColor)),
+                    ],
+                  ),
+                ),
+                Text('${_formatCurrency((e.value as num).toDouble())} RWF', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: textColor)),
+              ],
+            ),
+          )),
+          const SizedBox(height: 14),
+        ],
+
+        // Rider breakdown for pickups
+        if (pickupRiders != null && pickupRiders.isNotEmpty) ...[
+          Text('Pickup Rider Earnings', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: textColor)),
+          const SizedBox(height: 10),
+          ...pickupRiders.map((r) {
+            final rider = r as Map<String, dynamic>;
+            return Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: cardColor,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: borderColor, width: 0.5),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 38, height: 38,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF8B5CF6).withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.two_wheeler_rounded, color: Color(0xFF8B5CF6), size: 18),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(rider['rider_name'] ?? 'Unknown', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: textColor)),
+                        Text('${rider['delivery_count'] ?? 0} pickups', style: TextStyle(fontSize: 11, color: subtextColor)),
+                      ],
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text('${_formatCurrency((rider['rider_payout'] ?? 0).toDouble())} RWF', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF8B5CF6))),
+                      Text('Earned', style: TextStyle(fontSize: 9, color: subtextColor)),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
       ],
     );
   }

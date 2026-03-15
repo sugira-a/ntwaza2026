@@ -510,39 +510,55 @@ class _AdminOrderDetailScreenState extends State<AdminOrderDetailScreen>
         // ─── Payment ─────────────────────────────────────────────
         _sectionHeader('Payment Summary', Icons.payments_rounded, textColor),
         const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: cardColor,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: borderColor, width: 0.5),
-          ),
-          child: Column(
-            children: [
-              _payRow('Subtotal', '${_order.subtotal.toStringAsFixed(0)} RWF', textColor, subtextColor),
-              const SizedBox(height: 8),
-              _payRow('Delivery Fee', '${_order.deliveryFee.toStringAsFixed(0)} RWF', textColor, subtextColor),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Divider(color: borderColor, height: 1),
-              ),
-              _payRow('Total', '${_order.total.toStringAsFixed(0)} RWF', textColor, subtextColor, bold: true, valueColor: accentGreen),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  _payChip(Icons.credit_card_rounded, _order.paymentMethod.toUpperCase(), blue, isDark),
-                  const SizedBox(width: 8),
-                  _payChip(
-                    _order.paymentStatus == 'paid' ? Icons.check_circle_rounded : Icons.schedule_rounded,
-                    (_order.paymentStatus ?? 'pending').toUpperCase(),
-                    _order.paymentStatus == 'paid' ? accentGreen : gold,
-                    isDark,
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
+        Builder(builder: (context) {
+          // Smart fallback: compute subtotal from items if backend sent 0
+          double subtotal = _order.subtotal;
+          if (subtotal == 0 && _order.items.isNotEmpty) {
+            subtotal = _order.items.fold(0.0, (sum, item) => sum + item.total);
+          }
+          double deliveryFee = _order.deliveryFee;
+          if (deliveryFee == 0 && _order.total > 0 && subtotal > 0) {
+            deliveryFee = _order.total - subtotal;
+            if (deliveryFee < 0) deliveryFee = 0;
+          }
+          final paymentLabel = _order.paymentMethod[0].toUpperCase() + _order.paymentMethod.substring(1).toLowerCase();
+          final statusRaw = _order.paymentStatus ?? 'pending';
+          final statusLabel = statusRaw[0].toUpperCase() + statusRaw.substring(1).toLowerCase();
+
+          return Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: cardColor,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: borderColor, width: 0.5),
+            ),
+            child: Column(
+              children: [
+                _payRow('Subtotal', '${subtotal.toStringAsFixed(0)} RWF', textColor, subtextColor),
+                const SizedBox(height: 8),
+                _payRow('Delivery Fee', '${deliveryFee.toStringAsFixed(0)} RWF', textColor, subtextColor),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Divider(color: borderColor, height: 1),
+                ),
+                _payRow('Total', '${_order.total.toStringAsFixed(0)} RWF', textColor, subtextColor, bold: true, valueColor: accentGreen),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    _payChip(Icons.credit_card_rounded, paymentLabel, blue, isDark),
+                    const SizedBox(width: 8),
+                    _payChip(
+                      _order.paymentStatus == 'paid' ? Icons.check_circle_rounded : Icons.schedule_rounded,
+                      statusLabel,
+                      _order.paymentStatus == 'paid' ? accentGreen : gold,
+                      isDark,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        }),
         const SizedBox(height: 18),
 
         // ─── Verification codes ──────────────────────────────────

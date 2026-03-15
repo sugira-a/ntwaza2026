@@ -730,6 +730,7 @@ class _PickupCard extends StatelessWidget {
 
   _StatusInfo _pickupStatus(PickupOrderStatus s) {
     switch (s) {
+      case PickupOrderStatus.awaitingPayment: return _StatusInfo('Awaiting Payment', Icons.payment_rounded, const Color(0xFF1565C0));
       case PickupOrderStatus.pending: return _StatusInfo('Pending', Icons.schedule_rounded, const Color(0xFFF59E0B));
       case PickupOrderStatus.confirmed: return _StatusInfo('Confirmed', Icons.check_circle_rounded, const Color(0xFF3B82F6));
       case PickupOrderStatus.assignedToRider: return _StatusInfo('Assigned', Icons.person_pin_rounded, const Color(0xFF8B5CF6));

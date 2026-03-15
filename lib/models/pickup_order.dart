@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../utils/helpers.dart';
 
 enum PickupOrderStatus {
+  awaitingPayment('Awaiting Payment'),
   pending('Pending'),
   confirmed('Confirmed'),
   assignedToRider('Assigned to Rider'),
@@ -171,7 +172,7 @@ class PickupOrder {
   bool get canStartPickup => status == PickupOrderStatus.assignedToRider;
   bool get canCompletePickup => status == PickupOrderStatus.pickedUp;
   bool get canCompleteDelivery => status == PickupOrderStatus.inTransit;
-  bool get canCancel => status == PickupOrderStatus.pending || status == PickupOrderStatus.confirmed;
+  bool get canCancel => status == PickupOrderStatus.awaitingPayment || status == PickupOrderStatus.pending || status == PickupOrderStatus.confirmed;
 
   factory PickupOrder.fromJson(Map<String, dynamic> json) {
     return PickupOrder(
@@ -321,9 +322,13 @@ class PickupOrder {
 PickupOrderStatus _parseStatus(String? status) {
   if (status == null) return PickupOrderStatus.pending;
   
+  final lower = status.toLowerCase();
+  // Handle snake_case from backend
+  if (lower == 'awaiting_payment') return PickupOrderStatus.awaitingPayment;
+  
   try {
     return PickupOrderStatus.values.firstWhere(
-      (s) => s.name == status.toLowerCase(),
+      (s) => s.name.toLowerCase() == lower,
       orElse: () => PickupOrderStatus.pending,
     );
   } catch (e) {

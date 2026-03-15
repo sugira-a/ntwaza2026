@@ -67,6 +67,8 @@ class _RiderMainScreenState extends State<RiderMainScreen>
 
     if (riderId != null) {
       await context.read<PickupOrderProvider>().fetchRiderPickupOrders(riderId);
+      if (!mounted) return;
+      await context.read<PickupOrderProvider>().fetchAvailablePickupOrders();
     }
     if (!mounted) return;
     context.read<NotificationProvider>().initialize(pollingInterval: _pollSeconds);
@@ -284,6 +286,8 @@ class _RiderMainScreenState extends State<RiderMainScreen>
                       const SizedBox(height: 24),
                       if (_isOnline) ...[
                         _buildAvailableOrders(context, orderProvider, isDark),
+                        const SizedBox(height: 24),
+                        _buildAvailablePickups(context, isDark),
                         const SizedBox(height: 24),
                       ],
                       _buildActiveOrders(orderProvider, isDark, context),
@@ -822,9 +826,93 @@ class _RiderMainScreenState extends State<RiderMainScreen>
 
   // â”€â”€â”€ PICKUP ORDERS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
+  Widget _buildAvailablePickups(BuildContext ctx, bool isDark) {
+    final pickupProvider = ctx.watch<PickupOrderProvider>();
+    final orders = pickupProvider.availablePickupOrders;
+    if (orders.isEmpty) return const SizedBox.shrink();
+
+    final text = isDark ? Colors.white : Colors.black;
+    final sub = isDark ? Colors.grey[400]! : const Color(0xFF6B7280);
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [
+        Text('Available Pickups', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: text, letterSpacing: -0.5)),
+        const SizedBox(width: 8),
+        _badge('${orders.length}'),
+      ]),
+      const SizedBox(height: 12),
+      ...orders.take(5).map((o) => _buildAvailablePickupCard(o, isDark, text, sub, ctx)),
+    ]);
+  }
+
+  Widget _buildAvailablePickupCard(PickupOrder order, bool isDark, Color text, Color sub, BuildContext ctx) {
+    final bg = isDark ? const Color(0xFF1A1A1A) : Colors.white;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Container(
+            width: 44, height: 44,
+            decoration: BoxDecoration(color: const Color(0xFF8B5CF6).withOpacity(0.12), borderRadius: BorderRadius.circular(11)),
+            child: const Icon(Icons.local_shipping_rounded, color: Color(0xFF8B5CF6), size: 22),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Pickup #${order.orderNumber}', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: text)),
+              const SizedBox(height: 3),
+              Text('RWF ${order.totalAmount.toStringAsFixed(0)} \u00b7 ${order.items.length} item${order.items.length != 1 ? "s" : ""}',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: sub)),
+            ]),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+            decoration: BoxDecoration(color: const Color(0xFF8B5CF6).withOpacity(0.15), borderRadius: BorderRadius.circular(6)),
+            child: const Text('PICKUP', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Color(0xFF8B5CF6), letterSpacing: 0.5)),
+          ),
+        ]),
+        const SizedBox(height: 10),
+        Row(children: [
+          Expanded(
+            child: ElevatedButton(
+              onPressed: () => _handleAcceptPickup(order),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF22C55E), foregroundColor: Colors.white, elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+                padding: const EdgeInsets.symmetric(vertical: 9),
+              ),
+              child: const Text('Accept Pickup', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 11)),
+            ),
+          ),
+        ]),
+      ]),
+    );
+  }
+
+  Future<void> _handleAcceptPickup(PickupOrder order) async {
+    final confirmed = await _confirmAction(context, title: 'Accept Pickup', message: 'Accept this pickup delivery?', confirmLabel: 'Accept');
+    if (!confirmed) return;
+    final provider = context.read<PickupOrderProvider>();
+    final ok = await provider.acceptPickupOrder(order.id);
+    if (!mounted) return;
+    if (ok) {
+      final riderId = context.read<AuthProvider>().user?.id;
+      if (riderId != null && riderId.isNotEmpty) {
+        await provider.fetchRiderPickupOrders(riderId);
+      }
+      ScaffoldMessenger.of(context).showSnackBar(_buildSnackBar('Pickup order accepted'));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(_buildSnackBar(provider.error ?? 'Failed to accept', isError: true));
+    }
+  }
+
   Widget _buildPickupOrders(BuildContext ctx, bool isDark) {
     final pickupProvider = ctx.watch<PickupOrderProvider>();
-    final orders = pickupProvider.riderAssignedOrders;
+    final orders = pickupProvider.riderAssignedOrders
+        .where((o) => o.status != PickupOrderStatus.delivered && o.status != PickupOrderStatus.cancelled)
+        .toList();
     if (orders.isEmpty) return const SizedBox.shrink();
 
     final text = isDark ? Colors.white : Colors.black;
@@ -1275,20 +1363,39 @@ class _PickupOrdersList extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final pp = context.watch<PickupOrderProvider>();
-    var orders = pp.riderAssignedOrders;
+    var assignedOrders = pp.riderAssignedOrders;
+    var availableOrders = pp.availablePickupOrders;
     if (query.isNotEmpty) {
-      orders = orders.where((o) =>
+      assignedOrders = assignedOrders.where((o) =>
+        o.orderNumber.toLowerCase().contains(query) ||
+        o.pickupLocation.address.toLowerCase().contains(query)
+      ).toList();
+      availableOrders = availableOrders.where((o) =>
         o.orderNumber.toLowerCase().contains(query) ||
         o.pickupLocation.address.toLowerCase().contains(query)
       ).toList();
     }
 
-    if (orders.isEmpty) return _emptyList('No pickup orders', isDark);
+    if (assignedOrders.isEmpty && availableOrders.isEmpty) return _emptyList('No pickup orders', isDark);
 
-    return ListView.builder(
+    return ListView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 80),
-      itemCount: orders.length,
-      itemBuilder: (ctx, i) => _PickupCard(order: orders[i]),
+      children: [
+        if (availableOrders.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text('Available Pickups', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: isDark ? Colors.white : Colors.black)),
+          ),
+          ...availableOrders.map((o) => _PickupCard(order: o, showAccept: true)),
+        ],
+        if (assignedOrders.isNotEmpty) ...[
+          Padding(
+            padding: EdgeInsets.only(top: availableOrders.isNotEmpty ? 16 : 0, bottom: 8),
+            child: Text('My Pickups', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: isDark ? Colors.white : Colors.black)),
+          ),
+          ...assignedOrders.map((o) => _PickupCard(order: o)),
+        ],
+      ],
     );
   }
 }
@@ -1425,7 +1532,8 @@ class _OrderCard extends StatelessWidget {
 
 class _PickupCard extends StatelessWidget {
   final PickupOrder order;
-  const _PickupCard({required this.order});
+  final bool showAccept;
+  const _PickupCard({required this.order, this.showAccept = false});
 
   @override
   Widget build(BuildContext context) {
@@ -1433,35 +1541,72 @@ class _PickupCard extends StatelessWidget {
     final text = isDark ? Colors.white : Colors.black;
     final sub = isDark ? Colors.grey[400]! : const Color(0xFF6B7280);
     final bg = isDark ? const Color(0xFF1A1A1A) : Colors.white;
+    final badgeColor = showAccept ? const Color(0xFF8B5CF6) : const Color(0xFF3B82F6);
 
     return GestureDetector(
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RiderPickupOrderDetailScreen(order: order))),
+      onTap: showAccept ? null : () => Navigator.push(context, MaterialPageRoute(builder: (_) => RiderPickupOrderDetailScreen(order: order))),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12)),
-        child: Row(children: [
-          Container(
-            width: 44, height: 44,
-            decoration: BoxDecoration(color: const Color(0xFF3B82F6).withOpacity(0.12), borderRadius: BorderRadius.circular(11)),
-            child: const Icon(Icons.local_shipping_rounded, color: Color(0xFF3B82F6), size: 22),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Pickup #${order.orderNumber}',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: -0.3, color: text), maxLines: 1, overflow: TextOverflow.ellipsis),
-              const SizedBox(height: 3),
-              Text('RWF ${order.totalAmount.toStringAsFixed(0)} \u00b7 ${order.items.length} item${order.items.length != 1 ? "s" : ""}',
-                  style: TextStyle(color: sub, fontSize: 11, fontWeight: FontWeight.w600)),
-            ]),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(color: const Color(0xFF3B82F6).withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
-            child: Text(order.statusDisplay.toUpperCase(),
-                style: const TextStyle(color: Color(0xFF3B82F6), fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
-          ),
+        child: Column(children: [
+          Row(children: [
+            Container(
+              width: 44, height: 44,
+              decoration: BoxDecoration(color: badgeColor.withOpacity(0.12), borderRadius: BorderRadius.circular(11)),
+              child: Icon(Icons.local_shipping_rounded, color: badgeColor, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('Pickup #${order.orderNumber}',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: -0.3, color: text), maxLines: 1, overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 3),
+                Text('RWF ${order.totalAmount.toStringAsFixed(0)} \u00b7 ${order.items.length} item${order.items.length != 1 ? "s" : ""}',
+                    style: TextStyle(color: sub, fontSize: 11, fontWeight: FontWeight.w600)),
+              ]),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(color: badgeColor.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
+              child: Text(showAccept ? 'AVAILABLE' : order.statusDisplay.toUpperCase(),
+                  style: TextStyle(color: badgeColor, fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+            ),
+          ]),
+          if (showAccept) ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () async {
+                  final provider = context.read<PickupOrderProvider>();
+                  final ok = await provider.acceptPickupOrder(order.id);
+                  if (context.mounted) {
+                    if (ok) {
+                      final auth = context.read<AuthProvider>();
+                      final riderId = auth.user?.id;
+                      if (riderId != null && riderId.isNotEmpty) {
+                        await provider.fetchRiderPickupOrders(riderId);
+                      }
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Pickup order accepted'), backgroundColor: Color(0xFF22C55E)),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(provider.error ?? 'Failed to accept'), backgroundColor: Colors.red),
+                      );
+                    }
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF22C55E), foregroundColor: Colors.white, elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+                  padding: const EdgeInsets.symmetric(vertical: 9),
+                ),
+                child: const Text('Accept Pickup', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 11)),
+              ),
+            ),
+          ],
         ]),
       ),
     );

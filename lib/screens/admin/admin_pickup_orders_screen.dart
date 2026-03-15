@@ -88,7 +88,7 @@ class _AdminPickupOrdersScreenState extends State<AdminPickupOrdersScreen>
     final pickupOrders = pickupProvider.pickupOrders;
     final vendorOrders = vendorProvider.orders;
     _totalOrders = pickupOrders.length + vendorOrders.length;
-    _pendingCount = pickupOrders.where((o) => o.status == PickupOrderStatus.pending || o.status == PickupOrderStatus.confirmed).length;
+    _pendingCount = pickupOrders.where((o) => o.status == PickupOrderStatus.awaitingPayment || o.status == PickupOrderStatus.pending || o.status == PickupOrderStatus.confirmed).length;
     _inTransitCount = pickupOrders.where((o) => o.status == PickupOrderStatus.inTransit || o.status == PickupOrderStatus.assignedToRider).length;
     final today = nowInRwanda();
     _completedToday = pickupOrders.where((o) => o.status == PickupOrderStatus.delivered && o.createdAt.day == today.day && o.createdAt.month == today.month && o.createdAt.year == today.year).length;
@@ -416,7 +416,7 @@ class _AdminPickupOrdersScreenState extends State<AdminPickupOrdersScreen>
                     ),
                     if (order.riderName != null)
                       Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6), decoration: BoxDecoration(color: _Colors.purple.withOpacity(0.15), borderRadius: BorderRadius.circular(8), border: Border.all(color: _Colors.purple.withOpacity(0.3))), child: Row(children: [const Icon(Icons.two_wheeler_rounded, size: 14, color: _Colors.purple), const SizedBox(width: 4), Text(order.riderName!, style: const TextStyle(fontSize: 12, color: _Colors.purple, fontWeight: FontWeight.w600))]))
-                    else if (order.status == PickupOrderStatus.pending || order.status == PickupOrderStatus.confirmed)
+                    else if (order.status == PickupOrderStatus.awaitingPayment || order.status == PickupOrderStatus.pending || order.status == PickupOrderStatus.confirmed)
                       GestureDetector(
                         onTap: () => _showAssignRiderDialog(order),
                         child: Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), decoration: BoxDecoration(gradient: LinearGradient(colors: [_Colors.accent, _Colors.accent.withOpacity(0.7)]), borderRadius: BorderRadius.circular(8)), child: const Row(children: [Icon(Icons.person_add, size: 14, color: Colors.white), SizedBox(width: 4), Text('Assign', style: TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.w600))])),
@@ -528,6 +528,7 @@ class _AdminPickupOrdersScreenState extends State<AdminPickupOrdersScreen>
 
   Color _getStatusColor(PickupOrderStatus status) {
     switch (status) {
+      case PickupOrderStatus.awaitingPayment: return const Color(0xFF1565C0);
       case PickupOrderStatus.pending: return _Colors.warning;
       case PickupOrderStatus.confirmed: return _Colors.accent;
       case PickupOrderStatus.assignedToRider: return _Colors.purple;
@@ -618,7 +619,7 @@ class _OrderDetailsSheet extends StatelessWidget {
                 ],
                 if (order.riderId != null) ...[const SizedBox(height: 16), _buildSection('Assigned Rider', Icons.two_wheeler_rounded, _Colors.purple, [_DetailRow('Name', order.riderName ?? 'N/A'), _DetailRow('Phone', order.riderPhone ?? 'N/A', isPhone: true)])],
                 const SizedBox(height: 24),
-                if (order.status == PickupOrderStatus.pending || order.status == PickupOrderStatus.confirmed)
+                if (order.status == PickupOrderStatus.awaitingPayment || order.status == PickupOrderStatus.pending || order.status == PickupOrderStatus.confirmed)
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
@@ -653,7 +654,7 @@ class _OrderDetailsSheet extends StatelessWidget {
 
   Widget _buildStatusBadge(PickupOrderStatus status) {
     Color color;
-    switch (status) { case PickupOrderStatus.pending: color = _Colors.warning; break; case PickupOrderStatus.confirmed: color = _Colors.accent; break; case PickupOrderStatus.assignedToRider: color = _Colors.purple; break; case PickupOrderStatus.inTransit: color = _Colors.cyan; break; case PickupOrderStatus.delivered: color = _Colors.primary; break; default: color = _Colors.danger; }
+    switch (status) { case PickupOrderStatus.awaitingPayment: color = const Color(0xFF1565C0); break; case PickupOrderStatus.pending: color = _Colors.warning; break; case PickupOrderStatus.confirmed: color = _Colors.accent; break; case PickupOrderStatus.assignedToRider: color = _Colors.purple; break; case PickupOrderStatus.inTransit: color = _Colors.cyan; break; case PickupOrderStatus.delivered: color = _Colors.primary; break; default: color = _Colors.danger; }
     return Container(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8), decoration: BoxDecoration(color: color.withOpacity(0.15), borderRadius: BorderRadius.circular(20), border: Border.all(color: color.withOpacity(0.3))), child: Text(status.displayName, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: color)));
   }
 }

@@ -1020,6 +1020,8 @@ class _RiderPickupOrderDetailScreenState
 
   IconData _statusIcon(PickupOrderStatus status) {
     switch (status) {
+      case PickupOrderStatus.awaitingPayment:
+        return Icons.payment;
       case PickupOrderStatus.pending:
         return Icons.schedule;
       case PickupOrderStatus.confirmed:

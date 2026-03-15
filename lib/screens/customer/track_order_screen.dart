@@ -389,6 +389,9 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
 
     int currentIndex;
     switch (_order!.status) {
+      case PickupOrderStatus.awaitingPayment:
+        currentIndex = 0;
+        break;
       case PickupOrderStatus.pending:
         currentIndex = 0;
         break;

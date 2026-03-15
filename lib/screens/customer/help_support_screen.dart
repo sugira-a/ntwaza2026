@@ -83,18 +83,28 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
   // ── Actions ──
   Future<void> _launchPhone() async {
     final uri = Uri.parse('tel:$_phone');
-    if (await canLaunchUrl(uri)) await launchUrl(uri);
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      _showSnack('Could not open phone dialer', isError: true);
+    }
   }
 
   Future<void> _launchEmail() async {
     final uri = Uri.parse('mailto:$_email?subject=Support%20Request');
-    if (await canLaunchUrl(uri)) await launchUrl(uri);
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      _showSnack('Could not open email app', isError: true);
+    }
   }
 
   Future<void> _launchWhatsApp() async {
-    final uri = Uri.parse('https://wa.me/$_whatsApp?text=Hello%20NTWAZA%20Delivery%20Support');
-    if (await canLaunchUrl(uri)) {
+    final uri = Uri.parse('https://wa.me/$_whatsApp?text=Hello%20Ntwaza%20Delivery%20Support');
+    try {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      _showSnack('Could not open WhatsApp', isError: true);
     }
   }
 
@@ -153,10 +163,10 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
   Widget build(BuildContext context) {
     final isDark = context.watch<ThemeProvider>().isDarkMode;
     final bg = isDark ? const Color(0xFF121212) : const Color(0xFFFAFAFA);
-    final card = bg; // cards match background — seamless
+    final card = isDark ? const Color(0xFF1E1E1E) : Colors.white;
     final text = isDark ? Colors.white : const Color(0xFF1A1A1A);
     final sub = isDark ? Colors.grey[400]! : Colors.grey[600]!;
-    final divider = Colors.transparent;
+    final divider = isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE8E8E8);
     const accent = Color(0xFF2E7D32);
 
     return Scaffold(
@@ -199,7 +209,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
               sub: sub,
               accent: accent,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             _contactCard(
               icon: Icons.email,
               title: 'Email',
@@ -211,7 +221,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
               sub: sub,
               accent: accent,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             _contactCard(
               icon: Icons.chat,
               title: 'WhatsApp',
@@ -312,49 +322,68 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
     required Color sub,
     required Color accent,
   }) {
-    return Material(
-      color: card,
-      borderRadius: BorderRadius.circular(10),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(10),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: Row(
-            children: [
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: accent.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(8),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final borderColor = isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE3E5E8);
+    return Container(
+      decoration: BoxDecoration(
+        color: card,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: borderColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.18 : 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: accent.withOpacity(0.10),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(icon, size: 20, color: accent),
                 ),
-                child: Icon(icon, size: 17, color: accent),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title,
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: text)),
+                      const SizedBox(height: 2),
+                      Text(subtitle,
+                          style: TextStyle(fontSize: 12, color: sub),
+                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text(title,
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: text)),
-                    Text(subtitle,
-                        style: TextStyle(fontSize: 11.5, color: sub),
+                    Text(trailing,
+                        style: TextStyle(fontSize: 10, color: sub.withOpacity(0.7)),
+                        textAlign: TextAlign.end,
                         maxLines: 1, overflow: TextOverflow.ellipsis),
                   ],
                 ),
-              ),
-              const SizedBox(width: 6),
-              Flexible(
-                flex: 0,
-                child: Text(trailing,
-                    style: TextStyle(fontSize: 9.5, color: sub.withOpacity(0.6)),
-                    textAlign: TextAlign.end,
-                    maxLines: 1, overflow: TextOverflow.ellipsis),
-              ),
-              const SizedBox(width: 4),
-              Icon(Icons.chevron_right, size: 16, color: sub.withOpacity(0.4)),
-            ],
+                const SizedBox(width: 4),
+                Icon(Icons.chevron_right, size: 18, color: sub.withOpacity(0.5)),
+              ],
+            ),
           ),
         ),
       ),

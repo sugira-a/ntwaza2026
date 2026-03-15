@@ -48,7 +48,7 @@ class VendorOrderProvider with ChangeNotifier {
         orderDate.month == today.month &&
         orderDate.day == today.day &&
         o.status == OrderStatus.completed;
-    }).fold(0.0, (sum, o) => sum + o.total);
+    }).fold(0.0, (sum, o) => sum + o.subtotal);
   }
   
   int get todayOrderCount {

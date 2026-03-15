@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../models/delivery_address.dart';
+import '../../models/pickup_order.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/pickup_order_provider.dart';
 import '../../utils/distance.dart';
@@ -443,7 +444,7 @@ class _CreatePickupOrderScreenState extends State<CreatePickupOrderScreen> {
     if (order != null) {
       // Initiate MoMo payment if selected
       if (paymentMethod == 'momo' && mounted) {
-        final orderId = order['id']?.toString();
+        final orderId = order is PickupOrder ? order.id : order['id']?.toString();
         if (orderId != null) {
           final paymentService = PaymentService();
           final payResult = await paymentService.initiatePickupPayment(
@@ -1145,13 +1146,59 @@ class _CreatePickupOrderScreenState extends State<CreatePickupOrderScreen> {
               ),
               child: Padding(
                 padding: const EdgeInsets.all(16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: Column(
                   children: [
-                    Text('Estimated total', style: TextStyle(color: isDark ? Colors.white : Colors.black, fontWeight: FontWeight.w700)),
-                    Text(
-                      'RWF ${total.toStringAsFixed(0)}',
-                      style: TextStyle(color: isDark ? Colors.white : Colors.black, fontWeight: FontWeight.w800),
+                    // Delivery fee row
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Delivery fee', style: TextStyle(color: subtextColor, fontSize: 13)),
+                        if (_isCalculatingDistance)
+                          SizedBox(
+                            height: 14,
+                            width: 14,
+                            child: CircularProgressIndicator(strokeWidth: 1.5, color: subtextColor),
+                          )
+                        else if (distanceKm == null)
+                          Text('Set both locations', style: TextStyle(color: subtextColor, fontSize: 13, fontStyle: FontStyle.italic))
+                        else
+                          Text('RWF ${deliveryFee.toStringAsFixed(0)}', style: TextStyle(color: textColor, fontSize: 13, fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                    if (distanceKm != null) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Distance', style: TextStyle(color: subtextColor, fontSize: 12)),
+                          Text('${distanceKm.toStringAsFixed(1)} km', style: TextStyle(color: subtextColor, fontSize: 12)),
+                        ],
+                      ),
+                    ],
+                    if (_parseMoney(_itemValueController.text) > 0) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Item value', style: TextStyle(color: subtextColor, fontSize: 13)),
+                          Text('RWF ${_parseMoney(_itemValueController.text).toStringAsFixed(0)}', style: TextStyle(color: textColor, fontSize: 13, fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                    ],
+                    Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: Divider(height: 1, color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE3E5E8)),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Estimated total', style: TextStyle(color: textColor, fontWeight: FontWeight.w700, fontSize: 15)),
+                        Text(
+                          distanceKm == null ? '—' : 'RWF ${total.toStringAsFixed(0)}',
+                          style: TextStyle(color: accentColor, fontWeight: FontWeight.w800, fontSize: 15),
+                        ),
+                      ],
                     ),
                   ],
                 ),

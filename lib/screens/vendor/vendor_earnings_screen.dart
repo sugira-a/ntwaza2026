@@ -34,7 +34,7 @@ class _VendorEarningsScreenState extends State<VendorEarningsScreen>
 
   // ── helpers ─────────────────────────────────────────────────
   List<Order> _completedOrders(VendorOrderProvider p) =>
-      p.orders.where((o) => o.status.index >= 4).toList();
+      p.orders.where((o) => o.status == OrderStatus.completed).toList();
 
   List<Order> _todayOrders(VendorOrderProvider p) =>
       _completedOrders(p).where((o) => _isToday(o.createdAt)).toList();

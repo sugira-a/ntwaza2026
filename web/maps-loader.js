@@ -14,12 +14,15 @@
     return;
   }
 
-  const script = document.createElement('script');
+  var script = document.createElement('script');
   script.src =
     'https://maps.googleapis.com/maps/api/js?key=' +
-    encodeURIComponent(googleMapsWebKey);
-  script.async = true;
-  script.defer = true;
+    encodeURIComponent(googleMapsWebKey) +
+    '&callback=__ntwazaMapsReady';
   script.dataset.ntwazaGoogleMaps = 'true';
+  // Use a global callback to signal Maps API is ready
+  window.__ntwazaMapsReady = function () {
+    console.log('Google Maps JS API loaded successfully.');
+  };
   document.head.appendChild(script);
 })();
